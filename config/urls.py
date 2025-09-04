@@ -10,7 +10,8 @@ urlpatterns = [
 
     # Voucher management
     path("vouchers/validate/", views.validate_voucher, name="validate_voucher"),
-
+    path("breakfast-vouchers/", views.breakfast_vouchers, name="breakfast_vouchers"),
+    
     # API
     path('api/', include('hotel_app.api_urls')),  # Updated API URL
     path('api-gui/', views.api_gui_view, name='api_gui'),  # New API GUI view

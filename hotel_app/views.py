@@ -26,6 +26,8 @@ from hotel_app.serializers import (
     ServiceRequestSerializer, GuestCommentSerializer
 )
 from hotel_app.utils import generate_qr_code
+from .forms import GuestForm
+from .models import Guest
 
 # ------------------- Constants -------------------
 ADMINS_GROUP = 'Admins'
@@ -147,6 +149,14 @@ class DashboardReviews(generics.GenericAPIView):
 
 
 # ------------------- Voucher Management -------------------
+from django.shortcuts import render
+from .models import Voucher
+
+def breakfast_vouchers(request):
+    vouchers = Voucher.objects.all()
+    return render(request, "dashboard/breakfast_vouchers.html", {"vouchers": vouchers})
+
+
 def issue_voucher(request, guest_id):
     """Generate voucher + QR for a guest at check-in"""
     guest = get_object_or_404(Guest, id=guest_id)
@@ -317,3 +327,13 @@ def export_users_csv(request):
         dept = u.userprofile.department.name if hasattr(u, 'userprofile') and u.userprofile.department else ''
         writer.writerow([u.id, u.username, u.get_full_name(), u.email, dept, u.is_active])
     return resp
+
+def register_guest(request):
+    if request.method == "POST":
+        form = GuestForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("issue_voucher_list")  # redirect to vouchers page
+    else:
+        form = GuestForm()
+    return render(request, "guests/register_guest.html", {"form": form})

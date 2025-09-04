@@ -1,6 +1,15 @@
 from django import forms
 from django.contrib.auth.models import User, Group
-from hotel_app.models import UserProfile, Department, Location, RequestType, Checklist, Complaint, BreakfastVoucher, Review
+from hotel_app.models import UserProfile, Department, Location, RequestType, Checklist, Complaint, BreakfastVoucher, Review,Guest
+
+
+
+class GuestForm(forms.ModelForm):
+    class Meta:
+        model = Guest
+        fields = ["full_name", "phone", "email", "room_number", "checkin_date", "checkout_date", "breakfast_included"]
+
+
 
 class UserForm(forms.ModelForm):
     full_name = forms.CharField(max_length=160, required=True)

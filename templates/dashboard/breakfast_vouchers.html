@@ -23,7 +23,7 @@
                             <th>ID</th>
                             <th>Guest</th>
                             <th>Room No</th>
-                            <th>Qty</th>
+                            <th>Quantity</th>
                             <th>Status</th>
                             <th>Created At</th>
                             <th>Actions</th>
@@ -34,10 +34,24 @@
                             {% for voucher in vouchers %}
                             <tr>
                                 <td>{{ voucher.id }}</td>
-                                <td>{{ voucher.guest.full_name|default:voucher.customer_name }}</td>
+                                <td>
+                                    {% if voucher.guest %}
+                                        {{ voucher.guest.full_name }}
+                                    {% else %}
+                                        <span class="text-muted">No Guest</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ voucher.room_no }}</td>
                                 <td>{{ voucher.qty }}</td>
-                                <td>{{ voucher.status }}</td>
+                                <td>
+                                    {% if voucher.status == "active" %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% elif voucher.status == "used" %}
+                                        <span class="badge bg-warning text-dark">Used</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Expired</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ voucher.created_at|date:"Y-m-d H:i" }}</td>
                                 <td>
                                     <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editVoucherModal-{{ voucher.id }}">Edit</button>
@@ -70,7 +84,7 @@
               <div class="modal-body">
                   <div class="mb-3">
                       <label for="guest" class="form-label">Guest</label>
-                      <select name="guest" id="guest" class="form-control">
+                      <select name="guest" id="guest" class="form-control" required>
                           <option value="">---------</option>
                           {% for guest in guests %}
                               <option value="{{ guest.id }}">{{ guest.full_name }}</option>
@@ -90,7 +104,7 @@
 
                   <div class="mb-3">
                       <label for="status" class="form-label">Status</label>
-                      <select name="status" id="status" class="form-control">
+                      <select name="status" id="status" class="form-control" required>
                           <option value="active">Active</option>
                           <option value="used">Used</option>
                           <option value="expired">Expired</option>

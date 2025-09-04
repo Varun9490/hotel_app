@@ -372,15 +372,19 @@ class Voucher(models.Model):
     expiry_date = models.DateField()
     redeemed = models.BooleanField(default=False)
     redeemed_at = models.DateTimeField(null=True, blank=True)
-    redeemed_by = models.CharField(max_length=100, null=True, blank=True)  # staff name or ID
+    redeemed_by = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)  # ✅ safe for existing rows
+    updated_at = models.DateTimeField(auto_now=True)  # ✅ tracks modifications
 
     def __str__(self):
         return f"{self.guest_name} - {self.voucher_code}"
 
     def is_valid(self):
         """Check if the voucher is still valid."""
-        return not self.redeemed and self.expiry_date >= timezone.now().date()
-
+        return (
+            not self.redeemed
+            and self.expiry_date >= timezone.now().date()
+        )
 # ---- Complaints & Reviews ----
 
 class Complaint(models.Model):
