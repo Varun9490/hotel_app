@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel API GUI</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        margin: 2em;
+        background-color: #f8f9fa;
+        color: #343a40;
+      }
+      h1,
+      h2 {
+        color: #007bff;
+      }
+      .endpoint {
+        border: 1px solid #dee2e6;
+        padding: 1.5em;
+        margin-bottom: 1.5em;
+        border-radius: 8px;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .endpoint h2 {
+        margin-top: 0;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5em;
+      }
+      pre {
+        background-color: #e9ecef;
+        padding: 1em;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      input,
+      textarea,
+      button {
+        display: block;
+        margin-bottom: 0.75em;
+        width: calc(100% - 20px);
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+      }
+      button {
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .method-group {
+        margin-top: 1em;
+      }
+      .method-group button {
+        width: 100px;
+        display: inline-block;
+        margin-right: 10px;
+      }
+      .method-group input,
+      .method-group textarea {
+        width: calc(100% - 120px);
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hotel API GUI</h1>
+
+    <div class="endpoint">
+      <h2>Authentication</h2>
+      <input
+        type="text"
+        id="login-username"
+        placeholder="Username"
+        value="admin"
+      />
+      <input
+        type="password"
+        id="login-password"
+        placeholder="Password"
+        value="password"
+      />
+      <button onclick="login()">Login</button>
+      <pre id="login-response">Not logged in.</pre>
+    </div>
+
+    <div id="api-sections">
+      <!-- API sections will be dynamically added here -->
+    </div>
+
+    <script>
+      let authToken = "";
+
+      const apiEndpoints = {
+        Users: {
+          url: "/api/users/",
+          postData: {
+            username: "testuser",
+            email: "test@example.com",
+            password: "password123",
+          },
+          putData: { first_name: "Test", last_name: "User" },
+        },
+        Departments: {
+          url: "/api/departments/",
+          postData: { name: "New Department" },
+          putData: { name: "Updated Department" },
+        },
+        "User Groups": {
+          url: "/api/user-groups/",
+          postData: { name: "New Group" },
+          putData: { name: "Updated Group" },
+        },
+        Locations: {
+          url: "/api/locations/",
+          postData: { name: "New Location", room_no: "123" },
+          putData: { capacity: 10 },
+        },
+        Complaints: {
+          url: "/api/complaints/",
+          postData: {
+            subject: "Test Complaint",
+            description: "This is a test.",
+          },
+          putData: { status: "resolved" },
+        },
+        Vouchers: {
+          url: "/api/vouchers/",
+          postData: { customer_name: "Test Customer", qty: 1 },
+          putData: { status: "redeemed" },
+        },
+        Reviews: {
+          url: "/api/reviews/",
+          postData: { guest: 1, rating: 5, comment: "Great!" },
+          putData: { rating: 4 },
+        },
+        "Dashboard Overview": {
+          url: "/api/dashboard/overview/",
+          methods: ["GET"],
+        },
+      };
+
+      function createApiSection(name, config) {
+        const methods = config.methods || ["GET", "POST", "PUT", "DELETE"];
+        const section = document.createElement("div");
+        section.className = "endpoint";
+        section.innerHTML = `<h2>${name}</h2>`;
+
+        if (methods.includes("GET")) {
+          section.innerHTML += `
+                    <div class="method-group">
+                        <button onclick="apiRequest('${config.url}', 'GET', '${name}')">GET All</button>
+                    </div>
+                    <div class="method-group">
+                        <button onclick="apiRequest(document.getElementById('${name}-id').value ? '${config.url}' + document.getElementById('${name}-id').value + '/' : '', 'GET', '${name}')">GET by ID</button>
+                        <input type="text" id="${name}-id" placeholder="ID">
+                    </div>
+                `;
+        }
+        if (methods.includes("POST")) {
+          section.innerHTML += `
+                    <div class="method-group">
+                        <button onclick="apiRequest('${
+                          config.url
+                        }', 'POST', '${name}')">POST</button>
+                        <textarea id="${name}-post-data">${JSON.stringify(
+            config.postData,
+            null,
+            2
+          )}</textarea>
+                    </div>
+                `;
+        }
+        if (methods.includes("PUT")) {
+          section.innerHTML += `
+                    <div class="method-group">
+                        <button onclick="apiRequest(document.getElementById('${name}-id').value ? '${
+            config.url
+          }' + document.getElementById('${name}-id').value + '/' : '', 'PUT', '${name}')">PUT</button>
+                        <textarea id="${name}-put-data">${JSON.stringify(
+            config.putData,
+            null,
+            2
+          )}</textarea>
+                    </div>
+                `;
+        }
+        if (methods.includes("DELETE")) {
+          section.innerHTML += `
+                    <div class="method-group">
+                        <button onclick="apiRequest(document.getElementById('${name}-id').value ? '${config.url}' + document.getElementById('${name}-id').value + '/' : '', 'DELETE', '${name}')">DELETE</button>
+                    </div>
+                `;
+        }
+        section.innerHTML += `<pre id="${name}-response"></pre>`;
+        return section;
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const apiContainer = document.getElementById("api-sections");
+        for (const [name, config] of Object.entries(apiEndpoints)) {
+          apiContainer.appendChild(createApiSection(name, config));
+        }
+      });
+
+      async function login() {
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+        const responseContainer = document.getElementById("login-response");
+
+        try {
+          const response = await fetch("/api/auth/login/", {
+            // Note the trailing slash
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await response.json();
+          responseContainer.textContent = JSON.stringify(data, null, 2);
+          if (data.token) {
+            authToken = data.token;
+            responseContainer.textContent +=
+              "\n\nLogin successful. You can now use the API endpoints.";
+          }
+        } catch (error) {
+          responseContainer.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function apiRequest(url, method, name) {
+        const responseContainer = document.getElementById(`${name}-response`);
+        if (!authToken) {
+          responseContainer.textContent = "Please login first.";
+          return;
+        }
+        if (!url) {
+          responseContainer.textContent =
+            "Please provide an ID for this request.";
+          return;
+        }
+
+        const options = {
+          method: method,
+          headers: {
+            Authorization: `Token ${authToken}`,
+            "Content-Type": "application/json",
+          },
+        };
+
+        if (method === "POST") {
+          options.body = document.getElementById(`${name}-post-data`).value;
+        } else if (method === "PUT") {
+          options.body = document.getElementById(`${name}-put-data`).value;
+        }
+
+        try {
+          const response = await fetch(url, options);
+          if (response.status === 204) {
+            // No Content for DELETE
+            responseContainer.textContent = "Success (204 No Content)";
+            return;
+          }
+          const data = await response.json();
+          responseContainer.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          responseContainer.textContent = `Error: ${error.message}`;
+        }
+      }
+    </script>
+  </body>
+</html>

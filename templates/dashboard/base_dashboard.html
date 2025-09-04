@@ -1,0 +1,89 @@
+{% extends "base.html" %} {% block title %}Admin Dashboard{% endblock title %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <!-- Sidebar -->
+    <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+      <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'main' %}active{% endif %}"
+              href="{% url 'dashboard:main' %}"
+              >Dashboard</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}"
+              href="{% url 'dashboard:users' %}"
+              >Users</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'departments' %}active{% endif %}"
+              href="{% url 'dashboard:departments' %}"
+              >Departments</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'groups' %}active{% endif %}"
+              href="{% url 'dashboard:groups' %}"
+              >User Groups</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'locations' %}active{% endif %}"
+              href="{% url 'dashboard:locations' %}"
+              >Locations</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'request_types' %}active{% endif %}"
+              href="{% url 'dashboard:request_types' %}"
+              >Request Types</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'checklists' %}active{% endif %}"
+              href="{% url 'dashboard:checklists' %}"
+              >Checklists</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'complaints' %}active{% endif %}"
+              href="{% url 'dashboard:complaints' %}"
+              >Complaints</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'breakfast_vouchers' %}active{% endif %}"
+              href="{% url 'dashboard:breakfast_vouchers' %}"
+              >Breakfast Vouchers</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'reviews' %}active{% endif %}"
+              href="{% url 'dashboard:reviews' %}"
+              >Reviews</a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main role="main" class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      {% block dashboard_content %}{% endblock dashboard_content %}
+    </main>
+  </div>
+</div>
+{% endblock content %}

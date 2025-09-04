@@ -1,0 +1,51 @@
+{% extends "dashboard/main_dashboard.html" %} {% block dashboard_content %}
+<div class="bg-white shadow rounded p-6">
+  <h2 class="text-2xl font-bold mb-4">🎟️ Issue Voucher</h2>
+
+  {% if error %}
+  <div class="bg-red-100 text-red-600 px-4 py-2 rounded mb-4">{{ error }}</div>
+  {% endif %}
+
+  <div class="overflow-x-auto">
+    <table class="table-auto w-full border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100 text-left">
+          <th class="px-4 py-2 border">Guest</th>
+          <th class="px-4 py-2 border">Room</th>
+          <th class="px-4 py-2 border">Check-in</th>
+          <th class="px-4 py-2 border">Check-out</th>
+          <th class="px-4 py-2 border">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for guest in guests %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2 border">{{ guest.name }}</td>
+          <td class="px-4 py-2 border">{{ guest.room_number }}</td>
+          <td class="px-4 py-2 border">{{ guest.checkin_date }}</td>
+          <td class="px-4 py-2 border">{{ guest.checkout_date }}</td>
+          <td class="px-4 py-2 border">
+            {% if guest.breakfast_included %}
+            <a
+              href="{% url 'issue_voucher' guest.id %}"
+              class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Issue Voucher
+            </a>
+            {% else %}
+            <span class="text-gray-400">Not Eligible</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center p-4 text-gray-500">
+            No guests found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

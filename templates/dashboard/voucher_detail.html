@@ -1,0 +1,22 @@
+{% extends "dashboard/main_dashboard.html" %} {% block dashboard_content %}
+<div class="bg-white shadow rounded p-6">
+  <h2 class="text-2xl font-bold mb-4">🎟️ Guest Voucher</h2>
+
+  <div class="space-y-2">
+    <p><strong>Guest:</strong> {{ voucher.guest.name }}</p>
+    <p><strong>Room:</strong> {{ voucher.guest.room_number }}</p>
+    <p>
+      <strong>Validity:</strong> {{ voucher.valid_from }} → {{ voucher.valid_to
+      }}
+    </p>
+  </div>
+
+  <div class="mt-4">
+    <img
+      src="{{ voucher.qr_image.url }}"
+      alt="QR Code"
+      class="w-48 border p-2 rounded"
+    />
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<h2>Locations</h2>
+
+<!-- Add Location Button -->
+<button
+  class="btn btn-primary mb-3"
+  data-bs-toggle="modal"
+  data-bs-target="#addLocationModal"
+>
+  + Add Location
+</button>
+
+<!-- Table -->
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Building</th>
+      <th>Floor</th>
+      <th>Type</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if locations %}
+      {% for location in locations %}
+      <tr>
+        <td>{{ location.name }}</td>
+        <td>{{ location.building.name|default:"-" }}</td>
+        <td>{{ location.floor.floor_number|default:"-" }}</td>
+        
+        <td>{{ location.type.name|default:"-" }}</td>
+        <td>
+          <!-- Edit button opens modal -->
+          <button 
+            class="btn btn-sm btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#editLocationModal{{ location.id }}"
+          >
+            Edit
+          </button>
+          <form method="post" action="{% url 'dashboard:location_delete' location.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+
+      <!-- Edit Location Modal -->
+      <div
+        class="modal fade"
+        id="editLocationModal{{ location.id }}"
+        tabindex="-1"
+        aria-labelledby="editLocationModalLabel{{ location.id }}"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'dashboard:location_update' location.id %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title" id="editLocationModalLabel{{ location.id }}">Edit Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <input type="text" name="name" class="form-control" value="{{ location.name }}" required />
+                </div>
+                <div class="mb-3">
+                  <select name="building" class="form-control">
+                    <option value="">-- Select Building --</option>
+                    {% for b in buildings %}
+                      <option value="{{ b.id }}" {% if location.building and location.building.id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <select name="floor" class="form-control">
+                    <option value="">-- Select Floor --</option>
+                    {% for f in floors %}
+                      <option value="{{ f.id }}" {% if location.floor and location.floor.id == f.id %}selected{% endif %}>{{ f.floor_number }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                
+                <div class="mb-3">
+                  <select name="type" class="form-control">
+                    <option value="">-- Select Type --</option>
+                    {% for t in types %}
+                      <option value="{{ t.id }}" {% if location.type and location.type.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <tr>
+      <td colspan="6" class="text-center">No locations found.</td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Add Location Modal -->
+<div
+  class="modal fade"
+  id="addLocationModal"
+  tabindex="-1"
+  aria-labelledby="addLocationModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'dashboard:location_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addLocationModalLabel">Add Location</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <input type="text" name="name" class="form-control" placeholder="Location Name" required />
+          </div>
+          <div class="mb-3">
+            <select name="building" class="form-control">
+              <option value="">-- Select Building --</option>
+              {% for b in buildings %}
+                <option value="{{ b.id }}">{{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <select name="floor" class="form-control">
+              <option value="">-- Select Floor --</option>
+              {% for f in floors %}
+                <option value="{{ f.id }}">{{ f.floor_number }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <select name="type" class="form-control">
+              <option value="">-- Select Type --</option>
+              {% for t in types %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

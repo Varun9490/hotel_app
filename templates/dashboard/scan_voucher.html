@@ -1,0 +1,19 @@
+<h2>Scan Voucher</h2>
+<div id="reader" style="width: 300px"></div>
+<div id="result"></div>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+  const qrScanner = new Html5Qrcode("reader");
+  qrScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      fetch(`/vouchers/validate/?code=${decodedText}`)
+        .then((res) => res.json())
+        .then((data) => {
+          document.getElementById("result").innerText = data.message;
+        });
+    }
+  );
+</script>

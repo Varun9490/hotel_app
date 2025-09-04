@@ -1,0 +1,186 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<h2 class="mb-4 fw-bold">Dashboard</h2>
+
+<div class="row g-3">
+  <!-- Total Users -->
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="text-muted">Total Users</h6>
+          <h3 class="fw-bold">{{ total_users }}</h3>
+          <small class="text-success">+12% from last week</small>
+        </div>
+        <div class="bg-primary text-white rounded-circle p-3">
+          <i class="bi bi-people"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Departments -->
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="text-muted">Departments</h6>
+          <h3 class="fw-bold">{{ total_departments }}</h3>
+          <small class="text-success">+8% from last week</small>
+        </div>
+        <div class="bg-warning text-white rounded-circle p-3">
+          <i class="bi bi-diagram-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Locations -->
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="text-muted">Locations</h6>
+          <h3 class="fw-bold">{{ total_locations }}</h3>
+          <small class="text-success">+5% from last week</small>
+        </div>
+        <div class="bg-info text-white rounded-circle p-3">
+          <i class="bi bi-geo-alt"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Average Review -->
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="text-muted">Avg. Review</h6>
+          <h3 class="fw-bold">{{ average_review_rating }}</h3>
+          <small class="text-success">Stable</small>
+        </div>
+        <div class="bg-danger text-white rounded-circle p-3">
+          <i class="bi bi-star"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Second Row -->
+<div class="row g-3 mt-2">
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h6>Active Complaints</h6>
+      <h3 class="fw-bold">{{ active_complaints }}</h3>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h6>Resolved Complaints</h6>
+      <h3 class="fw-bold">{{ resolved_complaints }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Third Row -->
+<div class="row g-3 mt-2">
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h6>Vouchers Issued</h6>
+      <h3 class="fw-bold">{{ vouchers_issued }}</h3>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h6>Vouchers Redeemed</h6>
+      <h3 class="fw-bold">{{ vouchers_redeemed }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-3 mt-4">
+  <!-- Complaint Trends by Department -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h5>Complaint Trends by Department</h5>
+      <canvas id="complaintDeptChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Review Sentiment Analysis -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h5>Review Sentiment Analysis</h5>
+      <canvas id="reviewSentimentChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-4">
+  <!-- Room Occupancy Heatmap -->
+  <div class="col-md-12">
+    <div class="card shadow-sm border-0 rounded-3 p-3">
+      <h5>Room Occupancy Heatmap</h5>
+      <canvas id="roomHeatmap"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Complaint Trends by Department
+  const deptData = JSON.parse("{{ complaints_by_department|escapejs }}");
+  new Chart(document.getElementById("complaintDeptChart"), {
+    type: "bar",
+    data: {
+      labels: deptData.map((d) => d.department),
+      datasets: [
+        {
+          label: "Complaints",
+          data: deptData.map((d) => d.count),
+          backgroundColor: "rgba(54, 162, 235, 0.6)",
+        },
+      ],
+    },
+  });
+
+  // Review Sentiment Analysis
+  const sentimentData = JSON.parse("{{ review_sentiment|escapejs }}");
+  new Chart(document.getElementById("reviewSentimentChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Positive", "Neutral", "Negative"],
+      datasets: [
+        {
+          data: [
+            sentimentData.positive,
+            sentimentData.neutral,
+            sentimentData.negative,
+          ],
+          backgroundColor: ["#28a745", "#ffc107", "#dc3545"],
+        },
+      ],
+    },
+  });
+
+  // Room Occupancy Heatmap (simulated as matrix chart)
+  const heatmapData = JSON.parse("{{ occupancy_data|escapejs }}");
+  new Chart(document.getElementById("roomHeatmap"), {
+    type: "heatmap", // Needs chartjs-chart-matrix plugin
+    data: {
+      datasets: [
+        {
+          label: "Occupancy",
+          data: heatmapData,
+        },
+      ],
+    },
+  });
+</script>
+
+{% endblock %}
