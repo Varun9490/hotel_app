@@ -1,5 +1,6 @@
 from django.urls import path
 from . import dashboard_views
+from . import views  # Import views for guest registration and voucher features
 
 app_name = 'dashboard'   # ✅ Required for namespacing
 
@@ -42,4 +43,13 @@ urlpatterns = [
     path('reviews/create/', dashboard_views.review_create, name='review_create'),
     path('reviews/<int:review_id>/update/', dashboard_views.review_update, name='review_update'),
     path('reviews/<int:review_id>/delete/', dashboard_views.review_delete, name='review_delete'),
+    
+    # New Voucher System URLs
+    path('register-guest/', views.register_guest, name='register_guest'),
+    path('scan-voucher/', views.scan_voucher_page, name='scan_voucher'),
+    path('voucher-analytics/', dashboard_views.voucher_analytics, name='voucher_analytics'),
+    path('guests/', dashboard_views.dashboard_guests, name='guests'),
+    path('guests/<int:guest_id>/', dashboard_views.guest_detail, name='guest_detail'),
+    path('vouchers/', dashboard_views.dashboard_vouchers, name='vouchers'),
+    path('vouchers/<int:voucher_id>/', dashboard_views.voucher_detail, name='voucher_detail'),
 ]

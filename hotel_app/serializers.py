@@ -9,6 +9,7 @@ from .models import (
     Guest, GuestComment,
     GymMember, GymVisitor, GymVisit,
     BreakfastVoucher, BreakfastVoucherScan,
+    Voucher, VoucherScan,  # New voucher models
     Complaint, Review
 )
 
@@ -92,12 +93,218 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
 # Guest & Vouchers
 # -------------------
 
+class GuestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Guest
+        fields = '__all__'
+
+
+# -------------------
+# New Voucher System
+# -------------------
+
+class VoucherSerializer(serializers.ModelSerializer):
+    guest_details = GuestSerializer(source='guest', read_only=True)
+    location_name = serializers.CharField(source='location.name', read_only=True)
+    is_valid = serializers.SerializerMethodField()
+    can_redeem_today = serializers.SerializerMethodField()
+    days_until_expiry = serializers.SerializerMethodField()
+    scan_count = serializers.SerializerMethodField()
+    qr_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Voucher
+        fields = '__all__'
+        read_only_fields = ['voucher_code', 'qr_data', 'created_at', 'updated_at']
+
+    def get_is_valid(self, obj):
+        return obj.is_valid()
+    
+    def get_can_redeem_today(self, obj):
+        return obj.can_be_redeemed_today()
+    
+    def get_days_until_expiry(self, obj):
+        from django.utils import timezone
+        days = (obj.valid_to - timezone.now().date()).days
+        return max(0, days)
+    
+    def get_scan_count(self, obj):
+        return obj.scans.count()
+    
+    def get_qr_image_url(self, obj):
+        if obj.qr_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.qr_image.url)
+            return obj.qr_image.url
+        return None
+
+
+class VoucherScanSerializer(serializers.ModelSerializer):
+    voucher_details = VoucherSerializer(source='voucher', read_only=True)
+    scanned_by_name = serializers.CharField(source='scanned_by.get_full_name', read_only=True)
+    location_name = serializers.CharField(source='scan_location.name', read_only=True)
+
+    class Meta:
+        model = VoucherScan
+        fields = '__all__'
+        read_only_fields = ['scanned_at']
+
+
+class VoucherValidationSerializer(serializers.Serializer):
+    """Serializer for voucher validation requests"""
+    voucher_code = serializers.CharField(max_length=100, required=False)
+    qr_data = serializers.CharField(required=False)
+    scan_location = serializers.CharField(max_length=100, required=False)
+    
+    def validate(self, data):
+        if not data.get('voucher_code') and not data.get('qr_data'):
+            raise serializers.ValidationError(
+                "Either voucher_code or qr_data must be provided"
+            )
+        return data
+
+
+class VoucherValidationResponseSerializer(serializers.Serializer):
+    """Serializer for voucher validation responses"""
+    valid = serializers.BooleanField()
+    message = serializers.CharField()
+    voucher_details = VoucherSerializer(required=False)
+    scan_result = serializers.CharField(required=False)
+    error_code = serializers.CharField(required=False)
+
+
+class VoucherCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating new vouchers"""
+    generate_qr = serializers.BooleanField(default=True, write_only=True)
+    send_whatsapp = serializers.BooleanField(default=False, write_only=True)
+    
+    class Meta:
+        model = Voucher
+        fields = [
+            'voucher_type', 'guest', 'guest_name', 'room_number',
+            'valid_from', 'valid_to', 'quantity', 'location',
+            'special_instructions', 'generate_qr', 'send_whatsapp'
+        ]
+    
+    def create(self, validated_data):
+        generate_qr = validated_data.pop('generate_qr', True)
+        send_whatsapp = validated_data.pop('send_whatsapp', False)
+        
+        # Set created_by from request user
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['created_by'] = request.user
+        
+        voucher = super().create(validated_data)
+        
+        # Generate QR code if requested
+        if generate_qr:
+            from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+            voucher.qr_data = generate_voucher_qr_data(voucher)
+            voucher.qr_image = generate_voucher_qr_code(voucher)
+            voucher.save()
+        
+        # TODO: Send WhatsApp message if requested
+        if send_whatsapp:
+            # This would integrate with WhatsApp API
+            pass
+        
+        return voucher
+
+
+class GuestCreateSerializer(serializers.ModelSerializer):
+    """Enhanced guest serializer with voucher creation"""
+    create_breakfast_voucher = serializers.BooleanField(default=False, write_only=True)
+    voucher_quantity = serializers.IntegerField(default=1, write_only=True)
+    
+    class Meta:
+        model = Guest
+        fields = '__all__'
+    
+    def create(self, validated_data):
+        create_voucher = validated_data.pop('create_breakfast_voucher', False)
+        voucher_quantity = validated_data.pop('voucher_quantity', 1)
+        
+        guest = super().create(validated_data)
+        
+        # Auto-create breakfast voucher if breakfast is included
+        if guest.breakfast_included or create_voucher:
+            # Import here to avoid circular imports
+            from .models import Voucher
+            from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+            
+            # Create voucher directly
+            voucher = Voucher.objects.create(
+                voucher_type='breakfast',
+                guest=guest,
+                guest_name=guest.full_name or 'Guest',
+                room_number=guest.room_number,
+                valid_from=guest.checkin_date,
+                valid_to=guest.checkout_date,
+                quantity=voucher_quantity,
+                status='active'
+            )
+            
+            # Generate QR code
+            try:
+                voucher.qr_data = generate_voucher_qr_data(voucher)
+                voucher.qr_image = generate_voucher_qr_code(voucher)
+                voucher.save()
+            except Exception as e:
+                # Log error but don't fail guest creation
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Failed to generate QR code for voucher {voucher.voucher_code}: {str(e)}')
+        
+        return guest
+
+
+# -------------------
+# Voucher Analytics
+# -------------------
+
+class VoucherAnalyticsSerializer(serializers.Serializer):
+    """Serializer for voucher analytics data"""
+    total_vouchers = serializers.IntegerField()
+    active_vouchers = serializers.IntegerField()
+    redeemed_vouchers = serializers.IntegerField()
+    expired_vouchers = serializers.IntegerField()
+    redeemed_today = serializers.IntegerField()
+    vouchers_by_type = serializers.DictField()
+    peak_redemption_hours = serializers.ListField()
+    
+
+class VoucherReportSerializer(serializers.Serializer):
+    """Serializer for detailed voucher reports"""
+    date_range = serializers.CharField()
+    total_issued = serializers.IntegerField()
+    total_redeemed = serializers.IntegerField()
+    redemption_rate = serializers.FloatField()
+    avg_days_to_redemption = serializers.FloatField()
+    popular_times = serializers.ListField()
+    by_voucher_type = serializers.DictField()
+    by_location = serializers.DictField()
+
+
+# -------------------
+# Legacy Support
+# -------------------
+
 class BreakfastVoucherSerializer(serializers.ModelSerializer):
+    """Legacy breakfast voucher serializer"""
     guest_name = serializers.CharField(source='guest.full_name', read_only=True)
     location_name = serializers.CharField(source='location.name', read_only=True)
 
     class Meta:
         model = BreakfastVoucher
+        fields = '__all__'
+
+
+class BreakfastVoucherScanSerializer(serializers.ModelSerializer):
+    """Legacy breakfast voucher scan serializer"""
+    class Meta:
+        model = BreakfastVoucherScan
         fields = '__all__'
 
 
@@ -107,12 +314,6 @@ class GuestCommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GuestComment
-        fields = '__all__'
-
-
-class GuestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Guest
         fields = '__all__'
 
 

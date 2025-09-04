@@ -1,0 +1,79 @@
+{% extends "dashboard/base_dashboard.html" %} {% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold">Guest Management</h2>
+  <a href="{% url 'dashboard:register_guest' %}" class="btn btn-primary">
+    <i class="bi bi-person-plus"></i> Register New Guest
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Guest ID</th>
+            <th>Name</th>
+            <th>Room</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
+            <th>Breakfast</th>
+            <th>Vouchers</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for guest in guests %}
+          <tr>
+            <td>
+              <span class="badge bg-secondary"
+                >{{ guest.guest_id|default:"Auto" }}</span
+              >
+            </td>
+            <td>
+              <strong>{{ guest.full_name }}</strong><br />
+              <small class="text-muted">{{ guest.email }}</small>
+            </td>
+            <td><span class="badge bg-info">{{ guest.room_number }}</span></td>
+            <td>{{ guest.checkin_date|date:"M d, Y" }}</td>
+            <td>{{ guest.checkout_date|date:"M d, Y" }}</td>
+            <td>
+              {% if guest.breakfast_included %}
+              <span class="badge bg-success">Included</span>
+              {% else %}
+              <span class="badge bg-secondary">Not Included</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-primary">{{ guest.vouchers.count }}</span>
+            </td>
+            <td>
+              <a
+                href="{% url 'dashboard:guest_detail' guest.id %}"
+                class="btn btn-sm btn-outline-primary"
+              >
+                <i class="bi bi-eye"></i> View
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5">
+              <div class="text-muted">
+                <i class="bi bi-people fs-1"></i>
+                <p>No guests registered yet.</p>
+                <a
+                  href="{% url 'dashboard:register_guest' %}"
+                  class="btn btn-primary"
+                  >Register First Guest</a
+                >
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

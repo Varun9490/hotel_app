@@ -420,3 +420,306 @@ def review_delete(request, review_id):
     if request.method == "POST":
         review.delete()
     return redirect("dashboard:reviews")
+
+
+# ---- New Voucher System Dashboard Views ----
+
+@login_required
+def voucher_analytics(request):
+    """Voucher analytics dashboard"""
+    return render(request, "dashboard/voucher_analytics.html")
+
+
+@login_required
+def dashboard_guests(request):
+    """Guest management dashboard"""
+    from hotel_app.models import Guest
+    guests = Guest.objects.all().order_by('-created_at')
+    return render(request, "dashboard/guests.html", {
+        "guests": guests,
+        "title": "Guest Management"
+    })
+
+
+@login_required
+def guest_detail(request, guest_id):
+    """Guest detail view with vouchers"""
+    from hotel_app.models import Guest
+    guest = get_object_or_404(Guest, pk=guest_id)
+    vouchers = guest.vouchers.all().order_by('-created_at')
+    return render(request, "dashboard/guest_detail.html", {
+        "guest": guest,
+        "vouchers": vouchers,
+        "title": f"Guest: {guest.full_name}"
+    })
+
+
+@login_required
+def dashboard_vouchers(request):
+    """Voucher management dashboard"""
+    from hotel_app.models import Voucher
+    vouchers = Voucher.objects.all().select_related('guest').order_by('-created_at')
+    
+    # Calculate status counts
+    total_vouchers = vouchers.count()
+    active_vouchers = vouchers.filter(status='active').count()
+    redeemed_vouchers = vouchers.filter(status='redeemed').count()
+    expired_vouchers = vouchers.filter(status='expired').count()
+    
+    return render(request, "dashboard/vouchers.html", {
+        "vouchers": vouchers,
+        "total_vouchers": total_vouchers,
+        "active_vouchers": active_vouchers,
+        "redeemed_vouchers": redeemed_vouchers,
+        "expired_vouchers": expired_vouchers,
+        "title": "Voucher Management"
+    })
+
+
+@login_required
+def voucher_detail(request, voucher_id):
+    """Voucher detail view with scan history"""
+    from hotel_app.models import Voucher
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    scans = voucher.scans.all().order_by('-scanned_at')
+    return render(request, "dashboard/voucher_detail.html", {
+        "voucher": voucher,
+        "scans": scans,
+        "title": f"Voucher: {voucher.voucher_code}"
+    })
+
+
+# ---- Missing Dashboard Views ----
+
+@login_required
+def dashboard_request_types(request):
+    """Request types management"""
+    from hotel_app.models import RequestType
+    request_types = RequestType.objects.all()
+    from hotel_app.forms import RequestTypeForm
+    form = RequestTypeForm()
+    return render(request, "dashboard/request_types.html", {
+        "request_types": request_types,
+        "form": form,
+    })
+
+
+@login_required
+def dashboard_checklists(request):
+    """Checklists management"""
+    from hotel_app.models import Checklist
+    checklists = Checklist.objects.all()
+    from hotel_app.forms import ChecklistForm
+    form = ChecklistForm()
+    return render(request, "dashboard/checklists.html", {
+        "checklists": checklists,
+        "form": form,
+    })
+
+
+@login_required
+def complaints(request):
+    """Complaints management"""
+    from hotel_app.models import Complaint
+    complaints = Complaint.objects.all().order_by('-created_at')
+    from hotel_app.forms import ComplaintForm
+    form = ComplaintForm()
+    return render(request, "dashboard/complaints.html", {
+        "complaints": complaints,
+        "form": form,
+    })
+
+
+@login_required
+def breakfast_vouchers(request):
+    """Legacy breakfast vouchers view"""
+    from hotel_app.models import BreakfastVoucher
+    vouchers = BreakfastVoucher.objects.all().order_by('-created_at')
+    return render(request, "dashboard/breakfast_vouchers.html", {
+        "vouchers": vouchers,
+    })
+
+
+@login_required
+def reviews(request):
+    """Reviews management"""
+    from hotel_app.models import Review
+    reviews = Review.objects.all().order_by('-created_at')
+    from hotel_app.forms import ReviewForm
+    form = ReviewForm()
+    return render(request, "dashboard/reviews.html", {
+        "reviews": reviews,
+        "form": form,
+    })
+
+
+# ---- CRUD Operations for missing views ----
+
+@login_required
+@user_passes_test(is_superuser)
+def request_type_create(request):
+    if request.method == "POST":
+        from hotel_app.forms import RequestTypeForm
+        form = RequestTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:request_types")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def request_type_update(request, rt_id):
+    from hotel_app.models import RequestType
+    request_type = get_object_or_404(RequestType, pk=rt_id)
+    if request.method == "POST":
+        from hotel_app.forms import RequestTypeForm
+        form = RequestTypeForm(request.POST, instance=request_type)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:request_types")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def request_type_delete(request, rt_id):
+    from hotel_app.models import RequestType
+    request_type = get_object_or_404(RequestType, pk=rt_id)
+    if request.method == "POST":
+        request_type.delete()
+    return redirect("dashboard:request_types")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def checklist_create(request):
+    if request.method == "POST":
+        from hotel_app.forms import ChecklistForm
+        form = ChecklistForm(request.POST)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:checklists")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def checklist_update(request, cl_id):
+    from hotel_app.models import Checklist
+    checklist = get_object_or_404(Checklist, pk=cl_id)
+    if request.method == "POST":
+        from hotel_app.forms import ChecklistForm
+        form = ChecklistForm(request.POST, instance=checklist)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:checklists")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def checklist_delete(request, cl_id):
+    from hotel_app.models import Checklist
+    checklist = get_object_or_404(Checklist, pk=cl_id)
+    if request.method == "POST":
+        checklist.delete()
+    return redirect("dashboard:checklists")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def complaint_create(request):
+    if request.method == "POST":
+        from hotel_app.forms import ComplaintForm
+        form = ComplaintForm(request.POST)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:complaints")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def complaint_update(request, complaint_id):
+    from hotel_app.models import Complaint
+    complaint = get_object_or_404(Complaint, pk=complaint_id)
+    if request.method == "POST":
+        from hotel_app.forms import ComplaintForm
+        form = ComplaintForm(request.POST, instance=complaint)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:complaints")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def complaint_delete(request, complaint_id):
+    from hotel_app.models import Complaint
+    complaint = get_object_or_404(Complaint, pk=complaint_id)
+    if request.method == "POST":
+        complaint.delete()
+    return redirect("dashboard:complaints")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def voucher_create(request):
+    if request.method == "POST":
+        from hotel_app.forms import VoucherForm
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:vouchers")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def voucher_update(request, voucher_id):
+    from hotel_app.models import Voucher
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    if request.method == "POST":
+        from hotel_app.forms import VoucherForm
+        form = VoucherForm(request.POST, instance=voucher)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:vouchers")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def voucher_delete(request, voucher_id):
+    from hotel_app.models import Voucher
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    if request.method == "POST":
+        voucher.delete()
+    return redirect("dashboard:vouchers")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def review_create(request):
+    if request.method == "POST":
+        from hotel_app.forms import ReviewForm
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:reviews")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def review_update(request, review_id):
+    from hotel_app.models import Review
+    review = get_object_or_404(Review, pk=review_id)
+    if request.method == "POST":
+        from hotel_app.forms import ReviewForm
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+    return redirect("dashboard:reviews")
+
+
+@login_required
+@user_passes_test(is_superuser)
+def review_delete(request, review_id):
+    from hotel_app.models import Review
+    review = get_object_or_404(Review, pk=review_id)
+    if request.method == "POST":
+        review.delete()
+    return redirect("dashboard:reviews")

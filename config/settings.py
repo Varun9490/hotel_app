@@ -47,8 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_celery_results',
-    'django_celery_beat',
+    # 'django_celery_results',  # Temporarily disabled
+    # 'django_celery_beat',     # Temporarily disabled
     'rest_framework',
     'rest_framework.authtoken',
     'hotel_app',
@@ -147,6 +147,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 # STATICFILES_DIRS = [ BASE_DIR / 'static' ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (User uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

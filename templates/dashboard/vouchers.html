@@ -1,0 +1,143 @@
+{% extends "dashboard/base_dashboard.html" %} {% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold">Voucher Management</h2>
+  <div>
+    <a href="{% url 'dashboard:scan_voucher' %}" class="btn btn-success me-2">
+      <i class="bi bi-qr-code-scan"></i> Scan Voucher
+    </a>
+    <a href="{% url 'dashboard:voucher_analytics' %}" class="btn btn-info">
+      <i class="bi bi-graph-up"></i> Analytics
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Guest</th>
+            <th>Room</th>
+            <th>Valid Until</th>
+            <th>Status</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for voucher in vouchers %}
+          <tr>
+            <td>
+              <code>{{ voucher.voucher_code }}</code>
+            </td>
+            <td>
+              <span class="badge bg-primary"
+                >{{ voucher.voucher_type|title }}</span
+              >
+            </td>
+            <td>
+              <strong>{{ voucher.guest_name }}</strong>
+              {% if voucher.guest %}
+              <br /><small class="text-muted">{{ voucher.guest.email }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% if voucher.room_number %}
+              <span class="badge bg-info">{{ voucher.room_number }}</span>
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>{{ voucher.valid_to|date:"M d, Y" }}</td>
+            <td>
+              {% if voucher.status == 'active' %}
+              <span class="badge bg-success">Active</span>
+              {% elif voucher.status == 'redeemed' %}
+              <span class="badge bg-primary">Redeemed</span>
+              {% elif voucher.status == 'expired' %}
+              <span class="badge bg-danger">Expired</span>
+              {% else %}
+              <span class="badge bg-secondary">{{ voucher.status|title }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-secondary">{{ voucher.quantity }}</span>
+            </td>
+            <td>
+              <a
+                href="{% url 'dashboard:voucher_detail' voucher.id %}"
+                class="btn btn-sm btn-outline-primary"
+              >
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if voucher.qr_image %}
+              <a
+                href="{{ voucher.qr_image.url }}"
+                target="_blank"
+                class="btn btn-sm btn-outline-secondary"
+              >
+                <i class="bi bi-qr-code"></i> QR
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5">
+              <div class="text-muted">
+                <i class="bi bi-ticket-perforated fs-1"></i>
+                <p>No vouchers found.</p>
+                <a
+                  href="{% url 'dashboard:register_guest' %}"
+                  class="btn btn-primary"
+                  >Register Guest to Create Vouchers</a
+                >
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row g-3 mt-4">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white">
+      <div class="card-body text-center">
+        <h3>{{ total_vouchers }}</h3>
+        <small>Total Vouchers</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success text-white">
+      <div class="card-body text-center">
+        <h3>{{ active_vouchers }}</h3>
+        <small>Active</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-info text-white">
+      <div class="card-body text-center">
+        <h3>{{ redeemed_vouchers }}</h3>
+        <small>Redeemed</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-danger text-white">
+      <div class="card-body text-center">
+        <h3>{{ expired_vouchers }}</h3>
+        <small>Expired</small>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

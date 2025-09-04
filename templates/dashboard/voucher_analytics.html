@@ -1,0 +1,654 @@
+{% extends "dashboard/base_dashboard.html" %} 
+{% load static %} 
+
+{% block dashboard_content %}
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        📊 Voucher Analytics & Reports
+      </h1>
+      <p class="text-gray-600">
+        Comprehensive voucher management and analytics dashboard
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-blue-500">
+        <div class="flex items-center">
+          <div class="text-blue-500 text-3xl">🎫</div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-800">Total Vouchers</h3>
+            <p id="totalVouchers" class="text-2xl font-bold text-blue-600">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-green-500">
+        <div class="flex items-center">
+          <div class="text-green-500 text-3xl">✅</div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-800">Redeemed Today</h3>
+            <p id="redeemedToday" class="text-2xl font-bold text-green-600">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-yellow-500">
+        <div class="flex items-center">
+          <div class="text-yellow-500 text-3xl">⏳</div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-800">Active Vouchers</h3>
+            <p id="activeVouchers" class="text-2xl font-bold text-yellow-600">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-red-500">
+        <div class="flex items-center">
+          <div class="text-red-500 text-3xl">⏰</div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-800">Expired</h3>
+            <p id="expiredVouchers" class="text-2xl font-bold text-red-600">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Vouchers by Type</h2>
+        <div class="relative h-80">
+          <canvas id="voucherTypesChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Peak Redemption Hours</h2>
+        <div class="relative h-80">
+          <canvas id="redemptionHoursChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4">
+        <h2 class="text-xl font-semibold text-gray-800">Recent Vouchers</h2>
+        <div class="flex space-x-2">
+          <button id="refreshData" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center gap-2">
+            🔄
+            <span class="hidden sm:inline">Refresh</span>
+          </button>
+          <button id="exportData" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center gap-2">
+            📊
+            <span class="hidden sm:inline">Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label for="typeFilter" class="block text-sm font-medium text-gray-700 mb-1">Voucher Type</label>
+            <select id="typeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">All Types</option>
+              <option value="breakfast">Breakfast</option>
+              <option value="spa">Spa</option>
+              <option value="gym">Gym</option>
+              <option value="pool">Pool</option>
+            </select>
+          </div>
+          <div>
+            <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="redeemed">Redeemed</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          <div>
+            <label for="fromDate" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" id="fromDate" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="toDate" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" id="toDate" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valid Until</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vouchersTableBody" class="bg-white divide-y divide-gray-200">
+            </tbody>
+        </table>
+        <div id="loadingState" class="p-8 text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          <p class="text-gray-600">Loading voucher data...</p>
+        </div>
+        <div id="emptyState" class="p-8 text-center hidden">
+          <div class="text-gray-400 text-6xl">🚫</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No Vouchers Found</h3>
+          <p class="text-gray-600">Try adjusting your filters or create new vouchers.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-800">Recent Scan Activity</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voucher</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+            </tr>
+          </thead>
+          <tbody id="scanHistoryBody" class="bg-white divide-y divide-gray-200">
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  class VoucherDashboard {
+    // API endpoints configuration
+    API_ENDPOINTS = {
+      analytics: "/api/vouchers/analytics/",
+      vouchers: "/api/vouchers/",
+      scans: "/api/voucher-scans/",
+      redeem: (id) => `/api/vouchers/${id}/redeem/`,
+      validate: (code) => `/api/vouchers/validate/${code}/`,
+    };
+
+    constructor() {
+      this.charts = {};
+      this.data = {
+        vouchers: [],
+        scans: [],
+        analytics: {},
+      };
+      this.init();
+    }
+
+    /**
+     * Initializes the dashboard, loads data, and sets up event listeners.
+     */
+    async init() {
+      this.initializeCharts();
+      this.setupEventListeners();
+      await this.loadData();
+      // Auto-refresh data every 30 seconds
+      setInterval(() => this.loadData(), 30000);
+    }
+
+    /**
+     * Fetches all necessary data from the backend API.
+     */
+    async loadData() {
+      try {
+        // Fetch analytics, vouchers, and scans in parallel for speed
+        await Promise.all([
+          this.loadAnalytics(),
+          this.loadVouchers(),
+          this.loadScans(),
+        ]);
+      } catch (error) {
+        console.error("Dashboard data loading failed:", error);
+        // You could show a user-facing error message here
+      }
+    }
+
+    /**
+     * Generic API fetch helper with authorization.
+     * @param {string} url - The URL to fetch.
+     * @param {object} options - Fetch options.
+     * @returns {Promise<any>} - The JSON response.
+     */
+    async apiFetch(url, options = {}) {
+      const headers = {
+        Authorization: `Bearer ${this.getAuthToken()}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      };
+      const response = await fetch(url, { ...options, headers });
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "An unknown error occurred" }));
+        throw new Error(errorData.detail || errorData.message);
+      }
+      return response.json();
+    }
+
+    async loadAnalytics() {
+      this.data.analytics = await this.apiFetch(this.API_ENDPOINTS.analytics);
+      this.updateStats();
+      this.updateCharts();
+    }
+
+    async loadVouchers() {
+      const params = new URLSearchParams();
+      const typeFilter = document.getElementById("typeFilter").value;
+      const statusFilter = document.getElementById("statusFilter").value;
+      const fromDate = document.getElementById("fromDate").value;
+      const toDate = document.getElementById("toDate").value;
+
+      if (typeFilter) params.append("type", typeFilter);
+      if (statusFilter) params.append("status", statusFilter);
+      if (fromDate) params.append("from_date", fromDate);
+      if (toDate) params.append("to_date", toDate);
+
+      const data = await this.apiFetch(
+        `${this.API_ENDPOINTS.vouchers}?${params.toString()}`
+      );
+      this.data.vouchers = data.results || data; // Handle paginated and non-paginated responses
+      this.populateTable();
+    }
+
+    async loadScans() {
+      const data = await this.apiFetch(this.API_ENDPOINTS.scans);
+      this.data.scans = data.results || data;
+      this.populateScanHistory();
+    }
+
+    /**
+     * Updates the quick stat cards at the top of the page.
+     */
+    updateStats() {
+      const { analytics } = this.data;
+      document.getElementById("totalVouchers").textContent =
+        analytics.total_vouchers ?? 0;
+      document.getElementById("redeemedToday").textContent =
+        analytics.redeemed_today ?? 0;
+      document.getElementById("activeVouchers").textContent =
+        analytics.active_vouchers ?? 0;
+      document.getElementById("expiredVouchers").textContent =
+        analytics.expired_vouchers ?? 0;
+    }
+
+    /**
+     * Creates the initial Chart.js instances.
+     */
+    initializeCharts() {
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom" } },
+      };
+
+      this.charts.types = new Chart(
+        document.getElementById("voucherTypesChart").getContext("2d"),
+        {
+          type: "doughnut",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                data: [],
+                backgroundColor: [
+                  "#3B82F6",
+                  "#10B981",
+                  "#F59E0B",
+                  "#EF4444",
+                  "#8B5CF6",
+                ],
+              },
+            ],
+          },
+          options: commonOptions,
+        }
+      );
+
+      this.charts.hours = new Chart(
+        document.getElementById("redemptionHoursChart").getContext("2d"),
+        {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "Redemptions",
+                data: [],
+                backgroundColor: "#3B82F6",
+              },
+            ],
+          },
+          options: {
+            ...commonOptions,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } },
+          },
+        }
+      );
+    }
+
+    /**
+     * Updates chart data with the latest analytics.
+     */
+    updateCharts() {
+      const { analytics } = this.data;
+
+      // Update voucher types chart
+      if (analytics.vouchers_by_type) {
+        const typeLabels = Object.keys(analytics.vouchers_by_type);
+        const typeData = Object.values(analytics.vouchers_by_type);
+        this.charts.types.data.labels = typeLabels.map(
+          (type) => type.charAt(0).toUpperCase() + type.slice(1)
+        );
+        this.charts.types.data.datasets[0].data = typeData;
+        this.charts.types.update();
+      }
+
+      // Update peak hours chart (assumes API returns [{hour: 9, count: 15}, ...])
+      if (
+        analytics.peak_redemption_hours &&
+        Array.isArray(analytics.peak_redemption_hours)
+      ) {
+        const sortedHours = analytics.peak_redemption_hours.sort(
+          (a, b) => a.hour - b.hour
+        );
+        const hourLabels = sortedHours.map(
+          (item) => `${String(item.hour).padStart(2, "0")}:00`
+        );
+        const hourData = sortedHours.map((item) => item.count);
+        this.charts.hours.data.labels = hourLabels;
+        this.charts.hours.data.datasets[0].data = hourData;
+        this.charts.hours.update();
+      }
+    }
+
+    /**
+     * Populates the main vouchers table with data.
+     */
+    populateTable() {
+      const tbody = document.getElementById("vouchersTableBody");
+      const loadingState = document.getElementById("loadingState");
+      const emptyState = document.getElementById("emptyState");
+
+      loadingState.classList.add("hidden");
+      if (this.data.vouchers.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+      emptyState.classList.add("hidden");
+
+      const statusClasses = {
+        active: "text-green-800 bg-green-100",
+        redeemed: "text-blue-800 bg-blue-100",
+        expired: "text-red-800 bg-red-100",
+        cancelled: "text-gray-800 bg-gray-100",
+      };
+
+      tbody.innerHTML = this.data.vouchers
+        .map(
+          (voucher) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">${
+            voucher.voucher_code
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${
+            voucher.guest_name || "N/A"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${
+            voucher.room_number || "N/A"
+          }</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize bg-purple-100 text-purple-800">${
+              voucher.voucher_type
+            }</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
+              statusClasses[voucher.status] || statusClasses.cancelled
+            }">${voucher.status}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${this.formatDate(
+            voucher.valid_to
+          )}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${this.formatDate(
+            voucher.created_at
+          )}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <button data-action="view" data-code="${
+              voucher.voucher_code
+            }" class="text-blue-600 hover:text-blue-900 mr-3">View</button>
+            ${
+              voucher.status === "active"
+                ? `<button data-action="redeem" data-id="${voucher.id}" class="text-green-600 hover:text-green-900">Redeem</button>`
+                : ""
+            }
+          </td>
+        </tr>
+      `
+        )
+        .join("");
+    }
+
+    /**
+     * Populates the scan history table.
+     */
+    populateScanHistory() {
+      const tbody = document.getElementById("scanHistoryBody");
+      if (this.data.scans.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No recent scan activity found.</td></tr>`;
+        return;
+      }
+
+      const resultClasses = {
+        success: "text-green-800 bg-green-100",
+        already_redeemed: "text-yellow-800 bg-yellow-100",
+        expired: "text-red-800 bg-red-100",
+        invalid: "text-red-800 bg-red-100",
+      };
+
+      tbody.innerHTML = this.data.scans
+        .slice(0, 10)
+        .map(
+          (scan) => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${this.formatDateTime(
+                  scan.scanned_at
+                )}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">${
+                  scan.voucher_details?.voucher_code || "N/A"
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${
+                  scan.voucher_details?.guest_name || "N/A"
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${
+                  scan.scanned_by_name || "System"
+                }</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
+                      resultClasses[scan.scan_result] ||
+                      "text-gray-800 bg-gray-100"
+                    }">
+                        ${scan.scan_result.replace("_", " ")}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 capitalize">${
+                  scan.scan_source
+                }</td>
+            </tr>
+        `
+        )
+        .join("");
+    }
+
+    /**
+     * Sets up all event listeners for UI elements.
+     */
+    setupEventListeners() {
+      document
+        .getElementById("refreshData")
+        .addEventListener("click", () => this.loadData());
+      document
+        .getElementById("exportData")
+        .addEventListener("click", () => this.exportToCSV());
+
+      // Filter changes trigger a reload of the voucher list
+      ["typeFilter", "statusFilter", "fromDate", "toDate"].forEach((id) => {
+        document
+          .getElementById(id)
+          .addEventListener("change", () => this.loadVouchers());
+      });
+
+      // Event delegation for table actions (View, Redeem)
+      document
+        .getElementById("vouchersTableBody")
+        .addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-action]");
+          if (!button) return;
+
+          const { action, code, id } = button.dataset;
+          if (action === "view") this.viewVoucher(code);
+          else if (action === "redeem") this.redeemVoucher(id);
+        });
+    }
+
+    viewVoucher(voucherCode) {
+      window.open(this.API_ENDPOINTS.validate(voucherCode), "_blank");
+    }
+
+    async redeemVoucher(voucherId) {
+      if (!confirm("Are you sure you want to redeem this voucher?")) return;
+      try {
+        await this.apiFetch(this.API_ENDPOINTS.redeem(voucherId), {
+          method: "POST",
+        });
+        alert("Voucher redeemed successfully!");
+        this.loadData(); // Refresh all data to reflect the change
+      } catch (error) {
+        console.error("Error redeeming voucher:", error);
+        alert(`Failed to redeem voucher: ${error.message}`);
+      }
+    }
+
+    /**
+     * Exports the currently filtered voucher data to a CSV file.
+     */
+    exportToCSV() {
+      const headers = [
+        "Code",
+        "Guest",
+        "Room",
+        "Type",
+        "Status",
+        "Valid Until",
+        "Created",
+      ];
+      const rows = this.data.vouchers.map((v) => [
+        v.voucher_code,
+        v.guest_name,
+        v.room_number,
+        v.voucher_type,
+        v.status,
+        this.formatDate(v.valid_to),
+        this.formatDate(v.created_at),
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map((row) => row.map(this.escapeCSVField).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `vouchers_${new Date().toISOString().slice(0, 10)}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    escapeCSVField(field) {
+      const value = field === null || field === undefined ? "" : String(field);
+      if (/[",\n]/.test(value)) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }
+
+    /**
+     * Retrieves the auth token from local storage.
+     * @returns {string} The access token.
+     */
+    getAuthToken() {
+      return localStorage.getItem("access_token") || "";
+    }
+
+    // Date formatting helpers for consistency
+    formatDate(dateString) {
+      if (!dateString) return "N/A";
+      try {
+        return new Date(dateString).toLocaleDateString("en-CA"); // YYYY-MM-DD
+      } catch {
+        return "Invalid Date";
+      }
+    }
+
+    formatDateTime(dateString) {
+      if (!dateString) return "N/A";
+      try {
+        return new Date(dateString).toLocaleString("en-US", {
+          dateStyle: "short",
+          timeStyle: "short",
+        });
+      } catch {
+        return "Invalid Date";
+      }
+    }
+  }
+
+  // Initialize the dashboard once the DOM is fully loaded.
+  document.addEventListener("DOMContentLoaded", () => {
+    new VoucherDashboard();
+  });
+</script>
+
+<style>
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+{% endblock %}

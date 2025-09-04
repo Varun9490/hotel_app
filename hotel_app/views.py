@@ -10,6 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LogoutView
 from django.db.models import Count
 from django.views.generic import TemplateView
+from django.contrib import messages
 
 from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -329,11 +330,39 @@ def export_users_csv(request):
     return resp
 
 def register_guest(request):
+    """Enhanced guest registration with automatic voucher generation"""
     if request.method == "POST":
         form = GuestForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect("issue_voucher_list")  # redirect to vouchers page
+            guest = form.save()
+            
+            # Check if voucher was created
+            vouchers_created = guest.vouchers.count()
+            
+            if vouchers_created > 0:
+                messages.success(
+                    request, 
+                    f"Guest {guest.full_name} registered successfully! "
+                    f"{vouchers_created} voucher(s) created."
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Guest {guest.full_name} registered successfully!"
+                )
+            
+            # Redirect based on user preference or default
+            redirect_to = request.POST.get('redirect_to', 'dashboard:guests')
+            if redirect_to == 'create_another':
+                return redirect('register_guest')
+            elif redirect_to == 'view_vouchers':
+                return redirect('dashboard:vouchers')
+            else:
+                return redirect('dashboard:guests')
     else:
         form = GuestForm()
-    return render(request, "guests/register_guest.html", {"form": form})
+    
+    return render(request, "dashboard/register_guest.html", {
+        "form": form,
+        "title": "Register New Guest"
+    })
