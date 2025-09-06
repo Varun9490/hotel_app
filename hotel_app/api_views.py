@@ -399,11 +399,11 @@ class VoucherViewSet(viewsets.ModelViewSet):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class VoucherValidationView(APIView):
-    """Main voucher validation endpoint for QR scanning"""
+    """Enhanced voucher validation endpoint implementing your exact multi-day logic"""
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        """Validate voucher from QR scan or voucher code"""
+        """Validate voucher with exact logic from your requirements"""
         serializer = VoucherValidationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
@@ -446,74 +446,109 @@ class VoucherValidationView(APIView):
                 except Voucher.DoesNotExist:
                     scan_result = 'invalid'
                     error_code = 'VOUCHER_NOT_FOUND'
-                    message = 'Voucher not found'
+                    message = 'Invalid voucher code.'
             
             if voucher:
-                # Check if voucher can be redeemed
-                if not voucher.is_valid():
-                    if voucher.redeemed:
-                        scan_result = 'already_redeemed'
-                        error_code = 'ALREADY_REDEEMED'
-                        message = f'Voucher already redeemed on {voucher.redeemed_at.strftime("%Y-%m-%d %H:%M")}'
-                    elif voucher.status == 'expired' or voucher.valid_to < timezone.now().date():
+                today = timezone.now().date().isoformat()
+                
+                # Implement your exact validation logic
+                
+                # 1. Check if the scan date is within valid voucher dates
+                if today not in voucher.valid_dates:
+                    if voucher.is_expired():
                         scan_result = 'expired'
-                        error_code = 'EXPIRED'
-                        message = f'Voucher expired on {voucher.valid_to}'
+                        error_code = 'AFTER_CHECKOUT'
+                        message = f'Voucher has expired. Check-out was on {voucher.check_out_date}.'
                     else:
-                        scan_result = 'invalid'
-                        error_code = 'INVALID_STATUS'
-                        message = f'Voucher status: {voucher.status}'
-                elif not voucher.can_be_redeemed_today():
+                        scan_result = 'wrong_date'
+                        error_code = 'INVALID_DATE'
+                        message = f'Voucher not valid for today. Valid dates: {", ".join(voucher.valid_dates)}'
+                
+                # 2. Check if the voucher has already been used on that date
+                elif today in voucher.scan_history:
                     scan_result = 'already_redeemed'
-                    error_code = 'ALREADY_REDEEMED_TODAY'
-                    message = 'Voucher already redeemed today'
+                    error_code = 'ALREADY_USED'
+                    message = 'Voucher already used today.'
+                
+                # 3. If valid and not scanned -> mark as scanned
                 else:
-                    # Valid voucher - mark as redeemed
-                    voucher.mark_as_redeemed(request.user)
+                    # Valid voucher - mark as scanned for today
+                    voucher.mark_scanned_today(request.user)
                     scan_result = 'success'
-                    message = f'Voucher redeemed successfully for {voucher.guest_name}'
+                    message = f'Voucher redeemed successfully for today.'
+                    
+                    # Check remaining valid dates
+                    remaining_dates = voucher.get_remaining_valid_dates()
+                    if remaining_dates:
+                        message += f' Remaining valid dates: {", ".join(remaining_dates)}'
+                    else:
+                        message += ' All voucher dates have been used.'
             
-            # Create scan record
-            scan = VoucherScan.objects.create(
-                voucher=voucher,
-                scanned_by=request.user,
-                scan_result=scan_result,
-                redemption_successful=(scan_result == 'success'),
-                scan_source='web',
-                user_agent=user_agent,
-                ip_address=ip_address,
-                notes=f'Scan from {scan_location}' if scan_location else None
-            )
+            # Create comprehensive scan record
+            if voucher:
+                scan = VoucherScan.objects.create(
+                    voucher=voucher,
+                    scanned_by=request.user,
+                    scan_result=scan_result,
+                    redemption_successful=(scan_result == 'success'),
+                    scan_source='web',
+                    user_agent=user_agent,
+                    ip_address=ip_address,
+                    notes=f'Validation attempt from {scan_location}' if scan_location else 'API validation'
+                )
             
-            # Prepare response
+            # Prepare comprehensive response
             response_data = {
                 'valid': scan_result == 'success',
                 'message': message,
                 'scan_result': scan_result,
+                'timestamp': timezone.now().isoformat(),
             }
             
             if error_code:
                 response_data['error_code'] = error_code
             
             if voucher:
-                response_data['voucher_details'] = VoucherSerializer(
-                    voucher, context={'request': request}
-                ).data
+                # Add detailed voucher information
+                response_data.update({
+                    'voucher_details': {
+                        'voucher_code': voucher.voucher_code,
+                        'guest_name': voucher.guest_name,
+                        'room_number': voucher.room_number,
+                        'voucher_type': voucher.voucher_type,
+                        'check_in_date': voucher.check_in_date.isoformat() if voucher.check_in_date else None,
+                        'check_out_date': voucher.check_out_date.isoformat() if voucher.check_out_date else None,
+                        'valid_dates': voucher.valid_dates,
+                        'scan_history': voucher.scan_history,
+                        'remaining_dates': voucher.get_remaining_valid_dates(),
+                        'status': voucher.status,
+                        'fully_redeemed': voucher.redeemed,
+                    },
+                    'scan_info': {
+                        'scan_date': today,
+                        'scanned_by': request.user.get_full_name() or request.user.username,
+                        'scan_location': scan_location,
+                    }
+                })
             
-            response_serializer = VoucherValidationResponseSerializer(response_data)
+            # Set appropriate HTTP status
+            http_status = status.HTTP_200_OK
+            if scan_result in ['invalid', 'expired', 'already_redeemed', 'wrong_date']:
+                http_status = status.HTTP_400_BAD_REQUEST
             
-            return Response(response_serializer.data)
+            return Response(response_data, status=http_status)
             
         except Exception as e:
-            # Log error and return generic error response
+            # Production-ready error handling
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f'Voucher validation error: {str(e)}', exc_info=True)
+            logger.error(f'Voucher validation error for code {voucher_code}: {str(e)}', exc_info=True)
             
             return Response({
                 'valid': False,
                 'message': 'System error during validation',
-                'error_code': 'SYSTEM_ERROR'
+                'error_code': 'SYSTEM_ERROR',
+                'timestamp': timezone.now().isoformat()
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def get_client_ip(self, request):
@@ -528,37 +563,33 @@ class VoucherValidationView(APIView):
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])  # Allow public access for simple validation
-def quick_voucher_validation(request, voucher_code):
-    """Quick voucher validation endpoint for simple checks"""
+def validate_voucher_simple(request):
+    """Simple voucher validation endpoint exactly like your specification"""
+    code = request.GET.get('code')
+    if not code:
+        return Response({'message': 'Voucher code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    
     try:
-        voucher = Voucher.objects.get(voucher_code=voucher_code)
-        
-        response_data = {
-            'valid': voucher.is_valid(),
-            'guest_name': voucher.guest_name,
-            'room_number': voucher.room_number,
-            'voucher_type': voucher.voucher_type,
-            'valid_until': voucher.valid_to.isoformat(),
-            'status': voucher.status,
-        }
-        
-        if not voucher.is_valid():
-            if voucher.redeemed:
-                response_data['message'] = 'Already redeemed'
-            elif voucher.valid_to < timezone.now().date():
-                response_data['message'] = 'Expired'
-            else:
-                response_data['message'] = 'Invalid'
-        else:
-            response_data['message'] = 'Valid voucher'
-        
-        return JsonResponse(response_data)
-        
+        voucher = Voucher.objects.get(voucher_code=code)
     except Voucher.DoesNotExist:
-        return JsonResponse({
-            'valid': False,
-            'message': 'Voucher not found'
-        }, status=404)
+        return Response({'message': 'Invalid voucher code.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if expired (after check-out)
+    if voucher.is_expired():
+        return Response({'message': 'Voucher has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if valid for today and not already used
+    if voucher.is_valid_today():
+        voucher.mark_scanned_today()
+        return Response({'message': 'Voucher redeemed successfully for today.'})
+    else:
+        today = timezone.now().date().isoformat()
+        if today in voucher.scan_history:
+            return Response({'message': 'Voucher already used today or not valid for today.'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': 'Voucher not valid for today.'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
 
 
 class VoucherScanViewSet(viewsets.ReadOnlyModelViewSet):

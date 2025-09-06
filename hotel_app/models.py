@@ -252,8 +252,17 @@ class Guest(models.Model):
     phone = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(max_length=100, blank=True, null=True)
     room_number = models.CharField(max_length=20, blank=True, null=True)
-    checkin_date = models.DateField(blank=True, null=True)
-    checkout_date = models.DateField(blank=True, null=True)
+    
+    # Enhanced check-in/checkout with time support
+    checkin_date = models.DateField(blank=True, null=True)  # Legacy date field
+    checkout_date = models.DateField(blank=True, null=True)  # Legacy date field
+    checkin_datetime = models.DateTimeField(blank=True, null=True, verbose_name="Check-in Date & Time")
+    checkout_datetime = models.DateTimeField(blank=True, null=True, verbose_name="Check-out Date & Time")
+    
+    # Guest Details QR Code
+    details_qr_code = models.ImageField(upload_to="guests/qr/", blank=True, null=True, verbose_name="Guest Details QR Code")
+    details_qr_data = models.TextField(blank=True, null=True, verbose_name="Guest Details QR Data")
+    
     breakfast_included = models.BooleanField(default=False)
     guest_id = models.CharField(max_length=20, unique=True, blank=True, null=True, db_index=True)  # Hotel guest ID
     package_type = models.CharField(max_length=50, blank=True, null=True)  # Package or room type
@@ -270,9 +279,22 @@ class Guest(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+        
+        # Check date fields (legacy)
         if self.checkin_date and self.checkout_date:
             if self.checkout_date <= self.checkin_date:
                 raise ValidationError('Checkout date must be after check-in date.')
+        
+        # Check datetime fields (new)
+        if self.checkin_datetime and self.checkout_datetime:
+            if self.checkout_datetime <= self.checkin_datetime:
+                raise ValidationError('Check-out datetime must be after check-in datetime.')
+        
+        # Sync date fields with datetime fields
+        if self.checkin_datetime and not self.checkin_date:
+            self.checkin_date = self.checkin_datetime.date()
+        if self.checkout_datetime and not self.checkout_date:
+            self.checkout_date = self.checkout_datetime.date()
         
         if self.phone and len(self.phone) < 10:
             raise ValidationError('Phone number must be at least 10 digits.')
@@ -294,6 +316,30 @@ class Guest(models.Model):
         # Call clean method for validation
         self.full_clean()
         super().save(*args, **kwargs)
+    
+    def generate_details_qr_code(self, size='xlarge'):
+        """Generate QR code with all guest details"""
+        from .utils import generate_guest_details_qr_code, generate_guest_details_qr_data
+        
+        try:
+            # Generate QR data and image
+            self.details_qr_data = generate_guest_details_qr_data(self)
+            self.details_qr_code = generate_guest_details_qr_code(self, size=size)
+            self.save(update_fields=['details_qr_data', 'details_qr_code'])
+            return True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Failed to generate guest details QR code for {self.guest_id}: {str(e)}')
+            return False
+    
+    def get_details_qr_url(self, request=None):
+        """Get URL for guest details QR code"""
+        if self.details_qr_code:
+            if request:
+                return request.build_absolute_uri(self.details_qr_code.url)
+            return self.details_qr_code.url
+        return None
 
 
 class GuestComment(models.Model):
@@ -346,21 +392,55 @@ class GymVisit(models.Model):
         return f'Visit {self.pk}'
 
 
-# ---- Voucher System ----
+# ---- Booking System ----
+
+class Booking(models.Model):
+    """Guest booking/reservation model"""
+    guest = models.ForeignKey(Guest, on_delete=models.CASCADE, related_name='bookings')
+    check_in = models.DateTimeField()
+    check_out = models.DateTimeField()
+    room_number = models.CharField(max_length=20)
+    booking_reference = models.CharField(max_length=50, unique=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['booking_reference']),
+            models.Index(fields=['check_in', 'check_out']),
+            models.Index(fields=['room_number']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.booking_reference:
+            import random
+            import string
+            while True:
+                ref = 'BK' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                if not Booking.objects.filter(booking_reference=ref).exists():
+                    self.booking_reference = ref
+                    break
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Booking {self.booking_reference} - {self.guest.full_name}"
+
+
+# ---- Enhanced Voucher System ----
 
 class Voucher(models.Model):
-    """Unified voucher model for all voucher types"""
+    """Enhanced voucher model with multi-day validation support"""
     VOUCHER_TYPES = [
         ('breakfast', 'Breakfast Voucher'),
-        ('spa', 'Spa Voucher'),
         ('gym', 'Gym Voucher'),
-        ('pool', 'Pool Access'),
-        ('general', 'General Service'),
+        ('spa', 'Spa Voucher'),
+        ('restaurant', 'Restaurant Voucher'),
     ]
     
     STATUS_CHOICES = [
         ('active', 'Active'),
-        ('redeemed', 'Redeemed'),
+        ('redeemed', 'Fully Redeemed'),
         ('expired', 'Expired'),
         ('cancelled', 'Cancelled'),
     ]
@@ -368,23 +448,32 @@ class Voucher(models.Model):
     # Basic Information
     voucher_code = models.CharField(max_length=100, unique=True, editable=False)
     voucher_type = models.CharField(max_length=20, choices=VOUCHER_TYPES, default='breakfast')
+    
+    # Guest & Booking Information
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='vouchers', null=True, blank=True)
     guest = models.ForeignKey(Guest, on_delete=models.CASCADE, related_name='vouchers', null=True, blank=True)
     guest_name = models.CharField(max_length=100, blank=True, null=True)  # Denormalized for quick access
     room_number = models.CharField(max_length=20, blank=True, null=True)
     
-    # Validity
+    # Multi-day Validity System
+    check_in_date = models.DateField(null=True, blank=True)  # Guest check-in date
+    check_out_date = models.DateField(null=True, blank=True)  # Guest check-out date  
+    valid_dates = models.JSONField(default=list)  # List of valid dates ["2025-09-07", "2025-09-08"]
+    scan_history = models.JSONField(default=list)  # List of scanned dates ["2025-09-07"]
+    
+    # Legacy fields for backward compatibility
     valid_from = models.DateField(null=True, blank=True)
     valid_to = models.DateField(null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     
-    # QR Code
+    # QR Code Storage
     qr_image = models.ImageField(upload_to="vouchers/qr/", blank=True, null=True)
     qr_data = models.TextField(blank=True, null=True)  # Store QR data for validation
     
     # Status Tracking
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
-    redeemed = models.BooleanField(default=False)
-    redeemed_at = models.DateTimeField(null=True, blank=True)
+    redeemed = models.BooleanField(default=False)  # Legacy field - True when fully redeemed
+    redeemed_at = models.DateTimeField(null=True, blank=True)  # Last redemption timestamp
     redeemed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
@@ -417,6 +506,7 @@ class Voucher(models.Model):
             models.Index(fields=['voucher_code']),
             models.Index(fields=['status']),
             models.Index(fields=['guest']),
+            models.Index(fields=['check_in_date', 'check_out_date']),
             models.Index(fields=['valid_from', 'valid_to']),
         ]
 
@@ -429,49 +519,99 @@ class Voucher(models.Model):
                     self.voucher_code = code
                     break
         
+        # Auto-populate guest information from booking
+        if self.booking and not self.guest:
+            self.guest = self.booking.guest
+            self.room_number = self.booking.room_number
+            self.check_in_date = self.booking.check_in.date()
+            self.check_out_date = self.booking.check_out.date()
+        
         # Auto-populate guest_name from guest if available
         if self.guest and not self.guest_name:
             self.guest_name = self.guest.full_name or 'Guest'
         
+        # Auto-generate valid_dates if not provided but check-in/out dates exist
+        if not self.valid_dates and self.check_in_date and self.check_out_date:
+            from datetime import timedelta
+            current_date = self.check_in_date + timedelta(days=1)  # Start from day after check-in
+            dates = []
+            while current_date <= self.check_out_date:
+                dates.append(current_date.isoformat())
+                current_date += timedelta(days=1)
+            self.valid_dates = dates
+        
+        # Set legacy fields for backward compatibility
+        if not self.valid_from and self.check_in_date:
+            self.valid_from = self.check_in_date
+        if not self.valid_to and self.check_out_date:
+            self.valid_to = self.check_out_date
+        
         # Validate dates
-        if self.valid_from and self.valid_to and self.valid_to <= self.valid_from:
+        if self.check_in_date and self.check_out_date and self.check_out_date <= self.check_in_date:
             from django.core.exceptions import ValidationError
-            raise ValidationError('Valid to date must be after valid from date.')
+            raise ValidationError('Check-out date must be after check-in date.')
         
         super().save(*args, **kwargs)
 
-    def is_valid(self):
-        """Check if the voucher is still valid for redemption"""
-        today = timezone.now().date()
+    def is_valid_today(self):
+        """Check if voucher is valid for redemption today (your exact requirement)"""
+        today = timezone.now().date().isoformat()
         return (
             self.status == 'active' and
-            not self.redeemed and
-            self.valid_from <= today <= self.valid_to
+            today in self.valid_dates and 
+            today not in self.scan_history
         )
+    
+    def is_expired(self):
+        """Check if voucher is expired (after check-out)"""
+        if self.check_out_date:
+            return timezone.now().date() > self.check_out_date
+        if self.valid_to:
+            return timezone.now().date() > self.valid_to
+        return False
+    
+    def mark_scanned_today(self, scanned_by_user=None):
+        """Mark voucher as scanned for today (your exact requirement)"""
+        today = timezone.now().date().isoformat()
+        if today not in self.scan_history:
+            self.scan_history.append(today)
+            
+            # Check if all valid dates are now scanned (fully redeemed)
+            if set(self.scan_history) >= set(self.valid_dates):
+                self.redeemed = True
+                self.status = 'redeemed'
+                self.redeemed_at = timezone.now()
+                self.redeemed_by = scanned_by_user
+            
+            self.save()
+    
+    def get_remaining_valid_dates(self):
+        """Get list of remaining valid dates that haven't been scanned"""
+        return [date for date in self.valid_dates if date not in self.scan_history]
+    
+    def get_scan_status_for_date(self, date_str):
+        """Get scan status for a specific date"""
+        if date_str not in self.valid_dates:
+            return 'invalid_date'
+        if date_str in self.scan_history:
+            return 'already_scanned'
+        return 'available'
     
     def can_be_redeemed_today(self):
         """Check if voucher can be redeemed today (prevents double redemption)"""
-        if not self.is_valid():
-            return False
-        
-        today = timezone.now().date()
-        # Check if already redeemed today for breakfast vouchers
-        if self.voucher_type == 'breakfast':
-            today_scans = self.scans.filter(
-                scanned_at__date=today,
-                redemption_successful=True
-            )
-            return not today_scans.exists()
-        
-        return True
+        return self.is_valid_today() and not self.is_expired()
     
-    def mark_as_redeemed(self, redeemed_by_user=None):
-        """Mark voucher as redeemed"""
-        self.redeemed = True
-        self.redeemed_at = timezone.now()
-        self.redeemed_by = redeemed_by_user
-        self.status = 'redeemed'
-        self.save()
+    # Legacy method for backward compatibility
+    def is_valid(self):
+        """Legacy method - check basic validity"""
+        if self.valid_from and self.valid_to:
+            today = timezone.now().date()
+            return (
+                self.status == 'active' and
+                not self.redeemed and
+                self.valid_from <= today <= self.valid_to
+            )
+        return self.is_valid_today()
     
     def __str__(self):
         return f'{self.voucher_type.title()} Voucher {self.voucher_code} - {self.guest_name}'

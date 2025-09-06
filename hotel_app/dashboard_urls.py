@@ -1,4 +1,5 @@
 from django.urls import path
+from django.urls import path
 from . import dashboard_views
 from . import views  # Import views for guest registration and voucher features
 
@@ -52,4 +53,8 @@ urlpatterns = [
     path('guests/<int:guest_id>/', dashboard_views.guest_detail, name='guest_detail'),
     path('vouchers/', dashboard_views.dashboard_vouchers, name='vouchers'),
     path('vouchers/<int:voucher_id>/', dashboard_views.voucher_detail, name='voucher_detail'),
+    
+    # Guest QR Codes Management
+    path('guest-qr-codes/', dashboard_views.guest_qr_codes, name='guest_qr_codes'),
+    path('guest-qr-codes/<int:guest_id>/regenerate/', dashboard_views.regenerate_guest_qr, name='regenerate_guest_qr'),
 ]

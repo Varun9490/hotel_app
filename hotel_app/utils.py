@@ -38,8 +38,9 @@ def generate_voucher_qr_data(voucher):
         'voucher_type': voucher.voucher_type,
         'guest_name': voucher.guest_name,
         'room_number': voucher.room_number,
-        'valid_from': voucher.valid_from.isoformat(),
-        'valid_to': voucher.valid_to.isoformat(),
+        'check_in_date': voucher.check_in_date.isoformat() if voucher.check_in_date else None,
+        'check_out_date': voucher.check_out_date.isoformat() if voucher.check_out_date else None,
+        'valid_dates': voucher.valid_dates,
         'created_at': voucher.created_at.isoformat(),
         'quantity': voucher.quantity,
     }
@@ -53,25 +54,26 @@ def generate_voucher_qr_data(voucher):
     return json.dumps(qr_data)
 
 
-def generate_voucher_qr_code(voucher, size='medium'):
-    """Generate QR code specifically for vouchers with enhanced security"""
+def generate_voucher_qr_code(voucher, size='large'):
+    """Generate QR code specifically for vouchers with enhanced security and optimized scanning"""
     
-    # Size configurations
+    # Size configurations - larger pixels for better camera scanning
     size_configs = {
-        'small': {'box_size': 8, 'border': 3},
-        'medium': {'box_size': 10, 'border': 4},
-        'large': {'box_size': 12, 'border': 5},
+        'small': {'box_size': 12, 'border': 4},
+        'medium': {'box_size': 16, 'border': 5},
+        'large': {'box_size': 20, 'border': 6},
+        'xlarge': {'box_size': 25, 'border': 7},
     }
     
-    config = size_configs.get(size, size_configs['medium'])
+    config = size_configs.get(size, size_configs['large'])
     
     # Generate secure QR data
     qr_data = generate_voucher_qr_data(voucher)
     
-    # Create QR code with higher error correction for vouchers
+    # Create QR code with medium error correction for vouchers
     qr = qrcode.QRCode(
         version=None,  # Auto-determine version
-        error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction
+        error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction for balance
         box_size=config['box_size'],
         border=config['border'],
     )
@@ -79,10 +81,10 @@ def generate_voucher_qr_code(voucher, size='medium'):
     qr.add_data(qr_data)
     qr.make(fit=True)
     
-    # Create image with hotel branding colors
+    # Create image with high contrast for better scanning
     img = qr.make_image(
-        fill_color="#1a365d",  # Dark blue
-        back_color="white"
+        fill_color="#000000",  # Pure black for better contrast
+        back_color="#FFFFFF"   # Pure white background
     )
     
     # Save to buffer
@@ -115,16 +117,23 @@ def validate_voucher_qr_data(qr_data_string):
         if hash_to_verify != expected_hash:
             return {'valid': False, 'error': 'Invalid QR code hash'}
         
-        # Check date validity
+        # Check date validity (check if any valid dates are still in the future or today)
         try:
-            valid_from = datetime.fromisoformat(qr_data['valid_from']).date()
-            valid_to = datetime.fromisoformat(qr_data['valid_to']).date()
-            today = timezone.now().date()
+            today = timezone.now().date().isoformat()
+            valid_dates = qr_data.get('valid_dates', [])
             
-            if not (valid_from <= today <= valid_to):
-                return {'valid': False, 'error': 'Voucher expired or not yet valid'}
-        except (ValueError, KeyError):
-            return {'valid': False, 'error': 'Invalid date format'}
+            if valid_dates:
+                # Check if any valid date is today or in the future
+                if not any(date >= today for date in valid_dates):
+                    return {'valid': False, 'error': 'All voucher dates have passed'}
+            else:
+                # Fallback to legacy date validation
+                if qr_data.get('check_in_date') and qr_data.get('check_out_date'):
+                    check_out = datetime.fromisoformat(qr_data['check_out_date']).date()
+                    if check_out < timezone.now().date():
+                        return {'valid': False, 'error': 'Voucher expired - past check-out date'}
+        except (ValueError, KeyError) as e:
+            return {'valid': False, 'error': f'Invalid date format: {str(e)}'}
         
         return {'valid': True, 'data': qr_data}
         
@@ -168,9 +177,144 @@ def create_voucher_analytics_data(voucher):
         'voucher_type': voucher.voucher_type,
         'guest_id': voucher.guest.id if voucher.guest else None,
         'created_date': voucher.created_at.date().isoformat(),
-        'valid_period': (voucher.valid_to - voucher.valid_from).days,
+        'valid_period': (voucher.check_out_date - voucher.check_in_date).days if voucher.check_out_date and voucher.check_in_date else 0,
         'room_number': voucher.room_number,
         'status': voucher.status,
         'redeemed': voucher.redeemed,
         'whatsapp_sent': voucher.sent_whatsapp,
+        'scan_count': len(voucher.scan_history),
+        'valid_dates_count': len(voucher.valid_dates),
+        'remaining_dates': len(voucher.get_remaining_valid_dates()) if hasattr(voucher, 'get_remaining_valid_dates') else 0,
     }
+
+
+def generate_guest_details_qr_data(guest):
+    """Generate comprehensive QR data with all guest details"""
+    qr_data = {
+        'type': 'guest_details',
+        'guest_id': guest.guest_id,
+        'full_name': guest.full_name,
+        'phone': guest.phone,
+        'email': guest.email,
+        'room_number': guest.room_number,
+        'package_type': guest.package_type,
+        'breakfast_included': guest.breakfast_included,
+        'created_at': guest.created_at.isoformat() if guest.created_at else None,
+    }
+    
+    # Add datetime fields if available
+    if guest.checkin_datetime:
+        qr_data.update({
+            'checkin_datetime': guest.checkin_datetime.isoformat(),
+            'checkin_date': guest.checkin_datetime.strftime('%Y-%m-%d'),
+            'checkin_time': guest.checkin_datetime.strftime('%H:%M'),
+        })
+    elif guest.checkin_date:
+        qr_data['checkin_date'] = guest.checkin_date.isoformat()
+    
+    if guest.checkout_datetime:
+        qr_data.update({
+            'checkout_datetime': guest.checkout_datetime.isoformat(),
+            'checkout_date': guest.checkout_datetime.strftime('%Y-%m-%d'),
+            'checkout_time': guest.checkout_datetime.strftime('%H:%M'),
+        })
+    elif guest.checkout_date:
+        qr_data['checkout_date'] = guest.checkout_date.isoformat()
+    
+    # Calculate stay duration
+    if guest.checkin_datetime and guest.checkout_datetime:
+        duration = guest.checkout_datetime - guest.checkin_datetime
+        qr_data['stay_duration_hours'] = round(duration.total_seconds() / 3600, 1)
+        qr_data['stay_duration_days'] = duration.days
+    
+    # Add verification hash for security
+    secret_key = getattr(settings, 'SECRET_KEY', 'default-secret')
+    data_string = json.dumps(qr_data, sort_keys=True)
+    verification_hash = hashlib.sha256(f"{data_string}{secret_key}".encode()).hexdigest()[:16]
+    qr_data['verification_hash'] = verification_hash
+    
+    return json.dumps(qr_data, indent=2)
+
+
+def generate_guest_details_qr_code(guest, size='xlarge'):
+    """Generate QR code with all guest details - optimized for camera scanning"""
+    
+    # Size configurations for guest details (much larger for better camera scanning)
+    size_configs = {
+        'medium': {'box_size': 15, 'border': 4},
+        'large': {'box_size': 20, 'border': 5},
+        'xlarge': {'box_size': 25, 'border': 6},  # Much larger pixels for easy scanning
+        'xxlarge': {'box_size': 30, 'border': 8},  # Extra large for difficult cameras
+    }
+    
+    config = size_configs.get(size, size_configs['xlarge'])
+    
+    # Generate comprehensive QR data
+    qr_data = generate_guest_details_qr_data(guest)
+    
+    # Create QR code with medium error correction (balance between size and reliability)
+    qr = qrcode.QRCode(
+        version=None,  # Auto-determine version
+        error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction for better scanning
+        box_size=config['box_size'],
+        border=config['border'],
+    )
+    
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    
+    # Create image with high contrast colors for better scanning
+    img = qr.make_image(
+        fill_color="#000000",  # Pure black for better contrast
+        back_color="#FFFFFF"   # Pure white background
+    )
+    
+    # Save to buffer
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    image_value = buffer.getvalue()
+    
+    # Create filename with guest info
+    filename = f"guest_{guest.guest_id}_{guest.full_name.replace(' ', '_') if guest.full_name else 'details'}.png"
+    
+    return ContentFile(image_value, name=filename)
+    """Auto-generate voucher when guest checks in with breakfast included"""
+    if not guest.breakfast_included:
+        return None
+        
+    try:
+        from .models import Voucher
+        
+        # Check if voucher already exists
+        existing_voucher = Voucher.objects.filter(
+            guest=guest, 
+            voucher_type='breakfast'
+        ).first()
+        
+        if existing_voucher:
+            return existing_voucher
+        
+        # Create new voucher
+        voucher = Voucher.objects.create(
+            voucher_type='breakfast',
+            guest=guest,
+            guest_name=guest.full_name or 'Guest',
+            room_number=guest.room_number,
+            check_in_date=guest.checkin_date,
+            check_out_date=guest.checkout_date,
+            quantity=1,
+            status='active'
+        )
+        
+        # Generate QR code
+        voucher.qr_data = generate_voucher_qr_data(voucher)
+        voucher.qr_image = generate_voucher_qr_code(voucher)
+        voucher.save()
+        
+        return voucher
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Failed to auto-generate voucher for guest {guest.id}: {str(e)}', exc_info=True)
+        return None

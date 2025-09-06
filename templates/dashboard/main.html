@@ -9,7 +9,7 @@
     <div class="card shadow-sm border-0 rounded-3 p-4">
       <h5 class="mb-3">🏨 Quick Actions</h5>
       <div class="row g-3">
-        <div class="col-md-3">
+        <div class="col-md-2 col-sm-6">
           <a
             href="{% url 'dashboard:register_guest' %}"
             class="btn btn-primary w-100 py-3"
@@ -18,7 +18,7 @@
             <small>Register Guest</small>
           </a>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2 col-sm-6">
           <a
             href="{% url 'dashboard:scan_voucher' %}"
             class="btn btn-success w-100 py-3"
@@ -27,7 +27,7 @@
             <small>Scan Voucher</small>
           </a>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2 col-sm-6">
           <a
             href="{% url 'dashboard:voucher_analytics' %}"
             class="btn btn-info w-100 py-3"
@@ -36,13 +36,22 @@
             <small>Voucher Analytics</small>
           </a>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 col-sm-6">
           <a
             href="{% url 'dashboard:guests' %}"
             class="btn btn-warning w-100 py-3"
           >
             <i class="bi bi-people"></i><br />
             <small>Manage Guests</small>
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a
+            href="{% url 'dashboard:guest_qr_codes' %}"
+            class="btn btn-secondary w-100 py-3"
+          >
+            <i class="bi bi-qr-code"></i><br />
+            <small>Guest QR Codes</small>
           </a>
         </div>
       </div>

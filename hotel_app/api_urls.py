@@ -7,7 +7,7 @@ from .api_views import (
     DashboardViewSet, CustomAuthToken, GuestViewSet,
     # New voucher system
     VoucherViewSet, VoucherScanViewSet, VoucherValidationView,
-    quick_voucher_validation
+    validate_voucher_simple
 )
 
 router = DefaultRouter()
@@ -27,9 +27,9 @@ urlpatterns = [
     path('', include(router.urls)),
     path('auth/login/', CustomAuthToken.as_view()),
     
-    # New voucher validation endpoints
+    # Enhanced voucher validation endpoints
     path('vouchers/validate/', VoucherValidationView.as_view(), name='voucher_validate'),
-    path('vouchers/validate/<str:voucher_code>/', quick_voucher_validation, name='quick_voucher_validate'),
+    path('vouchers/validate/simple/', validate_voucher_simple, name='simple_voucher_validate'),
 
     # Legacy voucher management (keep for backward compatibility)
     path("issue-voucher/<int:guest_id>/", views.issue_voucher, name="issue_voucher"),

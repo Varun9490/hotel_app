@@ -76,6 +76,13 @@
               >Reviews</a
             >
           </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {% if request.resolver_match.url_name == 'guest_qr_codes' %}active{% endif %}"
+              href="{% url 'dashboard:guest_qr_codes' %}"
+              >Guest QR Codes</a
+            >
+          </li>
         </ul>
       </div>
     </nav>

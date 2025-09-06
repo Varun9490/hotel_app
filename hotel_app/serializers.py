@@ -6,10 +6,10 @@ from .models import (
     RequestFamily, WorkFamily, Workflow, WorkflowStep, WorkflowTransition,
     Checklist, ChecklistItem, RequestType, ServiceRequest, 
     ServiceRequestStep, ServiceRequestChecklist,
-    Guest, GuestComment,
+    Guest, GuestComment, Booking,  # Added Booking
     GymMember, GymVisitor, GymVisit,
     BreakfastVoucher, BreakfastVoucherScan,
-    Voucher, VoucherScan,  # New voucher models
+    Voucher, VoucherScan,  # Enhanced voucher models
     Complaint, Review
 )
 
@@ -100,33 +100,55 @@ class GuestSerializer(serializers.ModelSerializer):
 
 
 # -------------------
-# New Voucher System
+# Booking System
+# -------------------
+
+class BookingSerializer(serializers.ModelSerializer):
+    guest_details = GuestSerializer(source='guest', read_only=True)
+    
+    class Meta:
+        model = Booking
+        fields = '__all__'
+        read_only_fields = ['booking_reference', 'created_at', 'updated_at']
+
+
+# -------------------
+# Enhanced Voucher System
 # -------------------
 
 class VoucherSerializer(serializers.ModelSerializer):
     guest_details = GuestSerializer(source='guest', read_only=True)
+    booking_details = BookingSerializer(source='booking', read_only=True)
     location_name = serializers.CharField(source='location.name', read_only=True)
-    is_valid = serializers.SerializerMethodField()
+    is_valid_today = serializers.SerializerMethodField()
     can_redeem_today = serializers.SerializerMethodField()
     days_until_expiry = serializers.SerializerMethodField()
     scan_count = serializers.SerializerMethodField()
     qr_image_url = serializers.SerializerMethodField()
+    remaining_valid_dates = serializers.SerializerMethodField()
+    total_valid_dates = serializers.SerializerMethodField()
+    redemption_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Voucher
         fields = '__all__'
-        read_only_fields = ['voucher_code', 'qr_data', 'created_at', 'updated_at']
+        read_only_fields = ['voucher_code', 'qr_data', 'scan_history', 'created_at', 'updated_at']
 
-    def get_is_valid(self, obj):
-        return obj.is_valid()
+    def get_is_valid_today(self, obj):
+        return obj.is_valid_today()
     
     def get_can_redeem_today(self, obj):
         return obj.can_be_redeemed_today()
     
     def get_days_until_expiry(self, obj):
         from django.utils import timezone
-        days = (obj.valid_to - timezone.now().date()).days
-        return max(0, days)
+        if obj.check_out_date:
+            days = (obj.check_out_date - timezone.now().date()).days
+            return max(0, days)
+        elif obj.valid_to:
+            days = (obj.valid_to - timezone.now().date()).days
+            return max(0, days)
+        return 0
     
     def get_scan_count(self, obj):
         return obj.scans.count()
@@ -138,6 +160,17 @@ class VoucherSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.qr_image.url)
             return obj.qr_image.url
         return None
+    
+    def get_remaining_valid_dates(self, obj):
+        return obj.get_remaining_valid_dates()
+    
+    def get_total_valid_dates(self, obj):
+        return len(obj.valid_dates)
+    
+    def get_redemption_percentage(self, obj):
+        if len(obj.valid_dates) == 0:
+            return 0
+        return round((len(obj.scan_history) / len(obj.valid_dates)) * 100, 1)
 
 
 class VoucherScanSerializer(serializers.ModelSerializer):
@@ -175,21 +208,24 @@ class VoucherValidationResponseSerializer(serializers.Serializer):
 
 
 class VoucherCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating new vouchers"""
+    """Enhanced serializer for creating new vouchers"""
     generate_qr = serializers.BooleanField(default=True, write_only=True)
     send_whatsapp = serializers.BooleanField(default=False, write_only=True)
+    auto_generate_dates = serializers.BooleanField(default=True, write_only=True)
     
     class Meta:
         model = Voucher
         fields = [
-            'voucher_type', 'guest', 'guest_name', 'room_number',
-            'valid_from', 'valid_to', 'quantity', 'location',
-            'special_instructions', 'generate_qr', 'send_whatsapp'
+            'voucher_type', 'booking', 'guest', 'guest_name', 'room_number',
+            'check_in_date', 'check_out_date', 'valid_dates', 'quantity', 
+            'location', 'special_instructions', 'generate_qr', 'send_whatsapp',
+            'auto_generate_dates'
         ]
     
     def create(self, validated_data):
         generate_qr = validated_data.pop('generate_qr', True)
         send_whatsapp = validated_data.pop('send_whatsapp', False)
+        auto_generate_dates = validated_data.pop('auto_generate_dates', True)
         
         # Set created_by from request user
         request = self.context.get('request')

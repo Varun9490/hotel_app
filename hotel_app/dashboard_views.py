@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User, Group
 from django.db.models import Count, Avg
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from hotel_app.models import (
     Department, Location, RequestType, Checklist,
     Complaint, BreakfastVoucher, Review, Guest
@@ -426,17 +428,151 @@ def review_delete(request, review_id):
 
 @login_required
 def voucher_analytics(request):
-    """Voucher analytics dashboard"""
-    return render(request, "dashboard/voucher_analytics.html")
+    """Voucher analytics dashboard with actual data"""
+    import json
+    from django.utils import timezone
+    from django.db.models import Count
+    from hotel_app.models import Voucher, VoucherScan
+    
+    today = timezone.now().date()
+    
+    # Calculate analytics data
+    total_vouchers = Voucher.objects.count()
+    active_vouchers = Voucher.objects.filter(status='active').count()
+    redeemed_vouchers = Voucher.objects.filter(status='redeemed').count()
+    expired_vouchers = Voucher.objects.filter(status='expired').count()
+    redeemed_today = VoucherScan.objects.filter(
+        scanned_at__date=today,
+        redemption_successful=True
+    ).count()
+    
+    # Vouchers by type
+    vouchers_by_type = dict(
+        Voucher.objects.values('voucher_type').annotate(
+            count=Count('id')
+        ).values_list('voucher_type', 'count')
+    )
+    
+    # Recent vouchers
+    recent_vouchers = Voucher.objects.select_related('guest').order_by('-created_at')[:20]
+    
+    # Recent scans
+    recent_scans = VoucherScan.objects.select_related(
+        'voucher', 'voucher__guest', 'scanned_by'
+    ).order_by('-scanned_at')[:10]
+    
+    # Peak redemption hours (simplified - just count by hour)
+    # Use raw SQL to extract hour since Extract might not be available
+    peak_hours_data = []
+    try:
+        # Try using TruncHour which is more widely available
+        from django.db.models import TruncHour
+        peak_hours_qs = VoucherScan.objects.filter(
+            redemption_successful=True
+        ).annotate(
+            hour_truncated=TruncHour('scanned_at')
+        ).values('hour_truncated').annotate(
+            count=Count('id')
+        ).order_by('hour_truncated')
+        
+        # Convert to hour format
+        for item in peak_hours_qs:
+            if item['hour_truncated']:
+                hour = item['hour_truncated'].hour
+                peak_hours_data.append({'hour': hour, 'count': item['count']})
+    except ImportError:
+        # Fallback: use raw SQL if TruncHour is not available
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT HOUR(scanned_at) as hour, COUNT(*) as count
+                FROM hotel_app_voucherscan 
+                WHERE redemption_successful = 1
+                GROUP BY HOUR(scanned_at)
+                ORDER BY hour
+            """)
+            for row in cursor.fetchall():
+                peak_hours_data.append({'hour': row[0], 'count': row[1]})
+    
+    peak_hours = peak_hours_data
+    
+    analytics_data = {
+        'total_vouchers': total_vouchers,
+        'active_vouchers': active_vouchers,
+        'redeemed_vouchers': redeemed_vouchers,
+        'expired_vouchers': expired_vouchers,
+        'redeemed_today': redeemed_today,
+        'vouchers_by_type': vouchers_by_type,
+        'peak_hours': peak_hours,
+    }
+    
+    context = {
+        'analytics': analytics_data,
+        'analytics_json': json.dumps(analytics_data),
+        'recent_vouchers': recent_vouchers,
+        'recent_scans': recent_scans,
+    }
+    
+    return render(request, "dashboard/voucher_analytics.html", context)
 
 
 @login_required
 def dashboard_guests(request):
-    """Guest management dashboard"""
+    """Guest management dashboard with filters"""
     from hotel_app.models import Guest
+    from django.db.models import Q
+    from django.utils import timezone
+    
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    breakfast_filter = request.GET.get('breakfast_filter', '')
+    status_filter = request.GET.get('status_filter', '')
+    qr_filter = request.GET.get('qr_filter', '')
+    
+    # Base queryset
     guests = Guest.objects.all().order_by('-created_at')
+    
+    # Apply search filter
+    if search:
+        guests = guests.filter(
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(room_number__icontains=search) |
+            Q(guest_id__icontains=search) |
+            Q(phone__icontains=search)
+        )
+    
+    # Apply breakfast filter
+    if breakfast_filter == 'yes':
+        guests = guests.filter(breakfast_included=True)
+    elif breakfast_filter == 'no':
+        guests = guests.filter(breakfast_included=False)
+    
+    # Apply QR filter
+    if qr_filter == 'with_qr':
+        guests = guests.exclude(details_qr_code='')
+    elif qr_filter == 'without_qr':
+        guests = guests.filter(details_qr_code='')
+    
+    # Apply status filter
+    if status_filter:
+        today = timezone.now().date()
+        if status_filter == 'current':
+            guests = guests.filter(
+                checkin_date__lte=today,
+                checkout_date__gte=today
+            )
+        elif status_filter == 'past':
+            guests = guests.filter(checkout_date__lt=today)
+        elif status_filter == 'future':
+            guests = guests.filter(checkin_date__gt=today)
+    
     return render(request, "dashboard/guests.html", {
         "guests": guests,
+        "search": search,
+        "breakfast_filter": breakfast_filter,
+        "status_filter": status_filter,
+        "qr_filter": qr_filter,
         "title": "Guest Management"
     })
 
@@ -447,9 +583,17 @@ def guest_detail(request, guest_id):
     from hotel_app.models import Guest
     guest = get_object_or_404(Guest, pk=guest_id)
     vouchers = guest.vouchers.all().order_by('-created_at')
+    
+    # Calculate stay duration
+    stay_duration = None
+    if guest.checkin_date and guest.checkout_date:
+        duration = guest.checkout_date - guest.checkin_date
+        stay_duration = f"{duration.days} days"
+    
     return render(request, "dashboard/guest_detail.html", {
         "guest": guest,
         "vouchers": vouchers,
+        "stay_duration": stay_duration,
         "title": f"Guest: {guest.full_name}"
     })
 
@@ -723,3 +867,81 @@ def review_delete(request, review_id):
     if request.method == "POST":
         review.delete()
     return redirect("dashboard:reviews")
+
+
+# ---- Guest QR Codes Dashboard ----
+
+@login_required
+def guest_qr_codes(request):
+    """Display all guest QR codes in a grid layout"""
+    from hotel_app.models import Guest
+    from django.db.models import Q
+    
+    # Get search and filter parameters
+    search = request.GET.get('search', '')
+    filter_status = request.GET.get('filter', 'all')
+    
+    # Base queryset
+    guests = Guest.objects.all().order_by('-created_at')
+    
+    # Apply search filter
+    if search:
+        guests = guests.filter(
+            Q(full_name__icontains=search) |
+            Q(guest_id__icontains=search) |
+            Q(room_number__icontains=search) |
+            Q(email__icontains=search) |
+            Q(phone__icontains=search)
+        )
+    
+    # Apply status filter
+    if filter_status == 'with_qr':
+        guests = guests.exclude(details_qr_code='')
+    elif filter_status == 'without_qr':
+        guests = guests.filter(details_qr_code='')
+    elif filter_status == 'current':
+        from django.utils import timezone
+        today = timezone.now().date()
+        guests = guests.filter(
+            checkin_date__lte=today,
+            checkout_date__gte=today
+        )
+    
+    # Calculate statistics
+    total_guests = Guest.objects.count()
+    guests_with_qr = Guest.objects.exclude(details_qr_code='').count()
+    guests_without_qr = total_guests - guests_with_qr
+    
+    context = {
+        'guests': guests,
+        'search': search,
+        'filter_status': filter_status,
+        'total_guests': total_guests,
+        'guests_with_qr': guests_with_qr,
+        'guests_without_qr': guests_without_qr,
+        'title': 'Guest QR Codes'
+    }
+    
+    return render(request, "dashboard/guest_qr_codes.html", context)
+
+
+@login_required
+def regenerate_guest_qr(request, guest_id):
+    """Regenerate QR code for a specific guest"""
+    from hotel_app.models import Guest
+    guest = get_object_or_404(Guest, pk=guest_id)
+    
+    if request.method == "POST":
+        try:
+            # Get size from form or default to xlarge
+            size = request.POST.get('qr_size', 'xlarge')
+            success = guest.generate_details_qr_code(size=size)
+            
+            if success:
+                messages.success(request, f"QR code regenerated successfully for {guest.full_name}!")
+            else:
+                messages.error(request, f"Failed to regenerate QR code for {guest.full_name}. Please try again.")
+        except Exception as e:
+            messages.error(request, f"Error regenerating QR code: {str(e)}")
+    
+    return redirect('dashboard:guest_qr_codes')

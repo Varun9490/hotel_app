@@ -330,35 +330,61 @@ def export_users_csv(request):
     return resp
 
 def register_guest(request):
-    """Enhanced guest registration with automatic voucher generation"""
+    """Enhanced guest registration with automatic voucher generation and QR code"""
     if request.method == "POST":
         form = GuestForm(request.POST)
         if form.is_valid():
-            guest = form.save()
+            try:
+                guest = form.save()
+                
+                # Check if voucher was created
+                vouchers_created = guest.vouchers.count()
+                
+                # Prepare success message
+                if vouchers_created > 0:
+                    messages.success(
+                        request, 
+                        f"Guest {guest.full_name} registered successfully! "
+                        f"{vouchers_created} voucher(s) created."
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Guest {guest.full_name} registered successfully!"
+                    )
+                
+                # Check if guest details QR code was generated
+                if guest.details_qr_code:
+                    messages.info(
+                        request,
+                        "Guest details QR code generated successfully! You can view it on the guest details page."
+                    )
+                
+                # Redirect based on user preference or default
+                redirect_to = request.POST.get('redirect_to', 'guest_qr_success')
+                if redirect_to == 'create_another':
+                    return redirect('register_guest')
+                elif redirect_to == 'view_vouchers':
+                    return redirect('dashboard:vouchers')
+                elif redirect_to == 'guest_qr_success':
+                    return redirect('guest_qr_success', guest_id=guest.id)
+                else:
+                    return redirect('dashboard:guests')
+            except Exception as e:
+                # Add error message and log the exception
+                messages.error(request, f"Error saving guest: {str(e)}")
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error in guest registration: {str(e)}")
+        else:
+            # Add form validation errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
             
-            # Check if voucher was created
-            vouchers_created = guest.vouchers.count()
-            
-            if vouchers_created > 0:
-                messages.success(
-                    request, 
-                    f"Guest {guest.full_name} registered successfully! "
-                    f"{vouchers_created} voucher(s) created."
-                )
-            else:
-                messages.success(
-                    request,
-                    f"Guest {guest.full_name} registered successfully!"
-                )
-            
-            # Redirect based on user preference or default
-            redirect_to = request.POST.get('redirect_to', 'dashboard:guests')
-            if redirect_to == 'create_another':
-                return redirect('register_guest')
-            elif redirect_to == 'view_vouchers':
-                return redirect('dashboard:vouchers')
-            else:
-                return redirect('dashboard:guests')
+            # Add non-field errors
+            for error in form.non_field_errors():
+                messages.error(request, error)
     else:
         form = GuestForm()
     
@@ -366,3 +392,53 @@ def register_guest(request):
         "form": form,
         "title": "Register New Guest"
     })
+
+
+def guest_qr_success(request, guest_id):
+    """Display guest details and QR code after successful registration"""
+    guest = get_object_or_404(Guest, id=guest_id)
+    
+    # Get associated vouchers
+    vouchers = guest.vouchers.all()
+    
+    # Parse QR data for display
+    qr_details = None
+    if guest.details_qr_data:
+        try:
+            qr_details = json.loads(guest.details_qr_data)
+        except json.JSONDecodeError:
+            qr_details = None
+    
+    context = {
+        'guest': guest,
+        'vouchers': vouchers,
+        'qr_details': qr_details,
+        'title': f'Guest Registration Complete - {guest.full_name}'
+    }
+    
+    return render(request, "dashboard/guest_qr_success.html", context)
+
+
+@require_http_methods(["POST"])
+def generate_guest_qr(request, guest_id):
+    """Generate QR code for guest details on demand"""
+    guest = get_object_or_404(Guest, id=guest_id)
+    
+    try:
+        success = guest.generate_details_qr_code()
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': 'QR code generated successfully',
+                'qr_url': guest.get_details_qr_url(request)
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Failed to generate QR code'
+            })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error generating QR code: {str(e)}'
+        })

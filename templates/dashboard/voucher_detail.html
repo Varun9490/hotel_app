@@ -1,22 +1,127 @@
-{% extends "dashboard/main_dashboard.html" %} {% block dashboard_content %}
-<div class="bg-white shadow rounded p-6">
-  <h2 class="text-2xl font-bold mb-4">🎟️ Guest Voucher</h2>
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
 
-  <div class="space-y-2">
-    <p><strong>Guest:</strong> {{ voucher.guest.name }}</p>
-    <p><strong>Room:</strong> {{ voucher.guest.room_number }}</p>
-    <p>
-      <strong>Validity:</strong> {{ voucher.valid_from }} → {{ voucher.valid_to
-      }}
-    </p>
-  </div>
+{% block title %}Voucher Detail - Dashboard{% endblock %}
 
-  <div class="mt-4">
-    <img
-      src="{{ voucher.qr_image.url }}"
-      alt="QR Code"
-      class="w-48 border p-2 rounded"
-    />
-  </div>
+{% block dashboard_content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-ticket-alt me-2"></i>Voucher Details
+            </h1>
+            <p class="text-muted mb-0">{{ voucher.voucher_code }}</p>
+        </div>
+        <div>
+            <a href="{% url 'dashboard:voucher_analytics' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Analytics
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Voucher Information -->
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Voucher Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Voucher Code:</strong> <code>{{ voucher.voucher_code }}</code></p>
+                            <p><strong>Type:</strong> <span class="badge badge-primary">{{ voucher.voucher_type|title }}</span></p>
+                            <p><strong>Status:</strong> 
+                                {% if voucher.status == 'active' %}
+                                    <span class="badge badge-success">{{ voucher.status|title }}</span>
+                                {% elif voucher.status == 'redeemed' %}
+                                    <span class="badge badge-info">{{ voucher.status|title }}</span>
+                                {% elif voucher.status == 'expired' %}
+                                    <span class="badge badge-danger">{{ voucher.status|title }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ voucher.status|title }}</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Created:</strong> {{ voucher.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if voucher.guest %}
+                                <p><strong>Guest:</strong> {{ voucher.guest.full_name }}</p>
+                                <p><strong>Room:</strong> {{ voucher.guest.room_number|default:"N/A" }}</p>
+                                <p><strong>Email:</strong> {{ voucher.guest.email }}</p>
+                                <p><strong>Phone:</strong> {{ voucher.guest.phone|default:"N/A" }}</p>
+                            {% else %}
+                                <p><strong>Guest:</strong> <span class="text-muted">Not assigned</span></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">QR Code</h6>
+                </div>
+                <div class="card-body text-center">
+                    {% if voucher.qr_image %}
+                        <img src="{{ voucher.qr_image.url }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                        <div>
+                            <a href="{{ voucher.qr_image.url }}" download="voucher_{{ voucher.voucher_code }}.png" class="btn btn-success btn-sm">
+                                <i class="fas fa-download me-1"></i>Download
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">
+                            <i class="fas fa-qrcode fa-3x mb-3"></i>
+                            <p>No QR code available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan History -->
+    {% if scans %}
+    <div class="card shadow mb-4">
+        <div class="card-header">
+            <h6 class="m-0 font-weight-bold text-primary">Scan History</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Scanned By</th>
+                            <th>Result</th>
+                            <th>Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scan in scans %}
+                        <tr>
+                            <td>{{ scan.scanned_at|date:"M d, Y H:i:s" }}</td>
+                            <td>{{ scan.scanned_by.get_full_name|default:scan.scanned_by.username|default:"System" }}</td>
+                            <td>
+                                {% if scan.redemption_successful %}
+                                    <span class="badge badge-success">Success</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Failed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ scan.scan_source|default:"Web" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
