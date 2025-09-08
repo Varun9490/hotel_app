@@ -167,21 +167,21 @@
       </div>
       <div class="card-body text-center">
         {% if guest.details_qr_code %}
-          <img src="{{ guest.details_qr_code.url }}" alt="Guest QR Code" 
+          <img src="data:image/png;base64,{{ guest.details_qr_code }}" alt="Guest QR Code" 
                class="img-fluid border rounded mb-3" 
                style="max-width: 200px; cursor: pointer;"
-               onclick="showGuestQRModal('{{ guest.details_qr_code.url }}', '{{ guest.full_name }}', '{{ guest.id }}')">
+               onclick="showGuestQRModal('data:image/png;base64,{{ guest.details_qr_code }}', '{{ guest.full_name }}', '{{ guest.id }}', '{{ guest.phone|default:"" }}')">
           <div class="d-grid gap-2">
             <button type="button" class="btn btn-primary btn-sm" 
-                    onclick="showGuestQRModal('{{ guest.details_qr_code.url }}', '{{ guest.full_name }}', '{{ guest.id }}')">
+                    onclick="showGuestQRModal('data:image/png;base64,{{ guest.details_qr_code }}', '{{ guest.full_name }}', '{{ guest.id }}', '{{ guest.phone|default:"" }}')">
               <i class="bi bi-eye"></i> View QR Code
             </button>
-            <a href="{{ guest.details_qr_code.url }}" download="guest_qr_{{ guest.guest_id }}.png" 
+            <a href="data:image/png;base64,{{ guest.details_qr_code }}" download="guest_qr_{{ guest.guest_id }}.png" 
                class="btn btn-success btn-sm">
               <i class="bi bi-download"></i> Download
             </a>
             <button type="button" class="btn btn-outline-secondary btn-sm" 
-                    onclick="shareGuestQR('{{ guest.details_qr_code.url }}', '{{ guest.full_name }}')">
+                    onclick="shareGuestQR('data:image/png;base64,{{ guest.details_qr_code }}', '{{ guest.full_name }}', '{{ guest.phone|default:"" }}')">
               <i class="fab fa-whatsapp"></i> Share via WhatsApp
             </button>
           </div>
@@ -349,7 +349,7 @@
                 </div>
                 <div class="modal-body text-center">
                   <img
-                    src="{{ voucher.qr_image.url }}"
+                    src="data:image/png;base64,{{ voucher.qr_image }}"
                     alt="QR Code"
                     class="img-fluid border rounded"
                     style="max-width: 300px"
@@ -367,7 +367,7 @@
                     Close
                   </button>
                   <a
-                    href="{{ voucher.qr_image.url }}"
+                    href="data:image/png;base64,{{ voucher.qr_image }}"
                     download
                     class="btn btn-primary"
                   >
@@ -549,11 +549,12 @@
   // Guest QR Code functionality
   let currentGuestQRData = {};
   
-  function showGuestQRModal(qrUrl, guestName, guestId) {
+  function showGuestQRModal(qrUrl, guestName, guestId, guestPhone) {
     currentGuestQRData = {
       url: qrUrl,
       guestName: guestName,
-      guestId: guestId
+      guestId: guestId,
+      guestPhone: guestPhone || ''
     };
     
     document.getElementById('guestQRModalImage').src = qrUrl;
@@ -565,15 +566,76 @@
     modal.show();
   }
   
-  function shareGuestQR(qrUrl, guestName) {
-    const message = 'Here is the QR code for ' + guestName + '. Please scan this code to access your hotel services.';
-    const whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
-    window.open(whatsappUrl, '_blank');
+  function shareGuestQR(qrUrl, guestName, guestPhone) {
+    if (!guestPhone) {
+      alert('No phone number available for this guest. Please add a phone number to share via WhatsApp.');
+      return;
+    }
+    
+    // Get guest ID from current page
+    const guestId = '{{ guest.id }}';
+    
+    // Show loading state
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    btn.disabled = true;
+    
+    // Try WhatsApp Business API first
+    fetch(`/dashboard/guest-qr-codes/${guestId}/share-whatsapp/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('✅ ' + data.message);
+      } else {
+        // Fallback to wa.me URL with formatted message
+        console.log('WhatsApp API failed, trying fallback method...');
+        return fallbackWhatsAppShare(guestId);
+      }
+    })
+    .catch(error => {
+      console.error('WhatsApp API Error:', error);
+      // Fallback to wa.me URL
+      return fallbackWhatsAppShare(guestId);
+    })
+    .finally(() => {
+      // Restore button state
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+  }
+  
+  function fallbackWhatsAppShare(guestId) {
+    // Get formatted message from backend
+    fetch(`/dashboard/guest-qr-codes/${guestId}/whatsapp-message/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Open WhatsApp with formatted message
+        const waUrl = `https://wa.me/${data.phone}?text=${encodeURIComponent(data.message)}`;
+        window.open(waUrl, '_blank');
+        alert('📱 WhatsApp opened with guest details. The QR code image needs to be shared separately.');
+      } else {
+        alert('❌ Error: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Fallback Error:', error);
+      alert('❌ Failed to prepare WhatsApp message. Please try again.');
+    });
   }
   
   function shareCurrentGuestQR() {
     if (currentGuestQRData.url) {
-      shareGuestQR(currentGuestQRData.url, currentGuestQRData.guestName);
+      const guestPhone = '{{ guest.phone|default:"" }}';
+      shareGuestQR(currentGuestQRData.url, currentGuestQRData.guestName, guestPhone);
     }
   }
 </script>

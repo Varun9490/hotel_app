@@ -25,11 +25,13 @@
     
     .qr-image {
         width: 100%;
-        height: 200px;
+        height: 250px;  /* Increased from 200px */
         object-fit: contain;
         background: #f8f9fa;
-        padding: 10px;
+        padding: 15px;  /* Increased padding */
         cursor: pointer;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
     }
     
     .guest-info {
@@ -126,13 +128,15 @@
     }
     
     .no-qr-placeholder {
-        height: 200px;
+        height: 250px;  /* Increased to match qr-image height */
         background: linear-gradient(45deg, #f8f9fa, #e9ecef);
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
         color: #6c757d;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
     }
     
     .no-qr-placeholder i {
@@ -157,8 +161,12 @@
     
     .qr-modal-image {
         max-width: 100%;
-        max-height: 400px;
+        max-height: 500px;  /* Increased from 400px */
         object-fit: contain;
+        border: 3px solid #007bff;
+        border-radius: 12px;
+        background: white;
+        padding: 20px;
     }
     
     .whatsapp-btn {
@@ -255,8 +263,8 @@
                     <div class="qr-card h-100">
                         <!-- QR Code Image -->
                         {% if guest.details_qr_code %}
-                            <img src="{{ guest.details_qr_code.url }}" alt="QR Code for {{ guest.full_name }}" 
-                                 class="qr-image" onclick="showQRModal('{{ guest.details_qr_code.url }}', '{{ guest.full_name }}', '{{ guest.id }}')">
+                            <img src="data:image/png;base64,{{ guest.details_qr_code }}" alt="QR Code for {{ guest.full_name }}" 
+                                 class="qr-image" onclick="showQRModal('data:image/png;base64,{{ guest.details_qr_code }}', '{{ guest.full_name }}', '{{ guest.id }}', '{{ guest.phone|default:"" }}', '{{ guest.guest_id }}', '{{ guest.room_number|default:"" }}', '{{ guest.checkin_date|date:"M d, Y"|default:"" }}', '{{ guest.checkout_date|date:"M d, Y"|default:"" }}', '{{ guest.breakfast_included|yesno:"Included,Not Included" }}')">
                         {% else %}
                             <div class="no-qr-placeholder">
                                 <i class="fas fa-qrcode"></i>
@@ -302,10 +310,10 @@
                         <div class="card-actions">
                             {% if guest.details_qr_code %}
                                 <button type="button" class="btn btn-info btn-sm" 
-                                        onclick="showQRModal('{{ guest.details_qr_code.url }}', '{{ guest.full_name }}', '{{ guest.id }}')">
+                                        onclick="showQRModal('data:image/png;base64,{{ guest.details_qr_code }}', '{{ guest.full_name }}', '{{ guest.id }}', '{{ guest.phone|default:"" }}', '{{ guest.guest_id }}', '{{ guest.room_number|default:"" }}', '{{ guest.checkin_date|date:"M d, Y"|default:"" }}', '{{ guest.checkout_date|date:"M d, Y"|default:"" }}', '{{ guest.breakfast_included|yesno:"Included,Not Included" }}')">
                                     <i class="fas fa-eye me-1"></i>Show QR
                                 </button>
-                                <a href="{{ guest.details_qr_code.url }}" download="qr_{{ guest.guest_id }}.png" 
+                                <a href="data:image/png;base64,{{ guest.details_qr_code }}" download="qr_{{ guest.guest_id }}.png" 
                                    class="btn btn-success btn-sm">
                                     <i class="fas fa-download me-1"></i>Download
                                 </a>
@@ -338,10 +346,10 @@
                                     <div class="mb-3">
                                         <label for="qr_size{{ guest.id }}" class="form-label">QR Code Size</label>
                                         <select class="form-select" name="qr_size" id="qr_size{{ guest.id }}">
-                                            <option value="medium">Medium (Compact)</option>
-                                            <option value="large">Large (Recommended)</option>
-                                            <option value="xlarge" selected>Extra Large (Easy Scanning)</option>
-                                            <option value="xxlarge">XXL (Very Large)</option>
+                                            <option value="large">Large (Good for Tablets)</option>
+                                            <option value="xlarge" selected>Extra Large (Recommended)</option>
+                                            <option value="xxlarge">XXL (Best for Low-Res Cameras)</option>
+                                            <option value="xxxlarge">XXXL (Maximum Size)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -371,10 +379,10 @@
                                     <div class="mb-3">
                                         <label for="qr_size_gen{{ guest.id }}" class="form-label">QR Code Size</label>
                                         <select class="form-select" name="qr_size" id="qr_size_gen{{ guest.id }}">
-                                            <option value="medium">Medium (Compact)</option>
-                                            <option value="large">Large (Recommended)</option>
-                                            <option value="xlarge" selected>Extra Large (Easy Scanning)</option>
-                                            <option value="xxlarge">XXL (Very Large)</option>
+                                            <option value="large">Large (Good for Tablets)</option>
+                                            <option value="xlarge" selected>Extra Large (Recommended)</option>
+                                            <option value="xxlarge">XXL (Best for Low-Res Cameras)</option>
+                                            <option value="xxxlarge">XXXL (Maximum Size)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -442,11 +450,17 @@
     // QR Modal functionality
     let currentQRData = {};
     
-    function showQRModal(qrUrl, guestName, guestId) {
+    function showQRModal(qrUrl, guestName, guestId, guestPhone, guestIdCode, roomNumber, checkinDate, checkoutDate, breakfastStatus) {
         currentQRData = {
             url: qrUrl,
             guestName: guestName,
-            guestId: guestId
+            guestId: guestId,
+            guestPhone: guestPhone || '',
+            guestIdCode: guestIdCode || '',
+            roomNumber: roomNumber || 'Not assigned',
+            checkinDate: checkinDate || 'Not set',
+            checkoutDate: checkoutDate || 'Not set',
+            breakfastStatus: breakfastStatus || 'Not specified'
         };
         
         document.getElementById('qrModalImage').src = qrUrl;
@@ -461,9 +475,73 @@
     function shareOnWhatsApp() {
         if (!currentQRData.url) return;
         
-        const message = `Here is the QR code for ${currentQRData.guestName}. Please scan this code to access your hotel services.`;
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
+        const guestPhone = currentQRData.guestPhone;
+        if (!guestPhone) {
+            alert('No phone number available for this guest. Please add a phone number to share via WhatsApp.');
+            return;
+        }
+        
+        // Show loading state
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+        btn.disabled = true;
+        
+        // Try WhatsApp Business API first
+        fetch(`/dashboard/guest-qr-codes/${currentQRData.guestId}/share-whatsapp/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('qrDisplayModal'));
+                if (modal) modal.hide();
+            } else {
+                // Fallback to wa.me URL with formatted message
+                console.log('WhatsApp API failed, trying fallback method...');
+                return fallbackWhatsAppShare(currentQRData.guestId);
+            }
+        })
+        .catch(error => {
+            console.error('WhatsApp API Error:', error);
+            // Fallback to wa.me URL
+            return fallbackWhatsAppShare(currentQRData.guestId);
+        })
+        .finally(() => {
+            // Restore button state
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+    
+    function fallbackWhatsAppShare(guestId) {
+        // Get formatted message from backend
+        fetch(`/dashboard/guest-qr-codes/${guestId}/whatsapp-message/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Open WhatsApp with formatted message
+                const waUrl = `https://wa.me/${data.phone}?text=${encodeURIComponent(data.message)}`;
+                window.open(waUrl, '_blank');
+                alert('📱 WhatsApp opened with guest details. The QR code image needs to be shared separately.');
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('qrDisplayModal'));
+                if (modal) modal.hide();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fallback Error:', error);
+            alert('❌ Failed to prepare WhatsApp message. Please try again.');
+        });
     }
     // Auto-submit form on filter change
     document.getElementById('filter').addEventListener('change', function() {

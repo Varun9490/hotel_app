@@ -2,6 +2,10 @@ from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import date, datetime, timedelta
+from unittest.mock import patch
+from hotel_app.models import Voucher, Guest, VoucherScan
 
 User = get_user_model()
 
@@ -193,3 +197,107 @@ class HotelAPITests(APITestCase):
     def test_dashboard_reviews(self):
         response = self.client.get(reverse("dashboard-reviews"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # ===========================
+    # 10. Multi-day Voucher Scanning Test Case
+    # ===========================
+    def test_multi_day_voucher_scanning_scenario(self):
+        """Test the exact scenario from requirements:
+        Check-in: 6 September at 11:30 AM
+        Check-out: 8 September at 10:30 AM
+        Voucher Validity: 7 September (Day 1), 8 September (Day 2)
+        Rule: Guest can scan voucher once per day, expires after check-out
+        """
+        # Setup: Create guest with specific dates
+        guest = Guest.objects.create(
+            full_name="Test Guest",
+            room_number="101",
+            phone_number="+1234567890",
+            email="test@example.com",
+            check_in_date=date(2024, 9, 6),
+            check_out_date=date(2024, 9, 8)
+        )
+        
+        # Create voucher with multi-day validity
+        voucher = Voucher.objects.create(
+            guest=guest,
+            guest_name="Test Guest",
+            room_number="101",
+            check_in_date=date(2024, 9, 6),
+            check_out_date=date(2024, 9, 8),
+            valid_dates=["2024-09-07", "2024-09-08"],  # Day 1 and Day 2 breakfast
+            voucher_type='breakfast',
+            status='active'
+        )
+        
+        # Day 1 (Sept 7): First scan - should SUCCEED
+        with patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = timezone.make_aware(datetime(2024, 9, 7, 11, 30))
+            response = self.client.post('/api/vouchers/validate/', {
+                'voucher_code': voucher.voucher_code
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.data['valid'])
+            self.assertEqual(response.data['scan_result'], 'success')
+        
+        # Refresh voucher to see updated scan_history
+        voucher.refresh_from_db()
+        self.assertIn("2024-09-07", voucher.scan_history)
+        
+        # Day 1 (Sept 7): Second scan attempt - should FAIL (already used)
+        with patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = timezone.make_aware(datetime(2024, 9, 7, 15, 0))
+            response = self.client.post('/api/vouchers/validate/', {
+                'voucher_code': voucher.voucher_code
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertFalse(response.data['valid'])
+            self.assertEqual(response.data['scan_result'], 'already_redeemed')
+            self.assertEqual(response.data['error_code'], 'ALREADY_USED')
+        
+        # Day 2 (Sept 8): First scan - should SUCCEED
+        with patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = timezone.make_aware(datetime(2024, 9, 8, 8, 0))
+            response = self.client.post('/api/vouchers/validate/', {
+                'voucher_code': voucher.voucher_code
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.data['valid'])
+            self.assertEqual(response.data['scan_result'], 'success')
+        
+        # Refresh voucher to see updated scan_history
+        voucher.refresh_from_db()
+        self.assertIn("2024-09-08", voucher.scan_history)
+        self.assertTrue(voucher.redeemed)  # Should be fully redeemed now
+        
+        # Day 2 (Sept 8): Second scan attempt - should FAIL (already used)
+        with patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = timezone.make_aware(datetime(2024, 9, 8, 12, 0))
+            response = self.client.post('/api/vouchers/validate/', {
+                'voucher_code': voucher.voucher_code
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertFalse(response.data['valid'])
+            self.assertEqual(response.data['scan_result'], 'already_redeemed')
+            self.assertEqual(response.data['error_code'], 'ALREADY_USED')
+        
+        # Day 3 (Sept 9): After checkout - should FAIL (expired)
+        with patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = timezone.make_aware(datetime(2024, 9, 9, 9, 0))
+            response = self.client.post('/api/vouchers/validate/', {
+                'voucher_code': voucher.voucher_code
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertFalse(response.data['valid'])
+            self.assertEqual(response.data['scan_result'], 'expired')
+            self.assertEqual(response.data['error_code'], 'AFTER_CHECKOUT')
+        
+        # Verify scan history records
+        scans = VoucherScan.objects.filter(voucher=voucher)
+        self.assertEqual(scans.count(), 5)  # 2 successful + 3 failed attempts
+        
+        successful_scans = scans.filter(scan_result='success')
+        self.assertEqual(successful_scans.count(), 2)
+        
+        failed_scans = scans.filter(scan_result__in=['already_redeemed', 'expired'])
+        self.assertEqual(failed_scans.count(), 3)

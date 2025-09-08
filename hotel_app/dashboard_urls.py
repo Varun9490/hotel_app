@@ -57,4 +57,10 @@ urlpatterns = [
     # Guest QR Codes Management
     path('guest-qr-codes/', dashboard_views.guest_qr_codes, name='guest_qr_codes'),
     path('guest-qr-codes/<int:guest_id>/regenerate/', dashboard_views.regenerate_guest_qr, name='regenerate_guest_qr'),
+    path('guest-qr-codes/<int:guest_id>/share-whatsapp/', dashboard_views.share_guest_qr_whatsapp, name='share_guest_qr_whatsapp'),
+    path('guest-qr-codes/<int:guest_id>/whatsapp-message/', dashboard_views.get_guest_whatsapp_message, name='get_guest_whatsapp_message'),
+    
+    # Voucher QR Code Management
+    path('vouchers/<int:voucher_id>/regenerate-qr/', dashboard_views.regenerate_voucher_qr, name='regenerate_voucher_qr'),
+    path('vouchers/<int:voucher_id>/share-whatsapp/', dashboard_views.share_voucher_whatsapp, name='share_voucher_whatsapp'),
 ]

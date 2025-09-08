@@ -626,11 +626,96 @@ def voucher_detail(request, voucher_id):
     from hotel_app.models import Voucher
     voucher = get_object_or_404(Voucher, pk=voucher_id)
     scans = voucher.scans.all().order_by('-scanned_at')
+    
+    # Generate QR code if it doesn't exist
+    if not voucher.qr_image:
+        success = voucher.generate_qr_code(size='xxlarge')
+        if success:
+            messages.success(request, 'QR code generated successfully!')
+        else:
+            messages.error(request, 'Failed to generate QR code.')
+    
     return render(request, "dashboard/voucher_detail.html", {
         "voucher": voucher,
         "scans": scans,
         "title": f"Voucher: {voucher.voucher_code}"
     })
+
+
+@login_required
+def regenerate_voucher_qr(request, voucher_id):
+    """Regenerate QR code for a voucher"""
+    from hotel_app.models import Voucher
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    
+    if request.method == 'POST':
+        qr_size = request.POST.get('qr_size', 'xxlarge')
+        
+        # Generate new QR code
+        success = voucher.generate_qr_code(size=qr_size)
+        
+        if success:
+            messages.success(request, f'QR code regenerated successfully with size: {qr_size}!')
+        else:
+            messages.error(request, 'Failed to regenerate QR code.')
+    
+    return redirect('dashboard:voucher_detail', voucher_id=voucher.id)
+
+
+@login_required
+def share_voucher_whatsapp(request, voucher_id):
+    """Share voucher via WhatsApp"""
+    from hotel_app.models import Voucher
+    from django.http import JsonResponse
+    import json
+    
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    
+    if request.method == 'POST':
+        try:
+            # Check if guest has phone number
+            if not voucher.guest or not voucher.guest.phone:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No phone number available for this guest.'
+                })
+            
+            # Try WhatsApp Business API integration
+            # For now, we'll use the fallback method
+            from hotel_app.whatsapp_service import WhatsAppService
+            
+            try:
+                whatsapp_service = WhatsAppService()
+                result = whatsapp_service.send_voucher_message(voucher)
+                
+                if result.get('success'):
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Voucher shared via WhatsApp successfully!'
+                    })
+                else:
+                    # Fallback to wa.me URL
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'WhatsApp API unavailable, using fallback method.',
+                        'fallback': True
+                    })
+                    
+            except Exception as e:
+                # Fallback to wa.me URL
+                return JsonResponse({
+                    'success': False,
+                    'error': f'WhatsApp service error: {str(e)}',
+                    'fallback': True
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error sharing voucher: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
 
 
 # ---- Missing Dashboard Views ----
@@ -945,3 +1030,93 @@ def regenerate_guest_qr(request, guest_id):
             messages.error(request, f"Error regenerating QR code: {str(e)}")
     
     return redirect('dashboard:guest_qr_codes')
+
+
+@login_required
+def share_guest_qr_whatsapp(request, guest_id):
+    """Share guest QR code via WhatsApp"""
+    from hotel_app.models import Guest
+    from hotel_app.whatsapp_service import whatsapp_service
+    from django.http import JsonResponse
+    
+    guest = get_object_or_404(Guest, pk=guest_id)
+    
+    if request.method == "POST":
+        try:
+            # Use the guest's phone number
+            phone = guest.phone
+            if not phone:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No phone number available for this guest. Please add a phone number first.'
+                })
+            
+            # Send QR code and details via WhatsApp
+            success = whatsapp_service.send_guest_qr(guest)
+            
+            if success:
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Guest QR code and details sent successfully to {phone}!'
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Failed to send WhatsApp message. Please try again.'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error sending WhatsApp message: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def get_guest_whatsapp_message(request, guest_id):
+    """Get formatted WhatsApp message for guest QR sharing (fallback option)"""
+    from hotel_app.models import Guest
+    
+    guest = get_object_or_404(Guest, pk=guest_id)
+    
+    if not guest.phone:
+        return JsonResponse({
+            'success': False,
+            'error': 'No phone number available for this guest.'
+        })
+    
+    # Clean and format phone number
+    phone = guest.phone.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+    if not phone.startswith('+'):
+        phone = '+91' + phone  # Assuming Indian numbers
+    
+    # Create formatted message
+    message = f"🏨 Hotel Guest Details\n\n"
+    message += f"👤 Guest: {guest.full_name}\n"
+    message += f"📱 Phone: {guest.phone}\n"
+    message += f"🆔 Guest ID: {guest.guest_id}\n"
+    message += f"🏠 Room: {guest.room_number or 'Not assigned'}\n"
+    
+    if guest.checkin_date:
+        message += f"📅 Check-in: {guest.checkin_date.strftime('%b %d, %Y')}\n"
+    if guest.checkout_date:
+        message += f"📅 Check-out: {guest.checkout_date.strftime('%b %d, %Y')}\n"
+    
+    message += f"🍳 Breakfast: {'Included' if guest.breakfast_included else 'Not Included'}\n\n"
+    message += "📱 Please scan the QR code to access your hotel services.\n\n"
+    message += "Thank you for choosing our hotel! 🌟"
+    
+    # Get QR code URL if available
+    qr_url = ""
+    if guest.details_qr_code:
+        qr_url = f"data:image/png;base64,{guest.details_qr_code}"
+    
+    return JsonResponse({
+        'success': True,
+        'phone': phone,
+        'message': message,
+        'qr_url': qr_url,
+        'wa_me_url': f"https://wa.me/{phone}?text={message}"
+    })

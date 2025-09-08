@@ -208,11 +208,11 @@ class GuestForm(forms.ModelForm):
                 try:
                     # Get the selected QR code size
                     qr_size = self.cleaned_data.get('qr_code_size', 'xlarge')
-                    from .utils import generate_guest_details_qr_code, generate_guest_details_qr_data
+                    from .utils import generate_guest_details_qr_base64, generate_guest_details_qr_data
                     
-                    # Generate QR data and image with specified size
+                    # Generate QR data and base64 image with specified size
                     guest.details_qr_data = generate_guest_details_qr_data(guest)
-                    guest.details_qr_code = generate_guest_details_qr_code(guest, size=qr_size)
+                    guest.details_qr_code = generate_guest_details_qr_base64(guest, size=qr_size)
                     guest.save(update_fields=['details_qr_data', 'details_qr_code'])
                 except Exception as e:
                     # Log error but don't fail guest creation
@@ -274,11 +274,11 @@ class VoucherForm(forms.ModelForm):
         voucher = super().save(commit=commit)
         
         if commit and self.cleaned_data.get('generate_qr'):
-            from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+            from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
             
             # Generate QR code
             voucher.qr_data = generate_voucher_qr_data(voucher)
-            voucher.qr_image = generate_voucher_qr_code(voucher)
+            voucher.qr_image = generate_voucher_qr_base64(voucher)
             voucher.save()
         
         return voucher

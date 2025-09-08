@@ -201,90 +201,126 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  class VoucherDashboard {
-    constructor() {
-      this.charts = {};
-      this.init();
-    }
-
-    init() {
-      this.initializeCharts();
-      this.setupEventListeners();
-      this.populateCharts();
-    }
-
-    initializeCharts() {
-      const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } },
-      };
-
-      this.charts.types = new Chart(
-        document.getElementById("voucherTypesChart").getContext("2d"),
-        {
-          type: "doughnut",
-          data: { labels: [], datasets: [{ data: [], backgroundColor: ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"] }] },
-          options: commonOptions,
+    class VoucherDashboard {
+        constructor() {
+            this.charts = {};
+            this.init();
         }
-      );
 
-      this.charts.hours = new Chart(
-        document.getElementById("redemptionHoursChart").getContext("2d"),
-        {
-          type: "bar",
-          data: { labels: [], datasets: [{ label: "Redemptions", data: [], backgroundColor: "#3B82F6" }] },
-          options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        init() {
+            this.initializeCharts();
+            this.setupEventListeners();
+            this.populateCharts();
         }
-      );
+
+        initializeCharts() {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: "bottom" } }
+            };
+
+            this.charts.types = new Chart(document.getElementById("voucherTypesChart"), {
+                type: "doughnut",
+                data: { 
+                    labels: [], 
+                    datasets: [{ 
+                        data: [], 
+                        backgroundColor: ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1"] 
+                    }] 
+                },
+                options: commonOptions
+            });
+
+            this.charts.hours = new Chart(document.getElementById("redemptionHoursChart"), {
+                type: "bar",
+                data: { 
+                    labels: [], 
+                    datasets: [{ 
+                        label: "Redemptions", 
+                        data: [], 
+                        backgroundColor: "#0d6efd" 
+                    }] 
+                },
+                options: { 
+                    ...commonOptions, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { y: { beginAtZero: true } } 
+                }
+            });
+        }
+
+        populateCharts() {
+            const analyticsData = JSON.parse('{{ analytics_json|escapejs }}');
+
+            if (analyticsData.vouchers_by_type) {
+                this.charts.types.data.labels = Object.keys(analyticsData.vouchers_by_type);
+                this.charts.types.data.datasets[0].data = Object.values(analyticsData.vouchers_by_type);
+                this.charts.types.update();
+            }
+
+            if (Array.isArray(analyticsData.peak_hours)) {
+                const sortedHours = analyticsData.peak_hours.sort((a, b) => a.hour - b.hour);
+                this.charts.hours.data.labels = sortedHours.map(item => `${String(item.hour).padStart(2, "0")}:00`);
+                this.charts.hours.data.datasets[0].data = sortedHours.map(item => item.count);
+                this.charts.hours.update();
+            }
+        }
+
+        setupEventListeners() {
+            document.getElementById("refreshData").addEventListener("click", () => {
+                window.Toast.show({
+                    title: 'Refreshing Data',
+                    message: 'Updating analytics data...',
+                    type: 'info'
+                });
+                window.location.reload();
+            });
+            
+            document.getElementById("exportData").addEventListener("click", () => this.exportToCSV());
+            
+            ["typeFilter", "statusFilter", "fromDate", "toDate"].forEach(id => {
+                document.getElementById(id).addEventListener("change", () => {
+                    window.Toast.show({
+                        title: 'Filter Applied',
+                        message: 'Filtering voucher data...',
+                        type: 'info'
+                    });
+                });
+            });
+        }
+
+        exportToCSV() {
+            const rows = [];
+            const headers = ["Code", "Guest", "Room", "Type", "Status", "Valid Until", "Created"];
+            rows.push(headers);
+            
+            document.querySelectorAll("#vouchersTableBody tr").forEach(tr => {
+                const row = [...tr.querySelectorAll("td")].slice(0, 7).map(td => td.innerText.trim());
+                if (row.length) rows.push(row);
+            });
+
+            const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", "vouchers.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            window.Toast.show({
+                title: 'Export Complete',
+                message: 'Voucher data exported to CSV',
+                type: 'success'
+            });
+        }
     }
 
-    populateCharts() {
-      const analyticsData = JSON.parse('{{ analytics_json|escapejs }}');  // ✅ FIXED
-
-      if (analyticsData.vouchers_by_type) {
-        this.charts.types.data.labels = Object.keys(analyticsData.vouchers_by_type);
-        this.charts.types.data.datasets[0].data = Object.values(analyticsData.vouchers_by_type);
-        this.charts.types.update();
-      }
-
-      if (Array.isArray(analyticsData.peak_hours)) {
-        const sortedHours = analyticsData.peak_hours.sort((a, b) => a.hour - b.hour);
-        this.charts.hours.data.labels = sortedHours.map(item => `${String(item.hour).padStart(2, "0")}:00`);
-        this.charts.hours.data.datasets[0].data = sortedHours.map(item => item.count);
-        this.charts.hours.update();
-      }
-    }
-
-    setupEventListeners() {
-      document.getElementById("refreshData").addEventListener("click", () => window.location.reload());
-      document.getElementById("exportData").addEventListener("click", () => this.exportToCSV());
-      ["typeFilter", "statusFilter", "fromDate", "toDate"].forEach(id => {
-        document.getElementById(id).addEventListener("change", () => console.log("Filter changed:", id));
-      });
-    }
-
-    exportToCSV() {
-      const rows = [];
-      const headers = ["Code", "Guest", "Room", "Type", "Status", "Valid Until", "Created"];
-      rows.push(headers);
-      document.querySelectorAll("#vouchersTableBody tr").forEach(tr => {
-        const row = [...tr.querySelectorAll("td")].map(td => td.innerText.trim());
-        if (row.length) rows.push(row);
-      });
-
-      let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-      const link = document.createElement("a");
-      link.setAttribute("href", encodeURI(csvContent));
-      link.setAttribute("download", "vouchers.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", () => new VoucherDashboard());
+    document.addEventListener("DOMContentLoaded", () => new VoucherDashboard());
 </script>
 {% endblock %}

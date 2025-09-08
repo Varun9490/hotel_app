@@ -335,17 +335,17 @@ class VoucherViewSet(viewsets.ModelViewSet):
         """Regenerate QR code for voucher"""
         voucher = self.get_object()
         
-        from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+        from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
         
         # Generate new QR code
         voucher.qr_data = generate_voucher_qr_data(voucher)
-        voucher.qr_image = generate_voucher_qr_code(voucher)
+        voucher.qr_image = generate_voucher_qr_base64(voucher)
         voucher.save()
         
         return Response({
             'success': True,
             'message': 'QR code regenerated successfully',
-            'qr_image_url': request.build_absolute_uri(voucher.qr_image.url) if voucher.qr_image else None
+            'qr_image_url': f"data:image/png;base64,{voucher.qr_image}" if voucher.qr_image else None
         })
     
     @action(detail=False, methods=['get'])

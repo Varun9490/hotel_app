@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 import base64
+import qrcode
+from qrcode.constants import ERROR_CORRECT_M, ERROR_CORRECT_L
 
 def generate_qr_code(data: str, box_size: int = 10, border: int = 5, fill_color: str = "black", back_color: str = "white"):
     """Generate basic QR code"""
@@ -54,18 +56,18 @@ def generate_voucher_qr_data(voucher):
     return json.dumps(qr_data)
 
 
-def generate_voucher_qr_code(voucher, size='large'):
+def generate_voucher_qr_code(voucher, size='xlarge'):
     """Generate QR code specifically for vouchers with enhanced security and optimized scanning"""
     
-    # Size configurations - larger pixels for better camera scanning
+    # Size configurations - much larger pixels for better camera scanning and visibility
     size_configs = {
-        'small': {'box_size': 12, 'border': 4},
-        'medium': {'box_size': 16, 'border': 5},
-        'large': {'box_size': 20, 'border': 6},
-        'xlarge': {'box_size': 25, 'border': 7},
+        'small': {'box_size': 20, 'border': 4},    # Minimum readable size
+        'medium': {'box_size': 25, 'border': 5},   # Good for close scanning
+        'large': {'box_size': 30, 'border': 6},    # Optimal balance
+        'xxlarge': {'box_size': 40, 'border': 8},  # Maximum size for displays
     }
     
-    config = size_configs.get(size, size_configs['large'])
+    config = size_configs.get(size, size_configs['xlarge'])  # Default to xlarge for best visibility
     
     # Generate secure QR data
     qr_data = generate_voucher_qr_data(voucher)
@@ -236,18 +238,19 @@ def generate_guest_details_qr_data(guest):
     return json.dumps(qr_data, indent=2)
 
 
-def generate_guest_details_qr_code(guest, size='xlarge'):
+def generate_guest_details_qr_code(guest, size='xxlarge'):
     """Generate QR code with all guest details - optimized for camera scanning"""
     
     # Size configurations for guest details (much larger for better camera scanning)
     size_configs = {
-        'medium': {'box_size': 15, 'border': 4},
-        'large': {'box_size': 20, 'border': 5},
-        'xlarge': {'box_size': 25, 'border': 6},  # Much larger pixels for easy scanning
-        'xxlarge': {'box_size': 30, 'border': 8},  # Extra large for difficult cameras
+        'medium': {'box_size': 20, 'border': 4},    # Good for close scanning
+        'large': {'box_size': 25, 'border': 5},     # Better visibility
+        'xlarge': {'box_size': 30, 'border': 6},    # Much larger pixels for easy scanning
+        'xxlarge': {'box_size': 35, 'border': 8},   # Extra large for difficult cameras
+        'xxxlarge': {'box_size': 40, 'border': 10}, # Maximum size for displays
     }
     
-    config = size_configs.get(size, size_configs['xlarge'])
+    config = size_configs.get(size, size_configs['xxlarge'])  # Default to xxlarge for best visibility
     
     # Generate comprehensive QR data
     qr_data = generate_guest_details_qr_data(guest)
@@ -278,7 +281,100 @@ def generate_guest_details_qr_code(guest, size='xlarge'):
     filename = f"guest_{guest.guest_id}_{guest.full_name.replace(' ', '_') if guest.full_name else 'details'}.png"
     
     return ContentFile(image_value, name=filename)
-    """Auto-generate voucher when guest checks in with breakfast included"""
+
+
+def generate_guest_details_qr_base64(guest, size='xxlarge'):
+    """Generate QR code with all guest details and return as base64 string"""
+    import base64
+    
+    # Size configurations for guest details (much larger for better camera scanning)
+    size_configs = {
+        'medium': {'box_size': 20, 'border': 4},    # Good for close scanning
+        'large': {'box_size': 25, 'border': 5},     # Better visibility
+        'xlarge': {'box_size': 30, 'border': 6},    # Much larger pixels for easy scanning
+        'xxlarge': {'box_size': 35, 'border': 8},   # Extra large for difficult cameras
+        'xxxlarge': {'box_size': 40, 'border': 10}, # Maximum size for displays
+    }
+    
+    config = size_configs.get(size, size_configs['xxlarge'])  # Default to xxlarge for best visibility
+    
+    # Generate comprehensive QR data
+    qr_data = generate_guest_details_qr_data(guest)
+    
+    # Create QR code with medium error correction (balance between size and reliability)
+    qr = qrcode.QRCode(
+        version=None,  # Auto-determine version
+        error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction for better scanning
+        box_size=config['box_size'],
+        border=config['border'],
+    )
+    
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    
+    # Create image with high contrast colors for better scanning
+    img = qr.make_image(
+        fill_color="#000000",  # Pure black for better contrast
+        back_color="#FFFFFF"   # Pure white background
+    )
+    
+    # Save to buffer and convert to base64
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    image_value = buffer.getvalue()
+    
+    # Convert to base64 string
+    base64_string = base64.b64encode(image_value).decode('utf-8')
+    
+    return base64_string
+
+
+def generate_voucher_qr_base64(voucher, size='xlarge'):
+    """Generate QR code specifically for vouchers and return as base64 string"""
+    
+    # Size configurations - much larger pixels for better camera scanning and visibility
+    size_configs = {
+        'small': {'box_size': 20, 'border': 4},    # Minimum readable size
+        'medium': {'box_size': 25, 'border': 5},   # Good for close scanning
+        'large': {'box_size': 30, 'border': 6},    # Optimal balance
+        'xlarge': {'box_size': 35, 'border': 7},   # Large and very visible
+        'xxlarge': {'box_size': 40, 'border': 8},  # Maximum size for displays
+    }
+    
+    config = size_configs.get(size, size_configs['xlarge'])  # Default to xlarge for best visibility
+    
+    # Generate secure QR data
+    qr_data = generate_voucher_qr_data(voucher)
+    
+    # Create QR code with medium error correction for vouchers
+    qr = qrcode.QRCode(
+        version=None,  # Auto-determine version
+        error_correction=qrcode.constants.ERROR_CORRECT_M,  # Medium error correction for balance
+        box_size=config['box_size'],
+        border=config['border'],
+    )
+    
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    
+    # Create image with high contrast for better scanning
+    img = qr.make_image(
+        fill_color="#000000",  # Pure black for better contrast
+        back_color="#FFFFFF"   # Pure white background
+    )
+    
+    # Save to buffer and convert to base64
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    image_value = buffer.getvalue()
+    
+    # Convert to base64 string
+    base64_string = base64.b64encode(image_value).decode('utf-8')
+    
+    return base64_string
+
+
+def auto_generate_breakfast_voucher(guest):
     if not guest.breakfast_included:
         return None
         
@@ -308,7 +404,7 @@ def generate_guest_details_qr_code(guest, size='xlarge'):
         
         # Generate QR code
         voucher.qr_data = generate_voucher_qr_data(voucher)
-        voucher.qr_image = generate_voucher_qr_code(voucher)
+        voucher.qr_image = generate_voucher_qr_base64(voucher)
         voucher.save()
         
         return voucher

@@ -20,8 +20,129 @@ class WhatsAppService:
         self.access_token = getattr(settings, 'WHATSAPP_ACCESS_TOKEN', 'mock_token')
         self.phone_number_id = getattr(settings, 'WHATSAPP_PHONE_NUMBER_ID', 'mock_phone_id')
     
+    def send_guest_qr(self, guest, recipient_phone=None):
+        """Send guest QR code with details via WhatsApp"""
+        try:
+            # Use guest's phone if no recipient specified
+            phone = recipient_phone or guest.phone
+            if not phone:
+                logger.error(f"No phone number available for guest {guest.guest_id}")
+                return False
+            
+            # Create guest details message
+            message = self._create_guest_details_message(guest)
+            
+            # Send image first if QR code exists
+            if guest.details_qr_code:
+                image_response = self._send_image_message(phone, guest.details_qr_code, guest)
+                if not image_response.get('success'):
+                    logger.warning(f"Failed to send QR image to {phone}, sending text only")
+            
+            # Send text message with details
+            text_response = self._send_text_message(phone, message)
+            
+            if text_response.get('success'):
+                logger.info(f"Guest QR details sent successfully to {phone} for guest {guest.guest_id}")
+                return True
+            else:
+                logger.error(f"Failed to send guest QR details: {text_response.get('error')}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"WhatsApp guest QR service error: {str(e)}")
+            return False
+    
+    def _create_guest_details_message(self, guest):
+        """Create formatted guest details message"""
+        message = "🏨 Hotel Guest Details\n\n"
+        message += f"👤 Guest: {guest.full_name}\n"
+        message += f"📱 Phone: {guest.phone or 'Not provided'}\n"
+        message += f"🆔 Guest ID: {guest.guest_id}\n"
+        message += f"🏠 Room: {guest.room_number or 'Not assigned'}\n"
+        
+        if guest.checkin_date:
+            message += f"📅 Check-in: {guest.checkin_date.strftime('%b %d, %Y')}\n"
+        if guest.checkout_date:
+            message += f"📅 Check-out: {guest.checkout_date.strftime('%b %d, %Y')}\n"
+        
+        message += f"🍳 Breakfast: {'Included' if guest.breakfast_included else 'Not Included'}\n\n"
+        message += "📱 Please scan the QR code above to access your hotel services.\n\n"
+        message += "Thank you for choosing our hotel! 🌟"
+        
+        return message
+    
+    def _send_image_message(self, phone, qr_base64_data, guest):
+        """Send QR code image via WhatsApp Business API"""
+        if not qr_base64_data:
+            return {'success': False, 'error': 'No QR image available'}
+        
+        # Format phone number
+        if not phone.startswith('+'):
+            phone = '+91' + phone.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        
+        # In production, you would first upload the base64 image to WhatsApp Media API
+        # and get a media_id, then send it
+        url = f"{self.api_url}/{self.phone_number_id}/messages"
+        
+        # For now, return mock success - implement actual media upload in production
+        return self._mock_send_image(phone, qr_base64_data, guest)
+    
+    def _send_text_message(self, phone, message):
+        """Send text message via WhatsApp"""
+        # Format phone number
+        if not phone.startswith('+'):
+            phone = '+91' + phone.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        
+        url = f"{self.api_url}/{self.phone_number_id}/messages"
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "text",
+            "text": {
+                "body": message
+            }
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            # In production environment
+            if self.access_token != 'mock_token':
+                response = requests.post(url, json=payload, headers=headers)
+                return response.json()
+            else:
+                # Mock response for development
+                return self._mock_send_text(phone, message)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def _mock_send_image(self, phone, qr_base64_data, guest):
+        """Mock image sending for development"""
+        import uuid
+        logger.info(f"MOCK: Sending QR image for guest {guest.guest_id} to {phone} (Base64 data: {len(qr_base64_data) if qr_base64_data else 0} chars)")
+        return {
+            'success': True,
+            'message_id': str(uuid.uuid4()),
+            'type': 'image',
+            'phone': phone
+        }
+    
+    def _mock_send_text(self, phone, message):
+        """Mock text sending for development"""
+        import uuid
+        logger.info(f"MOCK: Sending text message to {phone}: {message[:50]}...")
+        return {
+            'success': True,
+            'message_id': str(uuid.uuid4()),
+            'type': 'text',
+            'phone': phone
+        }
+    
     def send_voucher(self, voucher, recipient_phone):
-        """Send voucher via WhatsApp"""
         try:
             # In production, replace with actual WhatsApp API call
             message = create_whatsapp_voucher_message(voucher)

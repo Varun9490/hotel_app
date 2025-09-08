@@ -155,10 +155,8 @@ class VoucherSerializer(serializers.ModelSerializer):
     
     def get_qr_image_url(self, obj):
         if obj.qr_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.qr_image.url)
-            return obj.qr_image.url
+            # Return data URL for base64 QR codes
+            return f"data:image/png;base64,{obj.qr_image}"
         return None
     
     def get_remaining_valid_dates(self, obj):
@@ -236,9 +234,9 @@ class VoucherCreateSerializer(serializers.ModelSerializer):
         
         # Generate QR code if requested
         if generate_qr:
-            from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+            from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
             voucher.qr_data = generate_voucher_qr_data(voucher)
-            voucher.qr_image = generate_voucher_qr_code(voucher)
+            voucher.qr_image = generate_voucher_qr_base64(voucher)
             voucher.save()
         
         # TODO: Send WhatsApp message if requested
@@ -285,7 +283,7 @@ class GuestCreateSerializer(serializers.ModelSerializer):
             # Generate QR code
             try:
                 voucher.qr_data = generate_voucher_qr_data(voucher)
-                voucher.qr_image = generate_voucher_qr_code(voucher)
+                voucher.qr_image = generate_voucher_qr_base64(voucher)
                 voucher.save()
             except Exception as e:
                 # Log error but don't fail guest creation

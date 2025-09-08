@@ -259,8 +259,8 @@ class Guest(models.Model):
     checkin_datetime = models.DateTimeField(blank=True, null=True, verbose_name="Check-in Date & Time")
     checkout_datetime = models.DateTimeField(blank=True, null=True, verbose_name="Check-out Date & Time")
     
-    # Guest Details QR Code
-    details_qr_code = models.ImageField(upload_to="guests/qr/", blank=True, null=True, verbose_name="Guest Details QR Code")
+    # Guest Details QR Code - stored as base64 in database
+    details_qr_code = models.TextField(blank=True, null=True, verbose_name="Guest Details QR Code (Base64)")
     details_qr_data = models.TextField(blank=True, null=True, verbose_name="Guest Details QR Data")
     
     breakfast_included = models.BooleanField(default=False)
@@ -318,13 +318,13 @@ class Guest(models.Model):
         super().save(*args, **kwargs)
     
     def generate_details_qr_code(self, size='xlarge'):
-        """Generate QR code with all guest details"""
-        from .utils import generate_guest_details_qr_code, generate_guest_details_qr_data
+        """Generate QR code with all guest details and store as base64"""
+        from .utils import generate_guest_details_qr_base64, generate_guest_details_qr_data
         
         try:
-            # Generate QR data and image
+            # Generate QR data and base64 image
             self.details_qr_data = generate_guest_details_qr_data(self)
-            self.details_qr_code = generate_guest_details_qr_code(self, size=size)
+            self.details_qr_code = generate_guest_details_qr_base64(self, size=size)
             self.save(update_fields=['details_qr_data', 'details_qr_code'])
             return True
         except Exception as e:
@@ -333,13 +333,15 @@ class Guest(models.Model):
             logger.error(f'Failed to generate guest details QR code for {self.guest_id}: {str(e)}')
             return False
     
-    def get_details_qr_url(self, request=None):
-        """Get URL for guest details QR code"""
+    def get_details_qr_data_url(self):
+        """Get data URL for guest details QR code"""
         if self.details_qr_code:
-            if request:
-                return request.build_absolute_uri(self.details_qr_code.url)
-            return self.details_qr_code.url
+            return f"data:image/png;base64,{self.details_qr_code}"
         return None
+    
+    def has_qr_code(self):
+        """Check if guest has a QR code"""
+        return bool(self.details_qr_code)
 
 
 class GuestComment(models.Model):
@@ -466,8 +468,8 @@ class Voucher(models.Model):
     valid_to = models.DateField(null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     
-    # QR Code Storage
-    qr_image = models.ImageField(upload_to="vouchers/qr/", blank=True, null=True)
+    # QR Code Storage - base64 in database
+    qr_image = models.TextField(blank=True, null=True, verbose_name="Voucher QR Code (Base64)")
     qr_data = models.TextField(blank=True, null=True)  # Store QR data for validation
     
     # Status Tracking
@@ -615,6 +617,32 @@ class Voucher(models.Model):
     
     def __str__(self):
         return f'{self.voucher_type.title()} Voucher {self.voucher_code} - {self.guest_name}'
+    
+    def generate_qr_code(self, size='xxlarge'):
+        """Generate QR code for voucher and store as base64 - now using larger size for better camera scanning"""
+        from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
+        
+        try:
+            # Generate QR data and base64 image with larger default size
+            self.qr_data = generate_voucher_qr_data(self)
+            self.qr_image = generate_voucher_qr_base64(self, size=size)
+            self.save(update_fields=['qr_data', 'qr_image'])
+            return True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Failed to generate voucher QR code for {self.voucher_code}: {str(e)}')
+            return False
+    
+    def get_qr_data_url(self):
+        """Get data URL for voucher QR code"""
+        if self.qr_image:
+            return f"data:image/png;base64,{self.qr_image}"
+        return None
+    
+    def has_qr_code(self):
+        """Check if voucher has a QR code"""
+        return bool(self.qr_image)
 
 
 class VoucherScan(models.Model):
