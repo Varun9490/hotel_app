@@ -13,37 +13,12 @@
       body {
         overflow-x: hidden;
       }
-      #sidebar {
-        min-width: 220px;
-        max-width: 220px;
-        min-height: 100vh;
-        background: #f8f9fa;
-        transition: margin-left 0.3s ease;
-      }
-      #sidebar.collapsed {
-        margin-left: -220px;
-      }
-      #content {
-        transition: margin-left 0.3s ease;
-        margin-left: 220px;
-        width: 100%;
-      }
-      #content.full {
-        margin-left: 0;
-      }
     </style>
   </head>
   <body class="bg-light">
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg bg-white border-bottom">
       <div class="container-fluid">
-        <button
-          id="sidebarToggle"
-          class="btn btn-outline-secondary me-2"
-          type="button"
-        >
-          ☰
-        </button>
         <a class="navbar-brand" href="/">Hotel Suite</a>
 
         <div class="collapse navbar-collapse">
@@ -69,72 +44,19 @@
       </div>
     </nav>
 
-    <div class="d-flex">
-      <!-- Sidebar -->
-      <div id="sidebar" class="border-end">
-        <ul class="nav flex-column p-3">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'dashboard:main' %}">
-              📊 Dashboard
-            </a>
-          </li>
-          {% if request.user.is_authenticated and is_admin %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'master_user' %}">
-              👥 Master - User
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'master_location' %}">
-              📍 Master - Location
-            </a>
-          </li>
-          {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'hotel_dashboard' %}">
-              🏨 Hotel Dashboard
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'breakfast_vouchers' %}">
-              🍳 Breakfast Vouchers
-            </a>
-          </li>
-
-          <!-- ✅ New QR Code Features -->
-          <li class="nav-item mt-3 fw-bold text-muted">
-            🎟️ Voucher Management
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'issue_voucher' guest_id=1 %}">
-              ➕ Issue Voucher
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'scan_voucher_page' %}"
-              >📷 Scan Voucher</a
-            >
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'voucher_report' %}">
-              📑 Voucher Report
-            </a>
-          </li>
-        </ul>
+    <!-- Main Content -->
+    <div
+      id="content"
+      class="p-4 d-flex justify-content-center align-items-start"
+    >
+      <div
+        class="container bg-white p-4 shadow-sm rounded"
+        style="max-width: 900px;"
+      >
+        {% block content %}{% endblock %}
       </div>
-
-      <!-- Main Content -->
-      <div id="content" class="p-4">{% block content %}{% endblock %}</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      document
-        .getElementById("sidebarToggle")
-        .addEventListener("click", function () {
-          document.getElementById("sidebar").classList.toggle("collapsed");
-          document.getElementById("content").classList.toggle("full");
-        });
-    </script>
   </body>
 </html>

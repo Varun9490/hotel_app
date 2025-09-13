@@ -10,6 +10,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    {% load group_filters %}
+    
     {% block extra_css %}{% endblock %}
     
     <style>
@@ -442,12 +444,14 @@
                         <span class="nav-text">Guests</span>
                     </a>
                 </div>
+                {% if user|has_permission:"Admins,Staff" %}
                 <div class="nav-item">
                     <a href="{% url 'dashboard:register_guest' %}" class="nav-link {% if request.resolver_match.url_name == 'register_guest' %}active{% endif %}">
                         <div class="nav-icon"><i class="fas fa-user-plus"></i></div>
                         <span class="nav-text">Register Guest</span>
                     </a>
                 </div>
+                {% endif %}
                 <div class="nav-item">
                     <a href="{% url 'dashboard:guest_qr_codes' %}" class="nav-link {% if request.resolver_match.url_name == 'guest_qr_codes' %}active{% endif %}">
                         <div class="nav-icon"><i class="fas fa-qrcode"></i></div>
@@ -465,18 +469,14 @@
                         <span class="nav-text">All Vouchers</span>
                     </a>
                 </div>
+                {% if user|has_permission:"Admins,Staff" %}
                 <div class="nav-item">
                     <a href="{% url 'dashboard:scan_voucher' %}" class="nav-link {% if request.resolver_match.url_name == 'scan_voucher' %}active{% endif %}">
                         <div class="nav-icon"><i class="fas fa-camera"></i></div>
                         <span class="nav-text">Scan Voucher</span>
                     </a>
                 </div>
-                <div class="nav-item">
-                    <a href="{% url 'dashboard:breakfast_vouchers' %}" class="nav-link {% if request.resolver_match.url_name == 'breakfast_vouchers' %}active{% endif %}">
-                        <div class="nav-icon"><i class="fas fa-utensils"></i></div>
-                        <span class="nav-text">Breakfast Vouchers</span>
-                    </a>
-                </div>
+                {% endif %}
             </div>
             
             <!-- Operations -->
@@ -502,7 +502,8 @@
                 </div>
             </div>
             
-            <!-- Settings -->
+            <!-- Settings (Admin Only) -->
+            {% if user|has_permission:"Admins" %}
             <div class="nav-section">
                 <div class="nav-section-title">Administration</div>
                 <div class="nav-item">
@@ -536,6 +537,7 @@
                     </a>
                 </div>
             </div>
+            {% endif %}
         </nav>
     </div>
     

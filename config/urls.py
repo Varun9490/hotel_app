@@ -5,10 +5,11 @@ from django.contrib.auth import views as auth_views
 from hotel_app.views import logout_view  # custom logout view
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.HomeView.as_view(), name='home'),
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
 
     # Voucher management
     path("vouchers/validate/", views.validate_voucher, name="validate_voucher"),

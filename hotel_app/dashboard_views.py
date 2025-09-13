@@ -1,28 +1,70 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User, Group
-from django.db.models import Count, Avg
-from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Count, Avg, Q
+from django.db.models.functions import TruncHour
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+from django.http import JsonResponse
+from django.db import connection
+
+# Import all models from hotel_app
 from hotel_app.models import (
     Department, Location, RequestType, Checklist,
-    Complaint, BreakfastVoucher, Review, Guest
+    Complaint, BreakfastVoucher, Review, Guest,
+    Voucher, VoucherScan
 )
+
+# Import all forms from the local forms.py
 from .forms import (
     UserForm, DepartmentForm, GroupForm, LocationForm,
     RequestTypeForm, ChecklistForm, ComplaintForm,
-    BreakfastVoucherForm, ReviewForm
+    BreakfastVoucherForm, ReviewForm, VoucherForm
 )
 
+# Import local utils and services
+from .utils import user_in_group
+from hotel_app.whatsapp_service import WhatsAppService
 
-# ---- Helpers ----
-def is_superuser(user):
-    return user.is_superuser
+
+# ---- Constants ----
+ADMINS_GROUP = 'Admins'
+STAFF_GROUP = 'Staff'
+USERS_GROUP = 'Users'
+
+
+# ---- Helper Functions ----
+def is_admin(user):
+    """Check if a user is an admin or superuser."""
+    return user.is_superuser or user_in_group(user, ADMINS_GROUP)
+
+def is_staff(user):
+    """Check if a user is staff, admin, or superuser."""
+    return (user.is_superuser or
+            user_in_group(user, ADMINS_GROUP) or
+            user_in_group(user, STAFF_GROUP))
+
+def require_permission(group_names):
+    """Decorator to require specific group permissions for a view."""
+    if not isinstance(group_names, (list, tuple)):
+        group_names = [group_names]
+    
+    def decorator(view_func):
+        @login_required
+        def wrapper(request, *args, **kwargs):
+            if request.user.is_superuser or any(user_in_group(request.user, group) for group in group_names):
+                return view_func(request, *args, **kwargs)
+            raise PermissionDenied("You don't have permission to access this page.")
+        return wrapper
+    return decorator
 
 
 # ---- Dashboard Home ----
 @login_required
 def dashboard_main(request):
+    """Main dashboard view with key metrics."""
     total_users = User.objects.count()
     total_departments = Department.objects.count()
     total_locations = Location.objects.count()
@@ -31,7 +73,6 @@ def dashboard_main(request):
     vouchers_issued = BreakfastVoucher.objects.count()
     vouchers_redeemed = BreakfastVoucher.objects.filter(status="redeemed").count()
     average_review_rating = Review.objects.aggregate(Avg("rating"))["rating__avg"] or 0
-
     complaint_trends = Complaint.objects.values("status").annotate(count=Count("id"))
 
     context = {
@@ -48,454 +89,369 @@ def dashboard_main(request):
     return render(request, "dashboard/main.html", context)
 
 
-# ---- Users ----
-@login_required
+# ---- User Management ----
+@require_permission([ADMINS_GROUP])
 def dashboard_users(request):
     users = User.objects.all().select_related("userprofile__department")
     departments = Department.objects.all()
     groups = Group.objects.all()
-    return render(request, "dashboard/users.html", {
+    context = {
         "users": users,
         "departments": departments,
         "groups": groups,
-    })
+    }
+    return render(request, "dashboard/users.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def user_create(request):
     if request.method == "POST":
         form = UserForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "User created successfully.")
+        else:
+            messages.error(request, "Please correct the errors below.")
     return redirect("dashboard:users")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def user_update(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == "POST":
         form = UserForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
+            messages.success(request, "User updated successfully.")
     return redirect("dashboard:users")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def user_delete(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == "POST":
         user.delete()
+        messages.success(request, "User deleted successfully.")
     return redirect("dashboard:users")
 
 
-# ---- Departments ----
-@login_required
+# ---- Department Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_departments(request):
     departments = Department.objects.all().annotate(user_count=Count("userprofile"))
     form = DepartmentForm()
-    return render(request, "dashboard/departments.html", {
+    context = {
         "departments": departments,
         "form": form,
-    })
+    }
+    return render(request, "dashboard/departments.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def department_create(request):
     if request.method == "POST":
         form = DepartmentForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Department created successfully.")
     return redirect("dashboard:departments")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def department_update(request, dept_id):
     department = get_object_or_404(Department, pk=dept_id)
     if request.method == "POST":
         form = DepartmentForm(request.POST, instance=department)
         if form.is_valid():
             form.save()
+            messages.success(request, "Department updated successfully.")
     return redirect("dashboard:departments")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def department_delete(request, dept_id):
     department = get_object_or_404(Department, pk=dept_id)
     if request.method == "POST":
         department.delete()
+        messages.success(request, "Department deleted successfully.")
     return redirect("dashboard:departments")
 
 
-# ---- Groups ----
-@login_required
+# ---- Group Management ----
+@require_permission([ADMINS_GROUP])
 def dashboard_groups(request):
     groups = Group.objects.all().annotate(user_count=Count("user"))
     form = GroupForm()
-    return render(request, "dashboard/groups.html", {
+    context = {
         "groups": groups,
         "form": form,
-    })
+    }
+    return render(request, "dashboard/groups.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def group_create(request):
     if request.method == "POST":
         form = GroupForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Group created successfully.")
     return redirect("dashboard:groups")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def group_update(request, group_id):
     group = get_object_or_404(Group, pk=group_id)
     if request.method == "POST":
         form = GroupForm(request.POST, instance=group)
         if form.is_valid():
             form.save()
+            messages.success(request, "Group updated successfully.")
     return redirect("dashboard:groups")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def group_delete(request, group_id):
     group = get_object_or_404(Group, pk=group_id)
     if request.method == "POST":
         group.delete()
+        messages.success(request, "Group deleted successfully.")
     return redirect("dashboard:groups")
 
 
-# ---- Locations ----
-@login_required
+# ---- Location Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_locations(request):
     locations = Location.objects.all().select_related("building", "floor", "type")
     form = LocationForm()
-    return render(request, "dashboard/locations.html", {
+    context = {
         "locations": locations,
         "form": form,
-    })
+    }
+    return render(request, "dashboard/locations.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def location_create(request):
     if request.method == "POST":
         form = LocationForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Location created successfully.")
     return redirect("dashboard:locations")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def location_update(request, loc_id):
     location = get_object_or_404(Location, pk=loc_id)
     if request.method == "POST":
         form = LocationForm(request.POST, instance=location)
         if form.is_valid():
             form.save()
+            messages.success(request, "Location updated successfully.")
     return redirect("dashboard:locations")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def location_delete(request, loc_id):
     location = get_object_or_404(Location, pk=loc_id)
     if request.method == "POST":
         location.delete()
+        messages.success(request, "Location deleted successfully.")
     return redirect("dashboard:locations")
 
 
-# ---- Request Types ----
-@login_required
+# ---- Request Type Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_request_types(request):
     request_types = RequestType.objects.all()
     form = RequestTypeForm()
-    return render(request, "dashboard/request_types.html", {
+    context = {
         "request_types": request_types,
         "form": form,
-    })
+    }
+    return render(request, "dashboard/request_types.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def request_type_create(request):
     if request.method == "POST":
         form = RequestTypeForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Request Type created successfully.")
     return redirect("dashboard:request_types")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def request_type_update(request, rt_id):
     request_type = get_object_or_404(RequestType, pk=rt_id)
     if request.method == "POST":
         form = RequestTypeForm(request.POST, instance=request_type)
         if form.is_valid():
             form.save()
+            messages.success(request, "Request Type updated successfully.")
     return redirect("dashboard:request_types")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def request_type_delete(request, rt_id):
     request_type = get_object_or_404(RequestType, pk=rt_id)
     if request.method == "POST":
         request_type.delete()
+        messages.success(request, "Request Type deleted successfully.")
     return redirect("dashboard:request_types")
 
 
-# ---- Checklists ----
-@login_required
+# ---- Checklist Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_checklists(request):
     checklists = Checklist.objects.all()
     form = ChecklistForm()
-    return render(request, "dashboard/checklists.html", {
+    context = {
         "checklists": checklists,
         "form": form,
-    })
+    }
+    return render(request, "dashboard/checklists.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def checklist_create(request):
     if request.method == "POST":
         form = ChecklistForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Checklist created successfully.")
     return redirect("dashboard:checklists")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def checklist_update(request, cl_id):
     checklist = get_object_or_404(Checklist, pk=cl_id)
     if request.method == "POST":
         form = ChecklistForm(request.POST, instance=checklist)
         if form.is_valid():
             form.save()
+            messages.success(request, "Checklist updated successfully.")
     return redirect("dashboard:checklists")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def checklist_delete(request, cl_id):
     checklist = get_object_or_404(Checklist, pk=cl_id)
     if request.method == "POST":
         checklist.delete()
+        messages.success(request, "Checklist deleted successfully.")
     return redirect("dashboard:checklists")
 
 
-# ---- Complaints ----
-@login_required
+# ---- Complaint Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def complaints(request):
-    complaints_list = Complaint.objects.all()
+    complaints_list = Complaint.objects.all().order_by('-created_at')
     form = ComplaintForm()
-    return render(request, "dashboard/complaints.html", {
+    context = {
         "complaints": complaints_list,
         "form": form,
         "users": User.objects.all(),
         "guests": Guest.objects.all(),
-    })
+    }
+    return render(request, "dashboard/complaints.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def complaint_create(request):
     if request.method == "POST":
         form = ComplaintForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Complaint logged successfully.")
     return redirect("dashboard:complaints")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def complaint_update(request, complaint_id):
     complaint = get_object_or_404(Complaint, pk=complaint_id)
     if request.method == "POST":
         form = ComplaintForm(request.POST, instance=complaint)
         if form.is_valid():
             form.save()
+            messages.success(request, "Complaint updated successfully.")
     return redirect("dashboard:complaints")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def complaint_delete(request, complaint_id):
     complaint = get_object_or_404(Complaint, pk=complaint_id)
     if request.method == "POST":
         complaint.delete()
+        messages.success(request, "Complaint deleted successfully.")
     return redirect("dashboard:complaints")
 
 
-# ---- Breakfast Vouchers ----
-@login_required
+# ---- Legacy Breakfast Voucher Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def breakfast_vouchers(request):
-    vouchers_list = BreakfastVoucher.objects.all()
+    vouchers_list = BreakfastVoucher.objects.all().order_by('-created_at')
     form = BreakfastVoucherForm()
-    return render(request, "dashboard/breakfast_vouchers.html", {
+    context = {
         "vouchers": vouchers_list,
         "form": form,
         "guests": Guest.objects.all(),
         "locations": Location.objects.all(),
-    })
+    }
+    return render(request, "dashboard/breakfast_vouchers.html", context)
 
 
-@login_required
-@user_passes_test(is_superuser)
-def voucher_create(request):
-    if request.method == "POST":
-        form = BreakfastVoucherForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:breakfast_vouchers")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def voucher_update(request, voucher_id):
-    voucher = get_object_or_404(BreakfastVoucher, pk=voucher_id)
-    if request.method == "POST":
-        form = BreakfastVoucherForm(request.POST, instance=voucher)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:breakfast_vouchers")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def voucher_delete(request, voucher_id):
-    voucher = get_object_or_404(BreakfastVoucher, pk=voucher_id)
-    if request.method == "POST":
-        voucher.delete()
-    return redirect("dashboard:breakfast_vouchers")
-
-
-# ---- Reviews ----
-@login_required
+# ---- Review Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def reviews(request):
-    reviews_list = Review.objects.all()
+    reviews_list = Review.objects.all().order_by('-created_at')
     form = ReviewForm()
-    return render(request, "dashboard/reviews.html", {
+    context = {
         "reviews": reviews_list,
         "form": form,
         "guests": Guest.objects.all(),
-    })
+    }
+    return render(request, "dashboard/reviews.html", context)
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def review_create(request):
     if request.method == "POST":
         form = ReviewForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Review submitted successfully.")
     return redirect("dashboard:reviews")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def review_update(request, review_id):
     review = get_object_or_404(Review, pk=review_id)
     if request.method == "POST":
         form = ReviewForm(request.POST, instance=review)
         if form.is_valid():
             form.save()
+            messages.success(request, "Review updated successfully.")
     return redirect("dashboard:reviews")
 
-
-@login_required
-@user_passes_test(is_superuser)
+@require_permission([ADMINS_GROUP])
 def review_delete(request, review_id):
     review = get_object_or_404(Review, pk=review_id)
     if request.method == "POST":
         review.delete()
+        messages.success(request, "Review deleted successfully.")
     return redirect("dashboard:reviews")
 
 
-# ---- New Voucher System Dashboard Views ----
-
-@login_required
+# ---- New Voucher System: Analytics ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def voucher_analytics(request):
-    """Voucher analytics dashboard with actual data"""
-    import json
-    from django.utils import timezone
-    from django.db.models import Count
-    from hotel_app.models import Voucher, VoucherScan
-    
+    """Voucher analytics dashboard with actual data."""
     today = timezone.now().date()
     
-    # Calculate analytics data
     total_vouchers = Voucher.objects.count()
     active_vouchers = Voucher.objects.filter(status='active').count()
     redeemed_vouchers = Voucher.objects.filter(status='redeemed').count()
     expired_vouchers = Voucher.objects.filter(status='expired').count()
-    redeemed_today = VoucherScan.objects.filter(
-        scanned_at__date=today,
-        redemption_successful=True
-    ).count()
+    redeemed_today = VoucherScan.objects.filter(scanned_at__date=today, redemption_successful=True).count()
     
-    # Vouchers by type
     vouchers_by_type = dict(
-        Voucher.objects.values('voucher_type').annotate(
-            count=Count('id')
-        ).values_list('voucher_type', 'count')
+        Voucher.objects.values('voucher_type').annotate(count=Count('id')).values_list('voucher_type', 'count')
     )
     
-    # Recent vouchers
     recent_vouchers = Voucher.objects.select_related('guest').order_by('-created_at')[:20]
+    recent_scans = VoucherScan.objects.select_related('voucher', 'voucher__guest', 'scanned_by').order_by('-scanned_at')[:10]
     
-    # Recent scans
-    recent_scans = VoucherScan.objects.select_related(
-        'voucher', 'voucher__guest', 'scanned_by'
-    ).order_by('-scanned_at')[:10]
-    
-    # Peak redemption hours (simplified - just count by hour)
-    # Use raw SQL to extract hour since Extract might not be available
-    peak_hours_data = []
-    try:
-        # Try using TruncHour which is more widely available
-        from django.db.models import TruncHour
-        peak_hours_qs = VoucherScan.objects.filter(
-            redemption_successful=True
-        ).annotate(
-            hour_truncated=TruncHour('scanned_at')
-        ).values('hour_truncated').annotate(
-            count=Count('id')
-        ).order_by('hour_truncated')
-        
-        # Convert to hour format
-        for item in peak_hours_qs:
-            if item['hour_truncated']:
-                hour = item['hour_truncated'].hour
-                peak_hours_data.append({'hour': hour, 'count': item['count']})
-    except ImportError:
-        # Fallback: use raw SQL if TruncHour is not available
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT HOUR(scanned_at) as hour, COUNT(*) as count
-                FROM hotel_app_voucherscan 
-                WHERE redemption_successful = 1
-                GROUP BY HOUR(scanned_at)
-                ORDER BY hour
-            """)
-            for row in cursor.fetchall():
-                peak_hours_data.append({'hour': row[0], 'count': row[1]})
-    
-    peak_hours = peak_hours_data
-    
+    # Peak redemption hours using Django ORM's TruncHour
+    peak_hours_data = list(
+        VoucherScan.objects.filter(redemption_successful=True)
+        .annotate(hour_truncated=TruncHour('scanned_at'))
+        .values('hour_truncated')
+        .annotate(count=Count('id'))
+        .order_by('hour_truncated')
+    )
+    # Reformat for chart
+    peak_hours = [{'hour': item['hour_truncated'].hour, 'count': item['count']} for item in peak_hours_data if item['hour_truncated']]
+
     analytics_data = {
         'total_vouchers': total_vouchers,
         'active_vouchers': active_vouchers,
@@ -512,611 +468,247 @@ def voucher_analytics(request):
         'recent_vouchers': recent_vouchers,
         'recent_scans': recent_scans,
     }
-    
     return render(request, "dashboard/voucher_analytics.html", context)
 
 
-@login_required
+# ---- New Voucher System: Guest Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_guests(request):
-    """Guest management dashboard with filters"""
-    from hotel_app.models import Guest
-    from django.db.models import Q
-    from django.utils import timezone
-    
-    # Get filter parameters
+    """Guest management dashboard with filters."""
     search = request.GET.get('search', '')
     breakfast_filter = request.GET.get('breakfast_filter', '')
     status_filter = request.GET.get('status_filter', '')
     qr_filter = request.GET.get('qr_filter', '')
     
-    # Base queryset
     guests = Guest.objects.all().order_by('-created_at')
     
-    # Apply search filter
     if search:
         guests = guests.filter(
-            Q(full_name__icontains=search) |
-            Q(email__icontains=search) |
-            Q(room_number__icontains=search) |
-            Q(guest_id__icontains=search) |
+            Q(full_name__icontains=search) | Q(email__icontains=search) |
+            Q(room_number__icontains=search) | Q(guest_id__icontains=search) |
             Q(phone__icontains=search)
         )
-    
-    # Apply breakfast filter
     if breakfast_filter == 'yes':
         guests = guests.filter(breakfast_included=True)
     elif breakfast_filter == 'no':
         guests = guests.filter(breakfast_included=False)
-    
-    # Apply QR filter
     if qr_filter == 'with_qr':
         guests = guests.exclude(details_qr_code='')
     elif qr_filter == 'without_qr':
         guests = guests.filter(details_qr_code='')
-    
-    # Apply status filter
     if status_filter:
         today = timezone.now().date()
         if status_filter == 'current':
-            guests = guests.filter(
-                checkin_date__lte=today,
-                checkout_date__gte=today
-            )
+            guests = guests.filter(checkin_date__lte=today, checkout_date__gte=today)
         elif status_filter == 'past':
             guests = guests.filter(checkout_date__lt=today)
         elif status_filter == 'future':
             guests = guests.filter(checkin_date__gt=today)
     
-    return render(request, "dashboard/guests.html", {
+    context = {
         "guests": guests,
         "search": search,
         "breakfast_filter": breakfast_filter,
         "status_filter": status_filter,
         "qr_filter": qr_filter,
         "title": "Guest Management"
-    })
+    }
+    return render(request, "dashboard/guests.html", context)
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def guest_detail(request, guest_id):
-    """Guest detail view with vouchers"""
-    from hotel_app.models import Guest
+    """Guest detail view with vouchers and stay information."""
     guest = get_object_or_404(Guest, pk=guest_id)
     vouchers = guest.vouchers.all().order_by('-created_at')
     
-    # Calculate stay duration
-    stay_duration = None
+    stay_duration = "N/A"
     if guest.checkin_date and guest.checkout_date:
         duration = guest.checkout_date - guest.checkin_date
         stay_duration = f"{duration.days} days"
     
-    return render(request, "dashboard/guest_detail.html", {
+    context = {
         "guest": guest,
         "vouchers": vouchers,
         "stay_duration": stay_duration,
         "title": f"Guest: {guest.full_name}"
-    })
+    }
+    return render(request, "dashboard/guest_detail.html", context)
 
 
-@login_required
+# ---- New Voucher System: Voucher Management ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_vouchers(request):
-    """Voucher management dashboard"""
-    from hotel_app.models import Voucher
+    """Voucher management dashboard."""
     vouchers = Voucher.objects.all().select_related('guest').order_by('-created_at')
     
-    # Calculate status counts
-    total_vouchers = vouchers.count()
-    active_vouchers = vouchers.filter(status='active').count()
-    redeemed_vouchers = vouchers.filter(status='redeemed').count()
-    expired_vouchers = vouchers.filter(status='expired').count()
+    for voucher in vouchers:
+        if not voucher.qr_image:
+            voucher.generate_qr_code(size='large')
     
-    return render(request, "dashboard/vouchers.html", {
+    context = {
         "vouchers": vouchers,
-        "total_vouchers": total_vouchers,
-        "active_vouchers": active_vouchers,
-        "redeemed_vouchers": redeemed_vouchers,
-        "expired_vouchers": expired_vouchers,
+        "total_vouchers": vouchers.count(),
+        "active_vouchers": vouchers.filter(status='active').count(),
+        "redeemed_vouchers": vouchers.filter(status='redeemed').count(),
+        "expired_vouchers": vouchers.filter(status='expired').count(),
         "title": "Voucher Management"
-    })
+    }
+    return render(request, "dashboard/vouchers.html", context)
 
+@require_permission([ADMINS_GROUP])
+def voucher_create(request):
+    if request.method == "POST":
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Voucher created successfully.")
+    return redirect("dashboard:vouchers")
 
-@login_required
+@require_permission([ADMINS_GROUP])
+def voucher_update(request, voucher_id):
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    if request.method == "POST":
+        form = VoucherForm(request.POST, instance=voucher)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Voucher updated successfully.")
+    return redirect("dashboard:vouchers")
+
+@require_permission([ADMINS_GROUP])
+def voucher_delete(request, voucher_id):
+    voucher = get_object_or_404(Voucher, pk=voucher_id)
+    if request.method == "POST":
+        voucher.delete()
+        messages.success(request, "Voucher deleted successfully.")
+    return redirect("dashboard:vouchers")
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def voucher_detail(request, voucher_id):
-    """Voucher detail view with scan history"""
-    from hotel_app.models import Voucher
+    """Voucher detail view with scan history."""
     voucher = get_object_or_404(Voucher, pk=voucher_id)
     scans = voucher.scans.all().order_by('-scanned_at')
     
-    # Generate QR code if it doesn't exist
     if not voucher.qr_image:
-        success = voucher.generate_qr_code(size='xxlarge')
-        if success:
+        if voucher.generate_qr_code(size='xlarge'):
             messages.success(request, 'QR code generated successfully!')
         else:
             messages.error(request, 'Failed to generate QR code.')
     
-    return render(request, "dashboard/voucher_detail.html", {
+    context = {
         "voucher": voucher,
         "scans": scans,
         "title": f"Voucher: {voucher.voucher_code}"
-    })
+    }
+    return render(request, "dashboard/voucher_detail.html", context)
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def regenerate_voucher_qr(request, voucher_id):
-    """Regenerate QR code for a voucher"""
-    from hotel_app.models import Voucher
+    """Regenerate QR code for a specific voucher."""
     voucher = get_object_or_404(Voucher, pk=voucher_id)
-    
     if request.method == 'POST':
-        qr_size = request.POST.get('qr_size', 'xxlarge')
-        
-        # Generate new QR code
-        success = voucher.generate_qr_code(size=qr_size)
-        
-        if success:
-            messages.success(request, f'QR code regenerated successfully with size: {qr_size}!')
+        qr_size = request.POST.get('qr_size', 'xlarge')
+        if voucher.generate_qr_code(size=qr_size):
+            messages.success(request, f'QR code regenerated with size: {qr_size}!')
         else:
             messages.error(request, 'Failed to regenerate QR code.')
-    
     return redirect('dashboard:voucher_detail', voucher_id=voucher.id)
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def share_voucher_whatsapp(request, voucher_id):
-    """Share voucher via WhatsApp"""
-    from hotel_app.models import Voucher
-    from django.http import JsonResponse
-    import json
-    
+    """Share voucher via WhatsApp API."""
     voucher = get_object_or_404(Voucher, pk=voucher_id)
-    
     if request.method == 'POST':
+        if not voucher.guest or not voucher.guest.phone:
+            return JsonResponse({'success': False, 'error': 'Guest phone number is not available.'})
         try:
-            # Check if guest has phone number
-            if not voucher.guest or not voucher.guest.phone:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No phone number available for this guest.'
-                })
-            
-            # Try WhatsApp Business API integration
-            # For now, we'll use the fallback method
-            from hotel_app.whatsapp_service import WhatsAppService
-            
-            try:
-                whatsapp_service = WhatsAppService()
-                result = whatsapp_service.send_voucher_message(voucher)
-                
-                if result.get('success'):
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Voucher shared via WhatsApp successfully!'
-                    })
-                else:
-                    # Fallback to wa.me URL
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'WhatsApp API unavailable, using fallback method.',
-                        'fallback': True
-                    })
-                    
-            except Exception as e:
-                # Fallback to wa.me URL
-                return JsonResponse({
-                    'success': False,
-                    'error': f'WhatsApp service error: {str(e)}',
-                    'fallback': True
-                })
-                
+            whatsapp_service = WhatsAppService()
+            result = whatsapp_service.send_voucher_message(voucher)
+            if result.get('success'):
+                return JsonResponse({'success': True, 'message': 'Voucher shared via WhatsApp!'})
+            else:
+                return JsonResponse({'success': False, 'error': 'WhatsApp API unavailable.', 'fallback': True})
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': f'Error sharing voucher: {str(e)}'
-            })
-    
+            return JsonResponse({'success': False, 'error': f'Service error: {str(e)}', 'fallback': True})
     return JsonResponse({'success': False, 'error': 'Invalid request method.'})
 
 
-# ---- Missing Dashboard Views ----
-
-@login_required
-def dashboard_request_types(request):
-    """Request types management"""
-    from hotel_app.models import RequestType
-    request_types = RequestType.objects.all()
-    from hotel_app.forms import RequestTypeForm
-    form = RequestTypeForm()
-    return render(request, "dashboard/request_types.html", {
-        "request_types": request_types,
-        "form": form,
-    })
-
-
-@login_required
-def dashboard_checklists(request):
-    """Checklists management"""
-    from hotel_app.models import Checklist
-    checklists = Checklist.objects.all()
-    from hotel_app.forms import ChecklistForm
-    form = ChecklistForm()
-    return render(request, "dashboard/checklists.html", {
-        "checklists": checklists,
-        "form": form,
-    })
-
-
-@login_required
-def complaints(request):
-    """Complaints management"""
-    from hotel_app.models import Complaint
-    complaints = Complaint.objects.all().order_by('-created_at')
-    from hotel_app.forms import ComplaintForm
-    form = ComplaintForm()
-    return render(request, "dashboard/complaints.html", {
-        "complaints": complaints,
-        "form": form,
-    })
-
-
-@login_required
-def breakfast_vouchers(request):
-    """Legacy breakfast vouchers view"""
-    from hotel_app.models import BreakfastVoucher
-    vouchers = BreakfastVoucher.objects.all().order_by('-created_at')
-    return render(request, "dashboard/breakfast_vouchers.html", {
-        "vouchers": vouchers,
-    })
-
-
-@login_required
-def reviews(request):
-    """Reviews management"""
-    from hotel_app.models import Review
-    reviews = Review.objects.all().order_by('-created_at')
-    from hotel_app.forms import ReviewForm
-    form = ReviewForm()
-    return render(request, "dashboard/reviews.html", {
-        "reviews": reviews,
-        "form": form,
-    })
-
-
-# ---- CRUD Operations for missing views ----
-
-@login_required
-@user_passes_test(is_superuser)
-def request_type_create(request):
-    if request.method == "POST":
-        from hotel_app.forms import RequestTypeForm
-        form = RequestTypeForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:request_types")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def request_type_update(request, rt_id):
-    from hotel_app.models import RequestType
-    request_type = get_object_or_404(RequestType, pk=rt_id)
-    if request.method == "POST":
-        from hotel_app.forms import RequestTypeForm
-        form = RequestTypeForm(request.POST, instance=request_type)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:request_types")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def request_type_delete(request, rt_id):
-    from hotel_app.models import RequestType
-    request_type = get_object_or_404(RequestType, pk=rt_id)
-    if request.method == "POST":
-        request_type.delete()
-    return redirect("dashboard:request_types")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def checklist_create(request):
-    if request.method == "POST":
-        from hotel_app.forms import ChecklistForm
-        form = ChecklistForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:checklists")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def checklist_update(request, cl_id):
-    from hotel_app.models import Checklist
-    checklist = get_object_or_404(Checklist, pk=cl_id)
-    if request.method == "POST":
-        from hotel_app.forms import ChecklistForm
-        form = ChecklistForm(request.POST, instance=checklist)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:checklists")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def checklist_delete(request, cl_id):
-    from hotel_app.models import Checklist
-    checklist = get_object_or_404(Checklist, pk=cl_id)
-    if request.method == "POST":
-        checklist.delete()
-    return redirect("dashboard:checklists")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def complaint_create(request):
-    if request.method == "POST":
-        from hotel_app.forms import ComplaintForm
-        form = ComplaintForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:complaints")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def complaint_update(request, complaint_id):
-    from hotel_app.models import Complaint
-    complaint = get_object_or_404(Complaint, pk=complaint_id)
-    if request.method == "POST":
-        from hotel_app.forms import ComplaintForm
-        form = ComplaintForm(request.POST, instance=complaint)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:complaints")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def complaint_delete(request, complaint_id):
-    from hotel_app.models import Complaint
-    complaint = get_object_or_404(Complaint, pk=complaint_id)
-    if request.method == "POST":
-        complaint.delete()
-    return redirect("dashboard:complaints")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def voucher_create(request):
-    if request.method == "POST":
-        from hotel_app.forms import VoucherForm
-        form = VoucherForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:vouchers")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def voucher_update(request, voucher_id):
-    from hotel_app.models import Voucher
-    voucher = get_object_or_404(Voucher, pk=voucher_id)
-    if request.method == "POST":
-        from hotel_app.forms import VoucherForm
-        form = VoucherForm(request.POST, instance=voucher)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:vouchers")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def voucher_delete(request, voucher_id):
-    from hotel_app.models import Voucher
-    voucher = get_object_or_404(Voucher, pk=voucher_id)
-    if request.method == "POST":
-        voucher.delete()
-    return redirect("dashboard:vouchers")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def review_create(request):
-    if request.method == "POST":
-        from hotel_app.forms import ReviewForm
-        form = ReviewForm(request.POST)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:reviews")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def review_update(request, review_id):
-    from hotel_app.models import Review
-    review = get_object_or_404(Review, pk=review_id)
-    if request.method == "POST":
-        from hotel_app.forms import ReviewForm
-        form = ReviewForm(request.POST, instance=review)
-        if form.is_valid():
-            form.save()
-    return redirect("dashboard:reviews")
-
-
-@login_required
-@user_passes_test(is_superuser)
-def review_delete(request, review_id):
-    from hotel_app.models import Review
-    review = get_object_or_404(Review, pk=review_id)
-    if request.method == "POST":
-        review.delete()
-    return redirect("dashboard:reviews")
-
-
 # ---- Guest QR Codes Dashboard ----
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def guest_qr_codes(request):
-    """Display all guest QR codes in a grid layout"""
-    from hotel_app.models import Guest
-    from django.db.models import Q
-    
-    # Get search and filter parameters
+    """Display all guest QR codes in a grid layout with filters."""
     search = request.GET.get('search', '')
     filter_status = request.GET.get('filter', 'all')
     
-    # Base queryset
     guests = Guest.objects.all().order_by('-created_at')
     
-    # Apply search filter
     if search:
         guests = guests.filter(
-            Q(full_name__icontains=search) |
-            Q(guest_id__icontains=search) |
-            Q(room_number__icontains=search) |
-            Q(email__icontains=search) |
-            Q(phone__icontains=search)
+            Q(full_name__icontains=search) | Q(guest_id__icontains=search) |
+            Q(room_number__icontains=search)
         )
-    
-    # Apply status filter
     if filter_status == 'with_qr':
         guests = guests.exclude(details_qr_code='')
     elif filter_status == 'without_qr':
         guests = guests.filter(details_qr_code='')
     elif filter_status == 'current':
-        from django.utils import timezone
         today = timezone.now().date()
-        guests = guests.filter(
-            checkin_date__lte=today,
-            checkout_date__gte=today
-        )
+        guests = guests.filter(checkin_date__lte=today, checkout_date__gte=today)
     
-    # Calculate statistics
     total_guests = Guest.objects.count()
-    guests_with_qr = Guest.objects.exclude(details_qr_code='').count()
-    guests_without_qr = total_guests - guests_with_qr
-    
     context = {
         'guests': guests,
         'search': search,
         'filter_status': filter_status,
         'total_guests': total_guests,
-        'guests_with_qr': guests_with_qr,
-        'guests_without_qr': guests_without_qr,
+        'guests_with_qr': Guest.objects.exclude(details_qr_code='').count(),
+        'guests_without_qr': Guest.objects.filter(details_qr_code='').count(),
         'title': 'Guest QR Codes'
     }
-    
     return render(request, "dashboard/guest_qr_codes.html", context)
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def regenerate_guest_qr(request, guest_id):
-    """Regenerate QR code for a specific guest"""
-    from hotel_app.models import Guest
+    """Regenerate QR code for a specific guest."""
     guest = get_object_or_404(Guest, pk=guest_id)
-    
-    if request.method == "POST":
-        try:
-            # Get size from form or default to xlarge
-            size = request.POST.get('qr_size', 'xlarge')
-            success = guest.generate_details_qr_code(size=size)
-            
-            if success:
-                messages.success(request, f"QR code regenerated successfully for {guest.full_name}!")
-            else:
-                messages.error(request, f"Failed to regenerate QR code for {guest.full_name}. Please try again.")
-        except Exception as e:
-            messages.error(request, f"Error regenerating QR code: {str(e)}")
-    
-    return redirect('dashboard:guest_qr_codes')
+    if request.method == 'POST':
+        qr_size = request.POST.get('qr_size', 'xlarge')
+        if guest.generate_details_qr_code(size=qr_size):
+            messages.success(request, f'Guest QR code regenerated with size: {qr_size}!')
+        else:
+            messages.error(request, 'Failed to regenerate guest QR code.')
+    return redirect('dashboard:guest_detail', guest_id=guest.id)
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def share_guest_qr_whatsapp(request, guest_id):
-    """Share guest QR code via WhatsApp"""
-    from hotel_app.models import Guest
-    from hotel_app.whatsapp_service import whatsapp_service
-    from django.http import JsonResponse
-    
+    """Share guest QR code via WhatsApp API."""
     guest = get_object_or_404(Guest, pk=guest_id)
-    
-    if request.method == "POST":
+    if request.method == 'POST':
+        if not guest.phone:
+            return JsonResponse({'success': False, 'error': 'Guest phone number not available.'})
         try:
-            # Use the guest's phone number
-            phone = guest.phone
-            if not phone:
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'No phone number available for this guest. Please add a phone number first.'
-                })
-            
-            # Send QR code and details via WhatsApp
-            success = whatsapp_service.send_guest_qr(guest)
-            
-            if success:
-                return JsonResponse({
-                    'success': True, 
-                    'message': f'Guest QR code and details sent successfully to {phone}!'
-                })
+            whatsapp_service = WhatsAppService()
+            result = whatsapp_service.send_guest_qr_message(guest)
+            if result.get('success'):
+                return JsonResponse({'success': True, 'message': 'Guest QR code shared via WhatsApp!'})
             else:
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'Failed to send WhatsApp message. Please try again.'
-                })
-                
+                return JsonResponse({'success': False, 'error': 'WhatsApp API unavailable.', 'fallback': True})
         except Exception as e:
-            return JsonResponse({
-                'success': False, 
-                'error': f'Error sending WhatsApp message: {str(e)}'
-            })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+            return JsonResponse({'success': False, 'error': f'Service error: {str(e)}', 'fallback': True})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
 
-
-@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def get_guest_whatsapp_message(request, guest_id):
-    """Get formatted WhatsApp message for guest QR sharing (fallback option)"""
-    from hotel_app.models import Guest
-    
+    """Get a pre-formatted WhatsApp message template for a guest."""
     guest = get_object_or_404(Guest, pk=guest_id)
-    
-    if not guest.phone:
-        return JsonResponse({
-            'success': False,
-            'error': 'No phone number available for this guest.'
-        })
-    
-    # Clean and format phone number
-    phone = guest.phone.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
-    if not phone.startswith('+'):
-        phone = '+91' + phone  # Assuming Indian numbers
-    
-    # Create formatted message
-    message = f"🏨 Hotel Guest Details\n\n"
-    message += f"👤 Guest: {guest.full_name}\n"
-    message += f"📱 Phone: {guest.phone}\n"
-    message += f"🆔 Guest ID: {guest.guest_id}\n"
-    message += f"🏠 Room: {guest.room_number or 'Not assigned'}\n"
-    
-    if guest.checkin_date:
-        message += f"📅 Check-in: {guest.checkin_date.strftime('%b %d, %Y')}\n"
-    if guest.checkout_date:
-        message += f"📅 Check-out: {guest.checkout_date.strftime('%b %d, %Y')}\n"
-    
-    message += f"🍳 Breakfast: {'Included' if guest.breakfast_included else 'Not Included'}\n\n"
-    message += "📱 Please scan the QR code to access your hotel services.\n\n"
-    message += "Thank you for choosing our hotel! 🌟"
-    
-    # Get QR code URL if available
-    qr_url = ""
-    if guest.details_qr_code:
-        qr_url = f"data:image/png;base64,{guest.details_qr_code}"
-    
+    message = (
+        f"Hello {guest.full_name},\n\n"
+        f"Welcome! Here is your personal QR code for accessing hotel services.\n\n"
+        f"Guest ID: {guest.guest_id}\n"
+        f"Room: {guest.room_number}"
+    )
     return JsonResponse({
         'success': True,
-        'phone': phone,
         'message': message,
-        'qr_url': qr_url,
-        'wa_me_url': f"https://wa.me/{phone}?text={message}"
+        'guest_name': guest.full_name,
+        'guest_phone': guest.phone
     })

@@ -10,46 +10,31 @@
       <h5 class="mb-3">🏨 Quick Actions</h5>
       <div class="row g-3">
         <div class="col-md-2 col-sm-6">
-          <a
-            href="{% url 'dashboard:register_guest' %}"
-            class="btn btn-primary w-100 py-3"
-          >
+          <a href="{% url 'dashboard:register_guest' %}" class="btn btn-primary w-100 py-3">
             <i class="bi bi-person-plus"></i><br />
             <small>Register Guest</small>
           </a>
         </div>
         <div class="col-md-2 col-sm-6">
-          <a
-            href="{% url 'dashboard:scan_voucher' %}"
-            class="btn btn-success w-100 py-3"
-          >
+          <a href="{% url 'dashboard:scan_voucher' %}" class="btn btn-success w-100 py-3">
             <i class="bi bi-qr-code-scan"></i><br />
             <small>Scan Voucher</small>
           </a>
         </div>
         <div class="col-md-2 col-sm-6">
-          <a
-            href="{% url 'dashboard:voucher_analytics' %}"
-            class="btn btn-info w-100 py-3"
-          >
+          <a href="{% url 'dashboard:voucher_analytics' %}" class="btn btn-info w-100 py-3">
             <i class="bi bi-graph-up"></i><br />
             <small>Voucher Analytics</small>
           </a>
         </div>
         <div class="col-md-3 col-sm-6">
-          <a
-            href="{% url 'dashboard:guests' %}"
-            class="btn btn-warning w-100 py-3"
-          >
+          <a href="{% url 'dashboard:guests' %}" class="btn btn-warning w-100 py-3">
             <i class="bi bi-people"></i><br />
             <small>Manage Guests</small>
           </a>
         </div>
         <div class="col-md-3">
-          <a
-            href="{% url 'dashboard:guest_qr_codes' %}"
-            class="btn btn-secondary w-100 py-3"
-          >
+          <a href="{% url 'dashboard:guest_qr_codes' %}" class="btn btn-secondary w-100 py-3">
             <i class="bi bi-qr-code"></i><br />
             <small>Guest QR Codes</small>
           </a>
@@ -59,57 +44,40 @@
   </div>
 </div>
 
-<!-- System Management Section -->
+<!-- System Management Section (Admins only) -->
+{% if request.user.is_staff %}
 <div class="row g-3 mb-4">
   <div class="col-12">
     <div class="card shadow-sm border-0 rounded-3 p-4">
       <h5 class="mb-3">🛠️ System Management</h5>
       <div class="row g-2">
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:users' %}"
-            class="btn btn-outline-primary w-100"
-          >
+          <a href="{% url 'dashboard:users' %}" class="btn btn-outline-primary w-100">
             <i class="bi bi-people"></i> Users
           </a>
         </div>
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:departments' %}"
-            class="btn btn-outline-primary w-100"
-          >
+          <a href="{% url 'dashboard:departments' %}" class="btn btn-outline-primary w-100">
             <i class="bi bi-diagram-3"></i> Departments
           </a>
         </div>
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:locations' %}"
-            class="btn btn-outline-primary w-100"
-          >
+          <a href="{% url 'dashboard:locations' %}" class="btn btn-outline-primary w-100">
             <i class="bi bi-geo-alt"></i> Locations
           </a>
         </div>
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:vouchers' %}"
-            class="btn btn-outline-success w-100"
-          >
+          <a href="{% url 'dashboard:vouchers' %}" class="btn btn-outline-success w-100">
             <i class="bi bi-ticket-perforated"></i> Vouchers
           </a>
         </div>
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:complaints' %}"
-            class="btn btn-outline-warning w-100"
-          >
+          <a href="{% url 'dashboard:complaints' %}" class="btn btn-outline-warning w-100">
             <i class="bi bi-exclamation-triangle"></i> Complaints
           </a>
         </div>
         <div class="col-md-2 col-sm-4">
-          <a
-            href="{% url 'dashboard:reviews' %}"
-            class="btn btn-outline-info w-100"
-          >
+          <a href="{% url 'dashboard:reviews' %}" class="btn btn-outline-info w-100">
             <i class="bi bi-star"></i> Reviews
           </a>
         </div>
@@ -117,6 +85,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="row g-3">
   <!-- Total Users -->

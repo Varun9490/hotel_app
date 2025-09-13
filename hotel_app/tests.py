@@ -1,3 +1,103 @@
+from django.test import TestCase, Client
+from django.contrib.auth.models import User, Group
+from django.urls import reverse
+from hotel_app.models import Guest, Voucher
+from datetime import date, timedelta
+
+class UserPermissionTestCase(TestCase):
+    def setUp(self):
+        # Create test users
+        self.admin_user = User.objects.create_user(
+            username='admin',
+            password='testpass123'
+        )
+        self.staff_user = User.objects.create_user(
+            username='staff',
+            password='testpass123'
+        )
+        self.regular_user = User.objects.create_user(
+            username='user',
+            password='testpass123'
+        )
+        
+        # Create groups
+        self.admins_group = Group.objects.create(name='Admins')
+        self.staff_group = Group.objects.create(name='Staff')
+        self.users_group = Group.objects.create(name='Users')
+        
+        # Assign users to groups
+        self.admin_user.groups.add(self.admins_group)
+        self.staff_user.groups.add(self.staff_group)
+        self.regular_user.groups.add(self.users_group)
+        
+        # Create test data
+        self.guest = Guest.objects.create(
+            full_name='Test Guest',
+            room_number='101',
+            checkin_date=date.today(),
+            checkout_date=date.today() + timedelta(days=2),
+            breakfast_included=True
+        )
+        
+        self.voucher = Voucher.objects.create(
+            guest_name='Test Guest',
+            room_number='101',
+            check_in_date=date.today(),
+            check_out_date=date.today() + timedelta(days=2),
+            valid_dates=[str(date.today() + timedelta(days=1))]
+        )
+        
+        # Create test client
+        self.client = Client()
+
+    def test_admin_access_to_admin_pages(self):
+        """Test that admin users can access admin-only pages"""
+        self.client.login(username='admin', password='testpass123')
+        response = self.client.get(reverse('dashboard:users'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_access_to_staff_pages(self):
+        """Test that staff users can access staff pages"""
+        self.client.login(username='staff', password='testpass123')
+        response = self.client.get(reverse('dashboard:guests'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_regular_user_access_restricted(self):
+        """Test that regular users cannot access restricted pages"""
+        self.client.login(username='user', password='testpass123')
+        response = self.client.get(reverse('dashboard:users'))
+        # Should be redirected or get permission denied
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_staff_cannot_access_admin_pages(self):
+        """Test that staff users cannot access admin-only pages"""
+        self.client.login(username='staff', password='testpass123')
+        response = self.client.get(reverse('dashboard:users'))
+        # Should be redirected or get permission denied
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_template_tags(self):
+        """Test custom template tags"""
+        from hotel_app.templatetags.group_filters import has_group, is_admin, is_staff, has_permission
+        
+        # Test has_group
+        self.assertTrue(has_group(self.admin_user, 'Admins'))
+        self.assertFalse(has_group(self.staff_user, 'Admins'))
+        
+        # Test is_admin
+        self.assertTrue(is_admin(self.admin_user))
+        self.assertFalse(is_admin(self.staff_user))
+        
+        # Test is_staff
+        self.assertTrue(is_staff(self.admin_user))
+        self.assertTrue(is_staff(self.staff_user))
+        self.assertFalse(is_staff(self.regular_user))
+        
+        # Test has_permission
+        self.assertTrue(has_permission(self.admin_user, 'Admins'))
+        self.assertTrue(has_permission(self.staff_user, ['Admins', 'Staff']))
+        self.assertFalse(has_permission(self.regular_user, 'Admins'))
+
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status

@@ -33,6 +33,7 @@ from .serializers import (
     VoucherValidationResponseSerializer, VoucherCreateSerializer,
     VoucherAnalyticsSerializer, VoucherReportSerializer
 )
+from .permissions import IsAdminUser, IsStaffUser, IsAdminOrReadOnly, IsStaffOrReadOnly, VoucherPermission, GuestPermission, UserPermission
 
 # Authentication Views
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -67,42 +68,87 @@ class CustomAuthToken(ObtainAuthToken):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
     
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            # Only admins can modify users
-            return [permissions.IsAdminUser()]
-        return super().get_permissions()
+        if self.action == 'list':
+            # Only admins can list all users
+            return [IsAdminUser()]
+        elif self.action == 'retrieve':
+            # Users can view their own profile, admins can view all
+            return [permissions.IsAuthenticated()]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can create, update, or delete users
+            return [IsAdminUser()]
+        return [permissions.IsAuthenticated()]
 
 # Department Management
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify departments
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view departments
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # User Groups
 class UserGroupViewSet(viewsets.ModelViewSet):
     queryset = UserGroup.objects.all()
     serializer_class = UserGroupSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify user groups
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view user groups
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 class UserGroupMembershipViewSet(viewsets.ModelViewSet):
     queryset = UserGroupMembership.objects.all()
     serializer_class = UserGroupMembershipSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify user group memberships
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view user group memberships
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Master Location
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify locations
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view locations
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Complaints (Service Requests)
 class ServiceRequestViewSet(viewsets.ModelViewSet):
     queryset = ServiceRequest.objects.all()
     serializer_class = ServiceRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify service requests
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view service requests
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
     
     def get_queryset(self):
         user = self.request.user
@@ -116,9 +162,17 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
 class BreakfastVoucherViewSet(viewsets.ModelViewSet):
     queryset = BreakfastVoucher.objects.all()
     serializer_class = BreakfastVoucherSerializer
-    permission_classes = [permissions.IsAuthenticated]
     
-    @action(detail=True, methods=['post'])
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify vouchers
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view vouchers
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser()])
     def mark_redeemed(self, request, pk=None):
         voucher = self.get_object()
         voucher.status = 'redeemed'
@@ -137,29 +191,64 @@ class BreakfastVoucherViewSet(viewsets.ModelViewSet):
 class GuestCommentViewSet(viewsets.ModelViewSet):
     queryset = GuestComment.objects.all()
     serializer_class = GuestCommentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify guest comments
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view guest comments
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Complaints
 class ComplaintViewSet(viewsets.ModelViewSet):
     queryset = Complaint.objects.all()
     serializer_class = ComplaintSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify complaints
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view complaints
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Reviews
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Only admins can modify reviews
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view reviews
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Guests
 class GuestViewSet(viewsets.ModelViewSet):
     queryset = Guest.objects.all()
     serializer_class = GuestSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            # Staff and admins can create guests
+            return [IsStaffUser()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Only admins can modify guests
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view guests
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
 
 # Dashboard Views
 class DashboardOverview(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]
     
     def get(self, request):
         # Calculate metrics
@@ -181,7 +270,7 @@ class DashboardOverview(APIView):
         return Response(serializer.data)
 
 class DashboardComplaints(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]
     
     def get(self, request):
         # Group complaints by status
@@ -196,7 +285,7 @@ class DashboardComplaints(APIView):
         return Response(serializer.data)
 
 class DashboardReviews(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]
     
     def get(self, request):
         # Group reviews by rating
@@ -218,7 +307,7 @@ class DashboardReviews(APIView):
         })
 
 class DashboardViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]
 
     def list(self, request):
         return Response({
@@ -263,7 +352,27 @@ class VoucherViewSet(viewsets.ModelViewSet):
     """Complete voucher management API"""
     queryset = Voucher.objects.all()
     serializer_class = VoucherSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            # Staff and admins can create vouchers
+            return [IsStaffUser()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Only admins can modify vouchers
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view vouchers
+            return [IsStaffUser()]
+        elif self.action == 'redeem':
+            # Staff and admins can redeem vouchers
+            return [IsStaffUser()]
+        elif self.action == 'regenerate_qr':
+            # Staff and admins can regenerate QR codes
+            return [IsStaffUser()]
+        elif self.action == 'analytics':
+            # Staff and admins can view analytics
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -400,7 +509,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
 @method_decorator(csrf_exempt, name='dispatch')
 class VoucherValidationView(APIView):
     """Enhanced voucher validation endpoint implementing your exact multi-day logic"""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]  # Only staff and admin can validate vouchers
     
     def post(self, request):
         """Validate voucher with exact logic from your requirements"""
@@ -562,7 +671,7 @@ class VoucherValidationView(APIView):
 
 
 @api_view(['GET'])
-@permission_classes([permissions.AllowAny])  # Allow public access for simple validation
+@permission_classes([IsStaffUser()])  # Only staff and admin can validate vouchers
 def validate_voucher_simple(request):
     """Simple voucher validation endpoint exactly like your specification"""
     code = request.GET.get('code')
@@ -596,7 +705,7 @@ class VoucherScanViewSet(viewsets.ReadOnlyModelViewSet):
     """Voucher scan history and analytics"""
     queryset = VoucherScan.objects.all()
     serializer_class = VoucherScanSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaffUser()]  # Only staff and admin can view scan history
     
     def get_queryset(self):
         queryset = VoucherScan.objects.all().select_related(
@@ -628,7 +737,21 @@ class VoucherScanViewSet(viewsets.ReadOnlyModelViewSet):
 class GuestViewSet(viewsets.ModelViewSet):
     """Enhanced guest management with voucher integration"""
     queryset = Guest.objects.all()
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            # Staff and admins can create guests
+            return [IsStaffUser()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Only admins can modify guests
+            return [IsAdminUser()]
+        elif self.action in ['list', 'retrieve']:
+            # Staff and admins can view guests
+            return [IsStaffUser()]
+        elif self.action in ['vouchers', 'create_voucher']:
+            # Staff and admins can view/create guest vouchers
+            return [IsStaffUser()]
+        return [permissions.IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'create':

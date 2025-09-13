@@ -8,7 +8,7 @@ import requests
 from django.conf import settings
 from django.utils import timezone
 from .models import Voucher
-from .utils import create_whatsapp_voucher_message, generate_voucher_url
+from .utils import generate_voucher_qr_base64
 
 logger = logging.getLogger(__name__)
 
@@ -144,28 +144,45 @@ class WhatsAppService:
     
     def send_voucher(self, voucher, recipient_phone):
         try:
-            # In production, replace with actual WhatsApp API call
-            message = create_whatsapp_voucher_message(voucher)
-            
-            # Mock API call - replace with actual implementation
-            response = self._mock_send_message(recipient_phone, message, voucher)
-            
-            if response.get('success'):
+            # Generate QR code for voucher
+            qr_base64 = generate_voucher_qr_base64(voucher, size="medium")
+
+            # Format voucher details text (optional, alongside QR image)
+            message = (
+                "🎟️ *Hotel Voucher*\n\n"
+                f"👤 Guest: {voucher.guest_name}\n"
+                f"🏠 Room: {voucher.room_number or 'Not assigned'}\n"
+                f"🍳 Type: {voucher.voucher_type}\n"
+                f"🔑 Code: {voucher.voucher_code}\n\n"
+                f"📅 Issued: {voucher.issued_at.strftime('%b %d, %Y') if voucher.issued_at else 'N/A'}\n"
+                f"⏳ Valid until: {voucher.valid_until.strftime('%b %d, %Y') if voucher.valid_until else 'Not specified'}\n\n"
+                "📱 Scan the QR code above to validate your voucher."
+            )
+
+            # First send QR image
+            image_response = self._send_image_message(recipient_phone, qr_base64, voucher)
+            if not image_response.get("success"):
+                logger.warning(f"Failed to send voucher QR image to {recipient_phone}, sending text only")
+
+            # Then send text
+            text_response = self._send_text_message(recipient_phone, message)
+
+            if text_response.get("success"):
                 voucher.sent_whatsapp = True
                 voucher.whatsapp_sent_at = timezone.now()
-                voucher.whatsapp_message_id = response.get('message_id')
+                voucher.whatsapp_message_id = text_response.get("message_id")
                 voucher.save()
-                
-                logger.info(f"WhatsApp voucher sent successfully: {voucher.voucher_code}")
+
+                logger.info(f"WhatsApp voucher QR sent successfully: {voucher.voucher_code}")
                 return True
             else:
-                logger.error(f"Failed to send WhatsApp voucher: {response.get('error')}")
+                logger.error(f"Failed to send WhatsApp voucher text: {text_response.get('error')}")
                 return False
-                
+
         except Exception as e:
-            logger.error(f"WhatsApp service error: {str(e)}")
+            logger.error(f"WhatsApp voucher QR service error: {str(e)}")
             return False
-    
+
     def _mock_send_message(self, phone, message, voucher):
         """Mock WhatsApp API call - replace with actual implementation"""
         # Simulate API response

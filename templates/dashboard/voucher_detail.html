@@ -135,9 +135,9 @@
                 <div class="card-body text-center">
                     {% if voucher.qr_image %}
                         <div class="qr-display mb-4">
-                            <img src="data:image/png;base64,{{ voucher.qr_image }}" alt="QR Code" 
+                            <img id="qrModalImage" src="data:image/png;base64,{{ voucher.qr_image }}" alt="QR Code" 
                                  class="img-fluid border rounded-3" 
-                                 style="max-width: 280px; background: white; padding: 15px; cursor: pointer;"
+                                 style="width: 100%; height: 250px; object-fit: contain; background: white; padding: 15px; cursor: pointer; border: 2px solid #e9ecef;"
                                  onclick="showQRFullscreen()">
                         </div>
                         

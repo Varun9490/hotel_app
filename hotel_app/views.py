@@ -11,6 +11,7 @@ from django.contrib.auth.views import LogoutView
 from django.db.models import Count
 from django.views.generic import TemplateView
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 
 from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -26,13 +27,14 @@ from hotel_app.serializers import (
     UserGroupMembershipSerializer, LocationSerializer,
     ServiceRequestSerializer, GuestCommentSerializer
 )
-from hotel_app.utils import generate_qr_code
+from hotel_app.utils import generate_qr_code, user_in_group, group_required, admin_required
 from .forms import GuestForm
 from .models import Guest
 
 # ------------------- Constants -------------------
 ADMINS_GROUP = 'Admins'
 USERS_GROUP = 'Users'
+STAFF_GROUP = 'Staff'
 
 
 # ------------------- Auth -------------------
@@ -56,7 +58,7 @@ def logout_view(request):
 def home(request):
     is_admin = (
         request.user.is_authenticated
-        and (request.user.is_superuser or request.user.groups.filter(name=ADMINS_GROUP).exists())
+        and (request.user.is_superuser or user_in_group(request.user, ADMINS_GROUP))
     )
     return render(request, "home.html", {"is_admin": is_admin})
 
@@ -71,6 +73,13 @@ class AdminOnlyView(LoginRequiredMixin, UserPassesTestMixin):
     """Restrict access to Admin users only."""
     def test_func(self):
         return user_in_group(self.request.user, ADMINS_GROUP)
+
+
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Restrict access to Staff and Admin users only."""
+    def test_func(self):
+        return (user_in_group(self.request.user, ADMINS_GROUP) or 
+                user_in_group(self.request.user, STAFF_GROUP))
 
 
 # ------------------- API ViewSets -------------------
@@ -160,6 +169,10 @@ def breakfast_vouchers(request):
 
 def issue_voucher(request, guest_id):
     """Generate voucher + QR for a guest at check-in"""
+    # Check if user has permission to issue vouchers
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        raise PermissionDenied("You don't have permission to issue vouchers.")
+    
     guest = get_object_or_404(Guest, id=guest_id)
 
     if not guest.breakfast_included:
@@ -171,9 +184,10 @@ def issue_voucher(request, guest_id):
     )
 
     if created or not voucher.qr_code:
-        qr_file = generate_qr_code(str(voucher.voucher_code))
-        voucher.qr_code.save(f"{voucher.voucher_code}.png", qr_file)
-        voucher.save()
+        # Generate QR code with larger size for better visibility
+        qr_data = f"Voucher: {voucher.voucher_code}\nGuest: {voucher.guest_name}"
+        voucher.qr_image = generate_qr_code(qr_data, size='xlarge')
+        voucher.save(update_fields=['qr_image'])
 
     return render(request, "dashboard/voucher_detail.html", {"voucher": voucher})
 
@@ -181,6 +195,10 @@ def issue_voucher(request, guest_id):
 @require_http_methods(["POST"])
 def scan_voucher(request, code=None):
     """Validate & redeem QR voucher via POST request."""
+    # Check if user has permission to scan vouchers
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
+    
     code = code or request.POST.get("voucher_code")
     try:
         voucher = Voucher.objects.get(voucher_code=code)
@@ -202,6 +220,10 @@ def scan_voucher(request, code=None):
 
 def validate_voucher(request):
     """Validate & redeem QR voucher via GET request."""
+    # Check if user has permission to validate vouchers
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
+    
     code = request.GET.get("code")
     if not code:
         return JsonResponse({"status": "error", "message": "Code missing"}, status=400)
@@ -226,17 +248,29 @@ def validate_voucher(request):
 
 
 def voucher_report(request):
+    # Check if user has permission to view reports
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        raise PermissionDenied("You don't have permission to view voucher reports.")
+    
     vouchers = Voucher.objects.all().order_by("-created_at")
     return render(request, "dashboard/voucher_report.html", {"vouchers": vouchers})
 
 
 def issue_voucher_list(request):
+    # Check if user has permission to issue vouchers
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        raise PermissionDenied("You don't have permission to issue vouchers.")
+    
     guests = Guest.objects.all()
     return render(request, "dashboard/issue_voucher.html", {"guests": guests})
 
 
 def scan_voucher_page(request):
     """Render the voucher scanning page (form/QR scanner UI)."""
+    # Check if user has permission to scan vouchers
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        raise PermissionDenied("You don't have permission to scan vouchers.")
+    
     return render(request, "dashboard/scan_voucher.html")
 
 
@@ -248,7 +282,9 @@ class BaseNavView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         context["ADMINS_GROUP"] = ADMINS_GROUP
         context["USERS_GROUP"] = USERS_GROUP
+        context["STAFF_GROUP"] = STAFF_GROUP
         context["is_admin"] = user_in_group(user, ADMINS_GROUP)
+        context["is_staff"] = user_in_group(user, STAFF_GROUP)
         context["is_user"] = user_in_group(user, USERS_GROUP)
         return context
 
@@ -331,6 +367,10 @@ def export_users_csv(request):
 
 def register_guest(request):
     """Enhanced guest registration with automatic voucher generation and QR code"""
+    # Check if user has permission to register guests
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        raise PermissionDenied("You don't have permission to register guests.")
+    
     if request.method == "POST":
         form = GuestForm(request.POST)
         if form.is_valid():
@@ -422,6 +462,10 @@ def guest_qr_success(request, guest_id):
 @require_http_methods(["POST"])
 def generate_guest_qr(request, guest_id):
     """Generate QR code for guest details on demand"""
+    # Check if user has permission to generate QR codes
+    if not (user_in_group(request.user, ADMINS_GROUP) or user_in_group(request.user, STAFF_GROUP)):
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
+    
     guest = get_object_or_404(Guest, id=guest_id)
     
     try:

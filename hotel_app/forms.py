@@ -276,9 +276,9 @@ class VoucherForm(forms.ModelForm):
         if commit and self.cleaned_data.get('generate_qr'):
             from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
             
-            # Generate QR code
+            # Generate QR code with larger size for better visibility
             voucher.qr_data = generate_voucher_qr_data(voucher)
-            voucher.qr_image = generate_voucher_qr_base64(voucher)
+            voucher.qr_image = generate_voucher_qr_base64(voucher, size='xlarge')
             voucher.save()
         
         return voucher
