@@ -543,7 +543,7 @@ def dashboard_vouchers(request):
     
     for voucher in vouchers:
         if not voucher.qr_image:
-            voucher.generate_qr_code(size='large')
+            voucher.generate_qr_code(size='xxlarge')
     
     context = {
         "vouchers": vouchers,
@@ -589,7 +589,7 @@ def voucher_detail(request, voucher_id):
     scans = voucher.scans.all().order_by('-scanned_at')
     
     if not voucher.qr_image:
-        if voucher.generate_qr_code(size='xlarge'):
+        if voucher.generate_qr_code(size='xxlarge'):
             messages.success(request, 'QR code generated successfully!')
         else:
             messages.error(request, 'Failed to generate QR code.')
@@ -606,7 +606,7 @@ def regenerate_voucher_qr(request, voucher_id):
     """Regenerate QR code for a specific voucher."""
     voucher = get_object_or_404(Voucher, pk=voucher_id)
     if request.method == 'POST':
-        qr_size = request.POST.get('qr_size', 'xlarge')
+        qr_size = request.POST.get('qr_size', 'xxlarge')
         if voucher.generate_qr_code(size=qr_size):
             messages.success(request, f'QR code regenerated with size: {qr_size}!')
         else:

@@ -188,12 +188,13 @@ class VoucherValidationSerializer(serializers.Serializer):
     qr_data = serializers.CharField(required=False)
     scan_location = serializers.CharField(max_length=100, required=False)
     
-    def validate(self, data):
-        if not data.get('voucher_code') and not data.get('qr_data'):
+    
+    def validate(self, attrs):
+        if not attrs.get('voucher_code') and not attrs.get('qr_data'):
             raise serializers.ValidationError(
                 "Either voucher_code or qr_data must be provided"
             )
-        return data
+        return attrs
 
 
 class VoucherValidationResponseSerializer(serializers.Serializer):
@@ -264,12 +265,10 @@ class GuestCreateSerializer(serializers.ModelSerializer):
         
         # Auto-create breakfast voucher if breakfast is included
         if guest.breakfast_included or create_voucher:
-            # Import here to avoid circular imports
-            from .models import Voucher
-            from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+            from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
             
             # Create voucher directly
-            voucher = Voucher.objects.create(
+            voucher = Voucher(
                 voucher_type='breakfast',
                 guest=guest,
                 guest_name=guest.full_name or 'Guest',
@@ -279,6 +278,7 @@ class GuestCreateSerializer(serializers.ModelSerializer):
                 quantity=voucher_quantity,
                 status='active'
             )
+            voucher.save()
             
             # Generate QR code
             try:

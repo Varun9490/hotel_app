@@ -90,9 +90,26 @@
                 <div class="mt-4 p-3 bg-warning bg-opacity-10 border border-warning rounded">
                   <h6 class="text-warning-emphasis mb-2">🎫 Vouchers Created:</h6>
                   {% for voucher in vouchers %}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                      <span>{{ voucher.voucher_type|title }} Voucher</span>
-                      <code class="small">{{ voucher.voucher_code }}</code>
+                    <div class="mb-3 pb-3 border-bottom">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ voucher.voucher_type|title }} Voucher</span>
+                        <code class="small">{{ voucher.voucher_code }}</code>
+                      </div>
+                      {% if voucher.qr_image %}
+                        <div class="text-center mt-2">
+                          <img src="data:image/png;base64,{{ voucher.qr_image }}" 
+                               alt="{{ voucher.voucher_type|title }} Voucher QR Code" 
+                               class="img-fluid border rounded shadow-sm"
+                               style="max-width: 150px;">
+                          <div class="mt-2">
+                            <a href="data:image/png;base64,{{ voucher.qr_image }}" 
+                               download="voucher_{{ voucher.voucher_code }}.png"
+                               class="btn btn-outline-warning btn-sm">
+                              <i class="fas fa-download me-1"></i> Download
+                            </a>
+                          </div>
+                        </div>
+                      {% endif %}
                     </div>
                   {% endfor %}
                 </div>
@@ -110,7 +127,7 @@
             <div class="card-body text-center">
               {% if guest.details_qr_code %}
                 <div class="mb-3">
-                  <img src="{{ guest.details_qr_code.url }}" 
+                  <img src="data:image/png;base64,{{ guest.details_qr_code }}" 
                        alt="Guest Details QR Code" 
                        class="img-fluid border rounded shadow-sm"
                        style="max-width: 300px;">
@@ -127,8 +144,8 @@
                   </ul>
                 </div>
 
-                <div class="d-flex gap-2 justify-content-center">
-                  <a href="{{ guest.details_qr_code.url }}" 
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                  <a href="data:image/png;base64,{{ guest.details_qr_code }}" 
                      download="guest_{{ guest.guest_id }}_qr.png"
                      class="btn btn-outline-primary btn-sm">
                     💾 Download QR
@@ -138,6 +155,13 @@
                           onclick="printQR()">
                     🖨️ Print QR
                   </button>
+                  {% if guest.phone %}
+                    <button type="button" 
+                            class="btn btn-success btn-sm"
+                            onclick="shareOnWhatsApp()">
+                      📱 Share on WhatsApp
+                    </button>
+                  {% endif %}
                 </div>
               {% else %}
                 <div class="text-muted">
@@ -297,6 +321,35 @@
       console.error('Error:', error);
       alert('Failed to generate QR code');
     });
+  }
+
+  function shareOnWhatsApp() {
+    // Create a temporary link to download the QR code
+    const qrDataUrl = "data:image/png;base64,{{ guest.details_qr_code }}";
+    
+    // Create guest details text
+    let guestDetails = `Guest Details:%0A`;
+    guestDetails += `Name: {{ guest.full_name|default:"N/A" }}%0A`;
+    guestDetails += `Guest ID: {{ guest.guest_id|default:"N/A" }}%0A`;
+    guestDetails += `Room: {{ guest.room_number|default:"N/A" }}%0A`;
+    {% if guest.checkin_datetime %}
+      guestDetails += `Check-in: {{ guest.checkin_datetime|date:"M d, Y" }} at {{ guest.checkin_datetime|time:"h:i A" }}%0A`;
+    {% endif %}
+    {% if guest.checkout_datetime %}
+      guestDetails += `Check-out: {{ guest.checkout_datetime|date:"M d, Y" }} at {{ guest.checkout_datetime|time:"h:i A" }}%0A`;
+    {% endif %}
+    
+    // For now, we'll share the QR code as a link and the details as text
+    // In a more advanced implementation, we could use the WhatsApp Business API to send the actual image
+    const phoneNumber = "{{ guest.phone|default:"" }}";
+    const message = `Hi, here are your guest details and QR code:%0A%0A${guestDetails}%0AYou can view your QR code at: ${window.location.href}`;
+    
+    if (phoneNumber) {
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+    } else {
+      // Fallback if phone number is not available
+      window.open(`https://web.whatsapp.com/send?text=${message}`, '_blank');
+    }
   }
 </script>
 {% endblock %}

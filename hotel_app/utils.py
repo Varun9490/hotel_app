@@ -72,7 +72,7 @@ def generate_voucher_qr_data(voucher):
     """Generate QR data for voucher"""
     return f"Voucher: {voucher.voucher_code}\nGuest: {voucher.guest_name}\nRoom: {voucher.room_number}"
 
-def generate_voucher_qr_base64(voucher, size='xlarge'):
+def generate_voucher_qr_base64(voucher, size='xxlarge'):
     """Generate QR code for voucher and return as base64 string"""
     data = generate_voucher_qr_data(voucher)
     return generate_qr_code(data, size)
@@ -81,7 +81,7 @@ def generate_guest_details_qr_data(guest):
     """Generate QR data for guest details"""
     return f"Guest ID: {guest.guest_id}\nName: {guest.full_name}\nRoom: {guest.room_number}\nCheck-in: {guest.checkin_date}\nCheck-out: {guest.checkout_date}"
 
-def generate_guest_details_qr_base64(guest, size='medium'):
+def generate_guest_details_qr_base64(guest, size='xxlarge'):
     """Generate QR code for guest details and return as base64 string"""
     data = generate_guest_details_qr_data(guest)
     return generate_qr_code(data, size)

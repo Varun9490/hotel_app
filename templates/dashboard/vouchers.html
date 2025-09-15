@@ -142,7 +142,7 @@
                                     
                                     {% if voucher.qr_image %}
                                         <button class="btn btn-sm btn-outline-secondary" 
-                                                onclick="showVoucherQR('{{ voucher.id }}', '{{ voucher.voucher_code }}', 'data:image/png;base64,{{ voucher.qr_image }}')"
+                                                onclick="showVoucherQR('{{ voucher.id }}', '{{ voucher.voucher_code }}', 'data:image/png;base64,{{ voucher.qr_image|escapejs }}')"
                                                 title="View QR Code">
                                             <i class="fas fa-qrcode"></i>
                                         </button>
@@ -156,7 +156,7 @@
                                         </button>
                                     {% endif %}
                                     
-                                    <a href="data:image/png;base64,{{ voucher.qr_image }}" 
+                                    <a href="data:image/png;base64,{{ voucher.qr_image|escapejs }}" 
                                        download="voucher_{{ voucher.voucher_code }}.png" 
                                        class="btn btn-sm btn-outline-success"
                                        title="Download QR Code">

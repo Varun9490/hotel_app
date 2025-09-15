@@ -157,7 +157,7 @@ class GuestForm(forms.ModelForm):
             if (self.cleaned_data.get('create_breakfast_voucher') and 
                 (guest.breakfast_included or self.cleaned_data.get('breakfast_included'))):
                 
-                from .utils import generate_voucher_qr_code, generate_voucher_qr_data
+                from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
                 
                 # Create voucher with enhanced date handling
                 voucher_data = {
@@ -188,7 +188,7 @@ class GuestForm(forms.ModelForm):
                 # Generate QR code
                 try:
                     voucher.qr_data = generate_voucher_qr_data(voucher)
-                    voucher.qr_image = generate_voucher_qr_code(voucher)
+                    voucher.qr_image = generate_voucher_qr_base64(voucher)
                     voucher.save()
                 except Exception as e:
                     # Log error but don't fail guest creation
@@ -278,7 +278,7 @@ class VoucherForm(forms.ModelForm):
             
             # Generate QR code with larger size for better visibility
             voucher.qr_data = generate_voucher_qr_data(voucher)
-            voucher.qr_image = generate_voucher_qr_base64(voucher, size='xlarge')
+            voucher.qr_image = generate_voucher_qr_base64(voucher, size='xxlarge')
             voucher.save()
         
         return voucher

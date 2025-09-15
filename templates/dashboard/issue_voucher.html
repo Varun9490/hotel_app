@@ -32,7 +32,7 @@
             {% if guest.breakfast_included %} {% if guest.voucher %}
             <div class="flex flex-col items-center">
               <img
-                src="{{ guest.voucher.qr_code.url }}"
+                src="data:image/png;base64,{{ guest.voucher.qr_image }}"
                 alt="Voucher QR"
                 class="w-20 h-20 mb-2 border rounded"
               />

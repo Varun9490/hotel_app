@@ -317,7 +317,7 @@ class Guest(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
     
-    def generate_details_qr_code(self, size='xlarge'):
+    def generate_details_qr_code(self, size='xxlarge'):
         """Generate QR code with all guest details and store as base64"""
         from .utils import generate_guest_details_qr_base64, generate_guest_details_qr_data
         

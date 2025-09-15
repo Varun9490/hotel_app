@@ -186,7 +186,7 @@ def issue_voucher(request, guest_id):
     if created or not voucher.qr_code:
         # Generate QR code with larger size for better visibility
         qr_data = f"Voucher: {voucher.voucher_code}\nGuest: {voucher.guest_name}"
-        voucher.qr_image = generate_qr_code(qr_data, size='xlarge')
+        voucher.qr_image = generate_qr_code(qr_data, size='xxlarge')
         voucher.save(update_fields=['qr_image'])
 
     return render(request, "dashboard/voucher_detail.html", {"voucher": voucher})
@@ -377,6 +377,10 @@ def register_guest(request):
             try:
                 guest = form.save()
                 
+                # Generate QR code for guest details
+                if not guest.details_qr_code:
+                    guest.generate_details_qr_code(size='xxlarge')
+                
                 # Check if voucher was created
                 vouchers_created = guest.vouchers.count()
                 
@@ -437,6 +441,10 @@ def register_guest(request):
 def guest_qr_success(request, guest_id):
     """Display guest details and QR code after successful registration"""
     guest = get_object_or_404(Guest, id=guest_id)
+    
+    # Generate QR code if it doesn't exist
+    if not guest.details_qr_code:
+        guest.generate_details_qr_code(size='xxlarge')
     
     # Get associated vouchers
     vouchers = guest.vouchers.all()
