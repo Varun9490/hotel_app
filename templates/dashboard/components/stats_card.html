@@ -1,0 +1,46 @@
+{% comment %}
+Reusable Statistics Card Component
+Usage:
+{% include 'dashboard/components/stats_card.html' with
+   title="Active Users"
+   value="1,247"
+   change="+12%"
+   change_positive=True
+   icon_slug="active_users"
+   icon_bg="bg-sky-600/10"
+   icon_color="text-sky-600"
+%}
+{% endcomment %}
+
+{% load static %}
+
+<div class="w-44 h-44 relative bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200">
+    
+    <!-- Icon + Change % -->
+    <div class="w-28 h-10 left-[25px] top-[25px] absolute inline-flex justify-between items-center">
+        
+        <!-- Icon Container -->
+        <div class="w-9 h-10 relative {{ icon_bg }} rounded-lg flex items-center justify-center">
+            <img src="{% static 'images/dashboard/' %}{{ icon_slug }}.svg" alt="{{ icon_slug }} icon" class="w-5 h-5 {{ icon_color }}"/>
+        </div>
+
+        <!-- Change Percentage -->
+        {% if change %}
+        <div class="w-8 h-4 relative">
+            <div class="text-xs font-medium {% if change_positive %}text-green-500{% else %}text-red-500{% endif %}">
+                {{ change }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Value -->
+    <div class="w-28 h-8 left-[25px] top-[81px] absolute">
+        <div class="text-gray-900 text-2xl font-bold">{{ value }}</div>
+    </div>
+
+    <!-- Title -->
+    <div class="w-28 h-5 left-[25px] top-[117px] absolute">
+        <div class="text-gray-600 text-sm font-normal">{{ title }}</div>
+    </div>
+</div>

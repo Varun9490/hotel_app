@@ -1,0 +1,56 @@
+<div class="w-full h-96 bg-white rounded-xl shadow-md border border-gray-200 p-5">
+    <div class="text-gray-900 text-lg font-semibold mb-4 font-['Inter']">Requests by Family</div>
+    <canvas id="requests-chart" class="w-full h-72"></canvas>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const requestsData = [
+        { name: "Housekeeping", value: 52 },
+        { name: "Maintenance", value: 38 },
+        { name: "Concierge", value: 27 },
+        { name: "F&B", value: 22 },
+        { name: "IT Support", value: 15 },
+        { name: "Other", value: 8 }
+    ];
+
+    const labels = requestsData.map(item => item.name);
+    const values = requestsData.map(item => item.value);
+
+    const ctx = document.getElementById('requests-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Number of Requests',
+                data: values,
+                backgroundColor: '#0EA5E9',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { bottom: 30 } }, // extra padding to avoid label cutoff
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#4B5563', stepSize: 10 }
+                },
+                x: {
+                    ticks: {
+                        color: '#4B5563',
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: false
+                    }
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
+{% endblock %}

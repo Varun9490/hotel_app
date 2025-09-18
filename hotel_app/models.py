@@ -13,14 +13,14 @@ class Department(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class UserGroup(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class UserProfile(models.Model):
@@ -36,7 +36,7 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.full_name or self.user.username
+        return str(self.full_name or getattr(self.user, "username", "Unknown User"))
 
 
 class UserGroupMembership(models.Model):
@@ -48,7 +48,7 @@ class UserGroupMembership(models.Model):
         unique_together = ('user', 'group')
 
     def __str__(self):
-        return f'{self.user} -> {self.group}'
+        return str(f'{self.user} -> {self.group}')
 
 
 class AuditLog(models.Model):
@@ -63,7 +63,7 @@ class AuditLog(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.action} {self.model_name} {self.object_pk} by {self.actor}"
+        return str(f"{self.action} {self.model_name} {self.object_pk} by {self.actor}")
 
 
 # ---- Locations ----
@@ -72,7 +72,7 @@ class Building(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class Floor(models.Model):
@@ -90,14 +90,14 @@ class LocationFamily(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class LocationType(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class Location(models.Model):
@@ -114,7 +114,7 @@ class Location(models.Model):
         unique_together = ("building", "room_no")
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 # ---- Workflow ----
@@ -123,21 +123,21 @@ class RequestFamily(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class WorkFamily(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class Workflow(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class WorkflowStep(models.Model):
@@ -170,7 +170,7 @@ class Checklist(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class ChecklistItem(models.Model):
@@ -194,7 +194,7 @@ class RequestType(models.Model):
     active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class ServiceRequest(models.Model):
@@ -292,15 +292,15 @@ class Guest(models.Model):
         
         # Sync date fields with datetime fields
         if self.checkin_datetime and not self.checkin_date:
-            self.checkin_date = self.checkin_datetime.date()
+            self.checkin_date = self.checkin_datetime.date() if hasattr(self.checkin_datetime, "date") else None
         if self.checkout_datetime and not self.checkout_date:
-            self.checkout_date = self.checkout_datetime.date()
+            self.checkout_date = self.checkout_datetime.date() if hasattr(self.checkout_datetime, "date") else None
         
-        if self.phone and len(self.phone) < 10:
+        if self.phone and len(str(self.phone)) < 10:
             raise ValidationError('Phone number must be at least 10 digits.')
 
     def __str__(self):
-        return self.full_name or f'Guest {self.pk}'
+        return str(self.full_name or f'Guest {self.pk}')
     
     def save(self, *args, **kwargs):
         # Generate unique guest ID if not provided
@@ -369,7 +369,7 @@ class GymMember(models.Model):
     status = models.CharField(max_length=50, blank=True, null=True)
     plan_type = models.CharField(max_length=50, blank=True, null=True)
 
-    def __str__(self):
+    def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return self.full_name
 
 
@@ -379,7 +379,7 @@ class GymVisitor(models.Model):
     email = models.EmailField(max_length=100, blank=True, null=True)
     registered_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return self.full_name
 
 
@@ -579,7 +579,10 @@ class Voucher(models.Model):
             self.scan_history.append(today)
             
             # Check if all valid dates are now scanned (fully redeemed)
-            if set(self.scan_history) >= set(self.valid_dates):
+            # Ensure we are working with list values, not field objects
+            scan_history = self.scan_history if isinstance(self.scan_history, list) else []
+            valid_dates = self.valid_dates if isinstance(self.valid_dates, list) else []
+            if set(scan_history) >= set(valid_dates):
                 self.redeemed = True
                 self.status = 'redeemed'
                 self.redeemed_at = timezone.now()

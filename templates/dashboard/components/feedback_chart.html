@@ -1,0 +1,57 @@
+<div class="w-full h-96 bg-white rounded-xl shadow-md border border-gray-200 p-5">
+    <div class="text-gray-900 text-lg font-semibold mb-4 font-['Inter']">Feedback Sentiment (Last 7 Days)</div>
+    <canvas id="feedback-chart" class="w-full h-72"></canvas>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const feedbackData = [
+        { day: "Mon", positive: 12, neutral: 5, negative: 3 },
+        { day: "Tue", positive: 15, neutral: 4, negative: 2 },
+        { day: "Wed", positive: 10, neutral: 6, negative: 4 },
+        { day: "Thu", positive: 18, neutral: 3, negative: 1 },
+        { day: "Fri", positive: 9, neutral: 5, negative: 3 },
+        { day: "Sat", positive: 7, neutral: 6, negative: 2 },
+        { day: "Sun", positive: 11, neutral: 4, negative: 3 }
+    ];
+
+    const labels = feedbackData.map(item => item.day);
+    const positive = feedbackData.map(item => item.positive);
+    const neutral = feedbackData.map(item => item.neutral);
+    const negative = feedbackData.map(item => item.negative);
+
+    const ctx = document.getElementById('feedback-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Positive', data: positive, borderColor: '#10B981', backgroundColor: '#10B98133', tension: 0.3, fill: true },
+                { label: 'Neutral', data: neutral, borderColor: '#FBBF24', backgroundColor: '#FBBF2433', tension: 0.3, fill: true },
+                { label: 'Negative', data: negative, borderColor: '#EF4444', backgroundColor: '#EF444433', tension: 0.3, fill: true }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { bottom: 20 } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#4B5563', stepSize: 5 }
+                },
+                x: {
+                    ticks: {
+                        color: '#4B5563',
+                        maxRotation: 0,
+                        minRotation: 0
+                    }
+                }
+            },
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+});
+</script>
+{% endblock %}

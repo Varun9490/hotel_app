@@ -57,6 +57,21 @@ Specific API permissions include:
 - QR code regeneration functionality
 - WhatsApp sharing integration
 
+## Frontend Styling with Tailwind CSS
+
+This project uses Tailwind CSS for styling the dashboard interface. For more information on how to set up and use Tailwind CSS, see [TAILWIND_SETUP.md](TAILWIND_SETUP.md).
+
+Key features:
+- Custom color palette matching the project's design system
+- Pre-built components for buttons, cards, navigation, and more
+- Responsive design utilities
+- Custom component classes for consistent UI elements
+
+You can initialize Tailwind CSS by running:
+```bash
+python init_tailwind.py
+```
+
 ## Production-Ready Features
 
 ### Security
@@ -91,7 +106,10 @@ Specific API permissions include:
 5. Run migrations: `python manage.py migrate`
 6. Create superuser: `python manage.py createsuperuser`
 7. Initialize groups: `python manage.py init_groups`
-8. Run the server: `python manage.py runserver`
+8. Set up Tailwind CSS: 
+   - Run the initialization script: `python init_tailwind.py`
+   - Follow the instructions to install Node.js dependencies and build CSS
+9. Run the server: `python manage.py runserver`
 
 ## User Groups Setup
 

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-12 bg-white rounded-lg shadow-lg p-8">
+  <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign Up</h2>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Username -->
+    <div>
+      {{ form.username.label_tag }}
+      {{ form.username }}
+      {% if form.username.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.username.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Email -->
+    <div>
+      {{ form.email.label_tag }}
+      {{ form.email }}
+      {% if form.email.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.email.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Password -->
+    <div>
+      {{ form.password1.label_tag }}
+      {{ form.password1 }}
+      {% if form.password1.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.password1.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Confirm Password -->
+    <div>
+      {{ form.password2.label_tag }}
+      {{ form.password2 }}
+      {% if form.password2.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.password2.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="w-full py-2 px-4 rounded bg-green-600 hover:bg-green-700 text-white font-medium">Create Account</button>
+  </form>
+
+  <p class="mt-4 text-center text-gray-600">
+    Already have an account? 
+    <a href="{% url 'login' %}" class="text-sky-600 hover:underline">Login</a>
+  </p>
+</div>
+{% endblock %}

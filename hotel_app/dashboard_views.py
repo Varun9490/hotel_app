@@ -46,6 +46,54 @@ def is_staff(user):
             user_in_group(user, ADMINS_GROUP) or
             user_in_group(user, STAFF_GROUP))
 
+@login_required
+@user_passes_test(is_staff)
+def dashboard(request):
+    """Main dashboard view."""
+    # Get system status
+    system_statuses = [
+        {'name': 'Camera Health', 'value': '98%', 'color': 'green-500'},
+        {'name': 'Import/Export Activity', 'value': 'Active', 'color': 'gray-900'},
+        {'name': 'Billing Status', 'value': 'Current', 'color': 'green-500'},
+    ]
+
+    # Get checklist data
+    checklists = [
+        {'name': 'Housekeeping', 'completed': 18, 'total': 20, 'status_color': 'green', 'percentage': 90},
+        {'name': 'Maintenance', 'completed': 12, 'total': 15, 'status_color': 'yellow', 'percentage': 80},
+    ]
+
+    # Get WhatsApp campaigns
+    whatsapp_campaigns = [
+        {'name': 'Welcome Message', 'time': '10:00 AM', 'status_color': 'green-500'},
+        {'name': 'Checkout Reminder', 'time': '2:00 PM', 'status_color': 'yellow-400'},
+        {'name': 'Feedback Request', 'time': '6:00 PM', 'status_color': 'sky-600'},
+    ]
+
+    # Get requests data for chart
+    requests_data = {
+        'labels': ['Housekeeping', 'Maintenance', 'Concierge', 'F&B', 'IT Support', 'Other'],
+        'values': [95, 75, 45, 35, 25, 15]
+    }
+
+    # Get feedback data for chart
+    feedback_data = {
+        'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'positive': [70, 80, 75, 90, 85, 95, 100],
+        'neutral': [20, 25, 30, 25, 35, 30, 25],
+        'negative': [15, 10, 20, 15, 12, 10, 8]
+    }
+
+    context = {
+        'system_statuses': system_statuses,
+        'checklists': checklists,
+        'whatsapp_campaigns': whatsapp_campaigns,
+        'requests_data': json.dumps(requests_data),
+        'feedback_data': json.dumps(feedback_data),
+    }
+    
+    return render(request, 'dashboard/dashboard.html', context)
+
 def require_permission(group_names):
     """Decorator to require specific group permissions for a view."""
     if not isinstance(group_names, (list, tuple)):
@@ -70,8 +118,8 @@ def dashboard_main(request):
     total_locations = Location.objects.count()
     active_complaints = Complaint.objects.filter(status="pending").count()
     resolved_complaints = Complaint.objects.filter(status="resolved").count()
-    vouchers_issued = BreakfastVoucher.objects.count()
-    vouchers_redeemed = BreakfastVoucher.objects.filter(status="redeemed").count()
+    vouchers_issued = Voucher.objects.count()
+    vouchers_redeemed = Voucher.objects.filter(status="redeemed").count()
     average_review_rating = Review.objects.aggregate(Avg("rating"))["rating__avg"] or 0
     complaint_trends = Complaint.objects.values("status").annotate(count=Count("id"))
 
@@ -88,6 +136,45 @@ def dashboard_main(request):
     }
     return render(request, "dashboard/main.html", context)
 
+
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
+def dashboard_view(request):
+    """Render the dashboard with live metrics for users, departments and open complaints.
+
+    - total_users: count of User objects
+    - total_departments: count of Department objects
+    - open_complaints: count of Complaint objects with pending/open status
+    """
+    # Live counts
+    try:
+        total_users = User.objects.count()
+    except Exception:
+        total_users = 0
+
+    try:
+        total_departments = Department.objects.count()
+    except Exception:
+        total_departments = 0
+
+    try:
+        open_complaints = Complaint.objects.filter(status__in=["pending", "open"]).count()
+    except Exception:
+        # Fallback to Complaint model count if status field differs
+        try:
+            open_complaints = Complaint.objects.count()
+        except Exception:
+            open_complaints = 0
+
+    # Keep other cards as examples/static values for now
+    context = {
+        'total_users': total_users,
+        'total_departments': total_departments,
+        'open_complaints': open_complaints,
+    }
+    return render(request, 'dashboard/dashboard.html', context)
 
 # ---- User Management ----
 @require_permission([ADMINS_GROUP])
@@ -660,8 +747,8 @@ def guest_qr_codes(request):
         'search': search,
         'filter_status': filter_status,
         'total_guests': total_guests,
-        'guests_with_qr': Guest.objects.exclude(details_qr_code='').count(),
-        'guests_without_qr': Guest.objects.filter(details_qr_code='').count(),
+        'guests_with_qr': Guest.objects.exclude(Q(details_qr_code='') | Q(details_qr_code__isnull=True)).count(),
+        'guests_without_qr': Guest.objects.filter(Q(details_qr_code='') | Q(details_qr_code__isnull=True)).count(),
         'title': 'Guest QR Codes'
     }
     return render(request, "dashboard/guest_qr_codes.html", context)
@@ -712,3 +799,10 @@ def get_guest_whatsapp_message(request, guest_id):
         'guest_name': guest.full_name,
         'guest_phone': guest.phone
     })
+
+
+# ---- Tailwind Test ----
+@login_required
+def tailwind_test(request):
+    """View for testing Tailwind CSS functionality."""
+    return render(request, "dashboard/tailwind_test.html")

@@ -1,12 +1,11 @@
 from django.urls import path
-from django.urls import path
 from . import dashboard_views
 from . import views  # Import views for guest registration and voucher features
 
 app_name = 'dashboard'   # ✅ Required for namespacing
 
 urlpatterns = [
-    path('', dashboard_views.dashboard_main, name='main'),
+    path('', dashboard_views.dashboard_view, name='main'),
     path('users/', dashboard_views.dashboard_users, name='users'),
     path('departments/', dashboard_views.dashboard_departments, name='departments'),
     path('groups/', dashboard_views.dashboard_groups, name='groups'),
@@ -63,4 +62,7 @@ urlpatterns = [
     # Voucher QR Code Management
     path('vouchers/<int:voucher_id>/regenerate-qr/', dashboard_views.regenerate_voucher_qr, name='regenerate_voucher_qr'),
     path('vouchers/<int:voucher_id>/share-whatsapp/', dashboard_views.share_voucher_whatsapp, name='share_voucher_whatsapp'),
+    
+    # Tailwind CSS Test Page
+    path('tailwind-test/', dashboard_views.tailwind_test, name='tailwind_test'),
 ]

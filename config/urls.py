@@ -2,10 +2,14 @@ from django.contrib import admin
 from django.urls import path, include
 from hotel_app import views
 from django.contrib.auth import views as auth_views
-from hotel_app.views import logout_view  # custom logout view
+from django.views.generic import TemplateView
+from hotel_app.views import logout_view, signup_view  # custom logout view
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -35,9 +39,14 @@ urlpatterns = [
     # Auth
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
     path('logout/', logout_view, name='logout'),
+    path("signup/", signup_view, name="signup"),
 
     # Dashboard
     path('dashboard/', include('hotel_app.dashboard_urls', namespace='dashboard')),
+    
+    # Tailwind CSS Test Page
+    path('tailwind-test/', TemplateView.as_view(template_name='tailwind_test.html'), name='tailwind_test'),
+
 ]
 
 # Serve media files during development

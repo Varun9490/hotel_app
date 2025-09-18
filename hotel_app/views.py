@@ -30,6 +30,9 @@ from hotel_app.serializers import (
 from hotel_app.utils import generate_qr_code, user_in_group, group_required, admin_required
 from .forms import GuestForm
 from .models import Guest
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+
 
 # ------------------- Constants -------------------
 ADMINS_GROUP = 'Admins'
@@ -293,6 +296,17 @@ class BaseNavView(LoginRequiredMixin, TemplateView):
 class HomeView(BaseNavView):
     template_name = 'home.html'
 
+
+def signup_view(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # log the user in after signup
+            return redirect("dashboard:main")  # change to your dashboard homepage
+    else:
+        form = UserCreationForm()
+    return render(request, "auth/signup.html", {"form": form})
 
 class MasterUserView(AdminOnlyView, BaseNavView):
     template_name = 'screens/master_user.html'
