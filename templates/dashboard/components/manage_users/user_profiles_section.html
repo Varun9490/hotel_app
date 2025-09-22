@@ -1,0 +1,124 @@
+  {% load static %}
+  <!-- User Profiles section placeholder for Manage Users -->
+  <section id="user_profiles" class="mt-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm text-gray-600 font-normal font-['Inter']">User Profiles</div>
+          <h2 class="text-2xl font-bold text-gray-900 font-['Inter']">User Profiles</h2>
+          <div class="mt-1 text-sm text-gray-600">Manage role templates and permissions for staff members</div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative">
+            <input type="text" name="q" placeholder="Search profiles..." class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-['Inter']" />
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <img src="{% static 'images/dashboard/search.svg' %}" alt="Search" class="w-4 h-4" />
+            </div>
+          </div>
+          <button type="button" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-sky-600 text-white text-base font-medium font-['Inter'] hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+            <img src="{% static 'images/manage_users/plus.svg' %}" alt="Plus" class="w-3.5 h-3.5" />
+            <span>Create Profile</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top cards row (mirrors design) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-sky-600/10 rounded-lg flex items-center justify-center">
+                <div class="w-4 h-4 bg-sky-600"></div>
+              </div>
+              <div>
+                <div class="text-lg font-semibold text-gray-900">Staff</div>
+                <div class="text-sm text-gray-600">Basic access level</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+            </div>
+          </div>
+          <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-600">12 users assigned</div>
+            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-teal-500/10 rounded-lg flex items-center justify-center">
+                <div class="w-4 h-4 bg-teal-500"></div>
+              </div>
+              <div>
+                <div class="text-lg font-semibold text-gray-900">Manager</div>
+                <div class="text-sm text-gray-600">Supervisory access</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+            </div>
+          </div>
+          <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-600">5 users assigned</div>
+            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-fuchsia-700/10 rounded-lg flex items-center justify-center">
+                <div class="w-4 h-3.5 bg-fuchsia-700"></div>
+              </div>
+              <div>
+                <div class="text-lg font-semibold text-gray-900">Concierge</div>
+                <div class="text-sm text-gray-600">Guest service specialist</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
+            </div>
+          </div>
+          <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-600">8 users assigned</div>
+            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Module Permissions Overview (table placeholder) -->
+      <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div>
+            <div class="text-lg font-semibold text-gray-900">Module Permissions Overview</div>
+            <div class="text-sm text-gray-600">Compare permissions across different role templates</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button class="rounded-lg outline outline-1 outline-gray-200 px-4 py-2">Export</button>
+            <button class="rounded-lg bg-sky-600 text-white px-4 py-2">Bulk Edit</button>
+          </div>
+        </div>
+
+        <div class="mt-4 overflow-auto">
+          <!-- Placeholder table header -->
+          <div class="min-w-[1086px]">
+            <div class="grid grid-cols-7 gap-4 text-sm text-gray-900 font-semibold py-3 border-b border-neutral-100">
+              <div>Module</div>
+              <div class="text-center">Staff</div>
+              <div class="text-center">Manager</div>
+              <div class="text-center">Concierge</div>
+              <div class="text-center">Maintenance</div>
+              <div class="text-center">Housekeeping</div>
+              <div class="text-center">Super Admin</div>
+            </div>
+            <!-- rows would go here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

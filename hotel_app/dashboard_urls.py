@@ -65,4 +65,20 @@ urlpatterns = [
     
     # Tailwind CSS Test Page
     path('tailwind-test/', dashboard_views.tailwind_test, name='tailwind_test'),
+    path('manage-users/', dashboard_views.manage_users, name='manage_users'),
+    # Manage Users screens (new per-screen routes)
+    path('manage-users/all/', dashboard_views.manage_users_all, name='manage_users_all'),
+    # API endpoint for Manage Users polling
+    path('api/manage-users/users/', dashboard_views.manage_users_api_users, name='api_manage_users_users'),
+    path('api/manage-users/users/<int:user_id>/toggle-enabled/', dashboard_views.manage_users_toggle_enabled, name='api_manage_users_toggle_enabled'),
+    path('api/manage-users/users/bulk-action/', dashboard_views.manage_users_api_bulk_action, name='api_manage_users_bulk_action'),
+    # Filters endpoint used by the Manage Users frontend to populate selects
+    path('api/manage-users/filters/', dashboard_views.manage_users_api_filters, name='api_manage_users_filters'),
+    path('manage-users/groups/', dashboard_views.manage_users_groups, name='manage_users_groups'),
+    path('manage-users/roles/', dashboard_views.manage_users_roles, name='manage_users_roles'),
+    path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
+    path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),
+    path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),
+    path('camera-settings/', dashboard_views.camera_settings, name='camera_settings'),
+    path('data-exports/', dashboard_views.data_exports, name='data_exports'),
 ]

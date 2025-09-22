@@ -1,0 +1,26 @@
+{% load static %}
+<div class="w-full h-28 bg-white border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div class="w-96">
+      <div class="flex items-center gap-2 text-sm">
+        <span class="text-gray-600 font-normal font-['Inter']">Admin</span>
+        <span class="w-2 h-4 flex items-center justify-center"><span class="w-1.5 h-2.5 bg-gray-600 block"></span></span>
+        <span class="text-gray-900 font-medium font-['Inter']">Predefined Requests</span>
+      </div>
+      <h1 class="mt-2 text-2xl font-bold text-gray-900 font-['Inter']">Predefined Requests</h1>
+      <p class="mt-1 text-sm text-gray-600 font-normal font-['Inter']">Manage request templates and their availability in the Guest Portal</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <input type="text" placeholder="Search requests..." class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-['Inter']" />
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+          <img src="{% static 'images/dashboard/search.svg' %}" alt="Search" class="w-4 h-4" />
+        </div>
+      </div>
+      <button class="h-10 px-4 rounded-lg bg-sky-600 text-white text-base font-medium font-['Inter'] flex items-center gap-2">
+        <img src="{% static 'images/manage_users/plus.svg' %}" alt="Plus" class="w-3.5 h-3.5" />
+        <span>New Request</span>
+      </button>
+    </div>
+  </div>
+</div>

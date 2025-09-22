@@ -1,0 +1,399 @@
+{% load static humanize %}
+<div class="w-full max-w-[1184px] mx-auto">
+  <!-- Filters + Bulk Actions -->
+  <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 mt-6">
+    <div class="px-6 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Search -->
+        <div class="w-80 h-10 relative">
+          <div class="absolute inset-0 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200"></div>
+          <div class="absolute left-[12px] top-[8px] w-5 h-5">
+            <img src="{% static 'images/dashboard/search.svg' %}" alt="search" class="w-full h-full" />
+          </div>
+          <input id="filter-search" type="text" placeholder="Search by name or email..."
+                 class="absolute left-0 top-0 w-80 h-10 bg-transparent outline-none border-none pl-10 pr-3 text-gray-900 text-base placeholder:text-gray-400" />
+        </div>
+
+        <!-- Role Filter -->
+        <div class="w-28 h-10 relative">
+          <div class="absolute inset-0 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200"></div>
+          <div class="absolute right-2 top-[8px] w-5 h-5">
+            <img id="role-arrow" src="{% static 'images/manage_users/open.svg' %}" alt="dropdown arrow" class="w-full h-full" />
+          </div>
+          <select id="filter-role"
+                  class="absolute inset-0 w-full h-full bg-transparent outline-none border-none appearance-none pl-3 pr-8 text-black text-base"
+                  onchange="toggleArrow('role-arrow')">
+            <option value="">All Roles</option>
+          </select>
+        </div>
+
+        <!-- Department Filter -->
+        <div class="w-44 h-10 relative">
+          <div class="absolute inset-0 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200"></div>
+          <div class="absolute right-2 top-[8px] w-5 h-5">
+            <img id="dept-arrow" src="{% static 'images/manage_users/open.svg' %}" alt="dropdown arrow" class="w-full h-full" />
+          </div>
+          <select id="filter-department"
+                  class="absolute inset-0 w-full h-full bg-transparent outline-none border-none appearance-none pl-3 pr-8 text-black text-base"
+                  onchange="toggleArrow('dept-arrow')">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="w-32 h-10 relative">
+          <div class="absolute inset-0 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200"></div>
+          <div class="absolute right-2 top-[8px] w-5 h-5">
+            <img id="status-arrow" src="{% static 'images/manage_users/open.svg' %}" alt="dropdown arrow" class="w-full h-full" />
+          </div>
+          <select id="filter-status"
+                  class="absolute inset-0 w-full h-full bg-transparent outline-none border-none appearance-none pl-3 pr-8 text-black text-base"
+                  onchange="toggleArrow('status-arrow')">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div class="flex items-center gap-3">
+        <div id="bulk-enable" class="w-24 h-24 relative opacity-50 bg-transparent rounded-lg outline outline-1 outline-offset-[-1px] outline-green-500 cursor-pointer pointer-events-none flex flex-col items-center justify-center">
+          <img src="{% static 'images/manage_users/enable.svg' %}" alt="Enable Selected" class="w-6 h-6 mb-1" />
+          <div class="w-full text-center text-green-500 text-base">Enable</div>
+          <div class="w-full text-center text-green-500 text-base">Selected</div>
+        </div>
+        <div id="bulk-disable" class="w-24 h-24 relative opacity-50 bg-transparent rounded-lg outline outline-1 outline-offset-[-1px] outline-red-500 cursor-pointer pointer-events-none flex flex-col items-center justify-center">
+          <img src="{% static 'images/manage_users/disable.svg' %}" alt="Disable Selected" class="w-6 h-6 mb-1" />
+          <div class="w-full text-center text-red-500 text-base">Disable</div>
+          <div class="w-full text-center text-red-500 text-base">Selected</div>
+        </div>
+        <div id="invite-user" class="w-20 h-20 relative bg-sky-600 rounded-lg cursor-pointer hover:bg-sky-700 flex flex-col items-center justify-center">
+          <img src="{% static 'images/manage_users/plus.svg' %}" alt="Invite User" class="w-6 h-6 mb-1" />
+          <div class="w-full text-center text-white text-base leading-tight">Invite</div>
+          <div class="w-full text-center text-white text-base leading-tight">User</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div id="users-card" class="mt-6 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 flex flex-col overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div id="users-total-count" class="text-gray-900 text-lg font-semibold">Users ({{ total_users|default:0 }})</div>
+      <div class="flex items-center gap-2"></div>
+    </div>
+
+    <!-- Table Header -->
+    <div class="bg-neutral-50 border-b border-gray-200 px-6 py-3">
+      <div class="grid items-center gap-4 text-xs font-medium text-neutral-500 tracking-wide"
+           style="grid-template-columns: 24px minmax(160px,1fr) minmax(220px,256px) 112px minmax(160px,176px) 96px 128px 96px;">
+        <div class="flex items-center justify-center">
+          <input id="select-all" type="checkbox" class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black align-middle" />
+        </div>
+        <div class="flex items-center gap-1">
+          
+          <span>Name</span>
+          <img src="{% static 'images/manage_users/name.svg' %}" alt="Name Icon" class="w-4 h-4" />
+        </div>
+        <div>Email</div>
+        <div>Role</div>
+        <div>Department(s)</div>
+        <div>Status</div>
+        <div>Last Active</div>
+        <div class="text-right">Actions</div>
+      </div>
+    </div>
+
+    <!-- User Rows -->
+    <div id="manage-users-rows" class="divide-y divide-gray-200"></div>
+
+    <!-- Footer -->
+    <div id="users-footer" class="px-6 py-3 border-t border-gray-200">
+      <div class="flex items-center justify-between">
+        <div id="users-showing" class="text-neutral-500 text-sm">Showing 0 to 0 of 0 results</div>
+        <div id="pagination-container" class="w-96 h-9 flex items-center gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleArrow(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const rotated = el.dataset.rotated === '1';
+  el.style.transform = rotated ? 'rotate(0deg)' : 'rotate(180deg)';
+  el.dataset.rotated = rotated ? '0' : '1';
+}
+
+(function(){
+  'use strict';
+  const apiUrl = '{% url "dashboard:api_manage_users_users" %}';
+  const bulkUrl = '{% url "dashboard:api_manage_users_bulk_action" %}';
+  const filtersUrl = '{% url "dashboard:api_manage_users_filters" %}';
+  const rowsEl = document.getElementById('manage-users-rows');
+  const usersShowingEl = document.getElementById('users-showing');
+  const usersTotalCountEl = document.getElementById('users-total-count');
+  const paginationContainer = document.getElementById('pagination-container');
+  const bulkEnableBtn = document.getElementById('bulk-enable');
+  const bulkDisableBtn = document.getElementById('bulk-disable');
+  const selectAllCb = document.getElementById('select-all');
+  const quickSearchInput = document.getElementById('quick-search');
+  const searchInput = document.getElementById('filter-search');
+  const roleSelect = document.getElementById('filter-role');
+  const deptSelect = document.getElementById('filter-department');
+  const statusSelect = document.getElementById('filter-status');
+  const rowsScroll = document.getElementById('users-rows-scroll');
+  const footerEl = document.getElementById('users-footer');
+
+  let selectedIds = new Set();
+  let currentPage = 1;
+  let pageSize = 10;
+  let totalPages = 1;
+  let totalResults = 0;
+  const state = { q: '', role: '', department: '', status: '', sort_by: '', sort_dir: 'asc' };
+
+  function getCsrf(){
+    const cookie = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : null;
+  }
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  function setBulkButtonsEnabled(){
+    const active = selectedIds.size > 0;
+    [bulkEnableBtn, bulkDisableBtn].forEach(btn=>{
+      if(!btn) return;
+      btn.style.opacity = active ? '1' : '0.5';
+      btn.style.pointerEvents = active ? 'auto' : 'none';
+    });
+  }
+
+  function renderPagination(){
+    if(!paginationContainer) return;
+    paginationContainer.innerHTML = '';
+    const mkBtn = (label, onClick, {active=false, disabled=false, w='w-9'}={})=>{
+      const div = document.createElement('div');
+      div.className = active
+        ? `${w} h-9 bg-sky-600 rounded-lg text-white flex items-center justify-center`
+        : `${w} h-9 rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200 flex items-center justify-center ${disabled?'opacity-50 pointer-events-none':'cursor-pointer'}`;
+      div.textContent = label;
+      if(!disabled) div.onclick = onClick;
+      return div;
+    };
+    const prev = mkBtn('Previous', ()=>{ if(currentPage>1){ currentPage--; load(); } }, {w:'w-20', disabled: currentPage<=1});
+    paginationContainer.appendChild(prev);
+    const windowStart = Math.max(1, currentPage-2);
+    const windowEnd = Math.min(totalPages, currentPage+2);
+    for(let p=windowStart; p<=windowEnd; p++){
+      paginationContainer.appendChild(mkBtn(String(p), (function(page){ return ()=>{ currentPage=page; load(); }; })(p), {active: p===currentPage}));
+    }
+    if(totalPages > windowEnd){
+      const dots = document.createElement('div');
+      dots.className='w-9 h-9 flex items-center justify-center text-neutral-500';
+      dots.textContent='...';
+      paginationContainer.appendChild(dots);
+      paginationContainer.appendChild(mkBtn(String(totalPages), ()=>{ currentPage=totalPages; load(); }, {w:'w-11'}));
+    }
+    const next = mkBtn('Next', ()=>{ if(currentPage<totalPages){ currentPage++; load(); } }, {w:'w-14', disabled: currentPage>=totalPages});
+    paginationContainer.appendChild(next);
+  }
+
+  function rowTemplate(u){
+    const checked = selectedIds.has(u.id) ? 'checked' : '';
+    const role = (u.roles && u.roles[0]) ? u.roles[0] : 'User';
+    const deptRaw = Array.isArray(u.departments) ? u.departments[0] : (u.department || '');
+    const dept = deptRaw ? `<span class="inline-flex px-2 py-0.5 bg-neutral-100 rounded text-neutral-800">${escapeHtml(deptRaw)}</span>` : '';
+    const status = u.is_active ? '<span class="text-green-500">Active</span>' : '<span class="text-neutral-500">Inactive</span>';
+    const email = escapeHtml(u.email||'');
+    const last = escapeHtml(u.last_active_human||'');
+    const name = escapeHtml(u.full_name||u.username||'');
+    const avatar = u.avatar_url||'https://placehold.co/40x40';
+
+    return `
+      <div class="px-6 py-3">
+        <div class="grid items-center gap-4" style="grid-template-columns: 24px minmax(160px,1fr) minmax(220px,256px) 112px minmax(160px,176px) 96px 128px 96px;">
+          <div class="flex items-center justify-center">
+            <input type="checkbox" class="select-user" data-user-id="${u.id}" ${checked} />
+          </div>
+
+          <div class="min-w-0">
+            <div class="flex items-center gap-3">
+              <img class="w-10 h-10 rounded-full flex-shrink-0" src="${avatar}" alt="${name}">
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-gray-900 truncate" title="${name}">${name}</div>
+                <div class="text-sm text-neutral-500 truncate">USR${u.id}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="min-w-0">
+            <div class="text-sm text-gray-900 truncate" title="${email}">${email}</div>
+          </div>
+
+          <div>
+            <div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex">
+              <span class="text-xs font-medium text-fuchsia-700 truncate">${escapeHtml(role)}</span>
+            </div>
+          </div>
+
+          <div class="min-w-0 text-xs">
+            ${dept}
+          </div>
+
+          <div class="text-xs">
+            ${status}
+          </div>
+
+          <div class="text-xs text-neutral-500 truncate" title="${last}">
+            ${last}
+          </div>
+
+          <div class="text-right">
+            <button class="px-2 py-1 rounded bg-gray-100 text-sm" title="Actions">•••</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function performBulk(action){
+    if(selectedIds.size===0) return;
+    const ids = Array.from(selectedIds);
+    const csrftoken = getCsrf();
+    try{
+      const r = await fetch(bulkUrl, {
+        method: 'POST',
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken},
+        body: JSON.stringify({action, user_ids: ids})
+      });
+      if(!r.ok) throw new Error('Bulk failed');
+      selectedIds.clear();
+      if(selectAllCb) selectAllCb.checked = false;
+      setBulkButtonsEnabled();
+      await load();
+    }catch(e){}
+  }
+
+  async function loadFilters(){
+    try{
+      const res = await fetch(filtersUrl, {credentials:'same-origin'});
+      if(!res.ok) return;
+      const data = await res.json();
+      if(Array.isArray(data.roles)){
+        roleSelect.innerHTML = '<option value="">All Roles</option>' + data.roles.map(r=>`<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+      }
+      if(Array.isArray(data.departments)){
+        deptSelect.innerHTML = '<option value="">All Departments</option>' + data.departments.map(d=>`<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+      }
+    }catch(e){}
+  }
+
+  async function load(params={}){
+    params.page = params.page || currentPage;
+    params.page_size = params.page_size || pageSize;
+    params.q = state.q || '';
+    params.role = state.role || '';
+    params.department = state.department || '';
+    params.status = state.status || '';
+    if(state.sort_by){ params.sort_by = state.sort_by; params.sort_dir = state.sort_dir; }
+
+    const qs = new URLSearchParams(params);
+    const res = await fetch(apiUrl + '?' + qs.toString(), {credentials:'same-origin'});
+    if(!res.ok) return;
+    const data = await res.json();
+
+    currentPage = data.page || currentPage;
+    pageSize = data.page_size || pageSize;
+    totalPages = data.total_pages || 1;
+    totalResults = data.total || 0;
+
+    if(usersTotalCountEl){ usersTotalCountEl.textContent = `Users (${totalResults})`; }
+
+    if(usersShowingEl){
+      const start = totalResults===0 ? 0 : ((currentPage-1)*pageSize)+1;
+      const end = Math.min(totalResults, currentPage*pageSize);
+      usersShowingEl.textContent = `Showing ${start} to ${end} of ${totalResults} results`;
+    }
+
+    if(rowsEl){
+      rowsEl.innerHTML = (data.users||[]).map(rowTemplate).join('');
+    }
+
+    document.querySelectorAll('.select-user').forEach(cb=>{
+      cb.addEventListener('change', function(){
+        const id = parseInt(this.dataset.userId, 10);
+        if(this.checked) selectedIds.add(id); else selectedIds.delete(id);
+        setBulkButtonsEnabled();
+        const visibleCbs = Array.from(document.querySelectorAll('.select-user'));
+        const allChecked = visibleCbs.length>0 && visibleCbs.every(x=>x.checked);
+        if(selectAllCb) selectAllCb.checked = allChecked;
+      });
+      const id = parseInt(cb.dataset.userId, 10);
+      cb.checked = selectedIds.has(id);
+    });
+
+    const visibleCbs = Array.from(document.querySelectorAll('.select-user'));
+    if(selectAllCb) selectAllCb.checked = (visibleCbs.length>0 && visibleCbs.every(x=>x.checked));
+
+    renderPagination();
+    adjustTableHeight();
+  }
+
+  function adjustTableHeight(){
+    if(!rowsScroll || !footerEl) return;
+    const rect = rowsScroll.getBoundingClientRect();
+    const footerH = footerEl.offsetHeight || 0;
+    const padding = 16;
+    const available = Math.max(240, Math.floor(window.innerHeight - rect.top - footerH - padding));
+    rowsScroll.style.maxHeight = available + 'px';
+  }
+
+  if(bulkEnableBtn) bulkEnableBtn.addEventListener('click', ()=>performBulk('enable'));
+  if(bulkDisableBtn) bulkDisableBtn.addEventListener('click', ()=>performBulk('disable'));
+
+  if(selectAllCb){
+    selectAllCb.addEventListener('change', ()=>{
+      const cbs = document.querySelectorAll('.select-user');
+      cbs.forEach(cb=>{
+        cb.checked = selectAllCb.checked;
+        const id = parseInt(cb.dataset.userId, 10);
+        if(selectAllCb.checked) selectedIds.add(id); else selectedIds.delete(id);
+      });
+      setBulkButtonsEnabled();
+    });
+  }
+
+  const onSearch = debounce(()=>{
+    state.q = (searchInput?.value || quickSearchInput?.value || '').trim();
+    currentPage = 1; load();
+  }, 300);
+
+  if(quickSearchInput){
+    quickSearchInput.addEventListener('input', ()=>{
+      if(searchInput) searchInput.value = quickSearchInput.value;
+      onSearch();
+    });
+  }
+  if(searchInput){
+    searchInput.addEventListener('input', ()=>{
+      if(quickSearchInput) quickSearchInput.value = searchInput.value;
+      onSearch();
+    });
+  }
+  if(roleSelect){ roleSelect.addEventListener('change', ()=>{ state.role = roleSelect.value; currentPage=1; load(); }); }
+  if(deptSelect){ deptSelect.addEventListener('change', ()=>{ state.department = deptSelect.value; currentPage=1; load(); }); }
+  if(statusSelect){ statusSelect.addEventListener('change', ()=>{ state.status = statusSelect.value; currentPage=1; load(); }); }
+
+  loadFilters();
+  load();
+  setInterval(()=>load(), 10000);
+  window.addEventListener('resize', adjustTableHeight);
+
+  const inviteBtn = document.getElementById('invite-user');
+  if(inviteBtn){
+    inviteBtn.addEventListener('click', ()=>{});
+  }
+})();
+</script>

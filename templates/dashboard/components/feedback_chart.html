@@ -6,20 +6,17 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const feedbackData = [
-        { day: "Mon", positive: 12, neutral: 5, negative: 3 },
-        { day: "Tue", positive: 15, neutral: 4, negative: 2 },
-        { day: "Wed", positive: 10, neutral: 6, negative: 4 },
-        { day: "Thu", positive: 18, neutral: 3, negative: 1 },
-        { day: "Fri", positive: 9, neutral: 5, negative: 3 },
-        { day: "Sat", positive: 7, neutral: 6, negative: 2 },
-        { day: "Sun", positive: 11, neutral: 4, negative: 3 }
-    ];
+    let parsed;
+    try {
+        parsed = JSON.parse('{{ feedback_data|escapejs }}');
+    } catch (e) {
+        parsed = null;
+    }
 
-    const labels = feedbackData.map(item => item.day);
-    const positive = feedbackData.map(item => item.positive);
-    const neutral = feedbackData.map(item => item.neutral);
-    const negative = feedbackData.map(item => item.negative);
+    const labels = parsed && parsed.labels ? parsed.labels : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const positive = parsed && parsed.positive ? parsed.positive : [70, 80, 75, 90, 85, 95, 100];
+    const neutral = parsed && parsed.neutral ? parsed.neutral : [20, 25, 30, 25, 35, 30, 25];
+    const negative = parsed && parsed.negative ? parsed.negative : [15, 10, 20, 15, 12, 10, 8];
 
     const ctx = document.getElementById('feedback-chart').getContext('2d');
     new Chart(ctx, {

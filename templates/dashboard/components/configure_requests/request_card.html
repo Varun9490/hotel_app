@@ -1,0 +1,41 @@
+{% load static %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between h-80">
+  <div class="flex items-center gap-3">
+    <div class="w-12 h-12 {{ card.icon_bg|default:'bg-gray-100' }} rounded-lg flex items-center justify-center">
+      {% if card.icon %}
+        <img src="{% static card.icon %}" alt="icon" class="w-6 h-6" />
+      {% else %}
+        <div class="w-6 h-6 bg-gray-300"></div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="text-lg font-semibold text-gray-900 font-['Inter']">{{ card.title }}</div>
+      <div class="mt-1 px-2 py-1 {{ card.tag_bg|default:'bg-gray-100' }} rounded-full text-xs font-medium font-['Inter'] inline-block">{{ card.department }}</div>
+    </div>
+  </div>
+  <div class="mt-4 text-sm text-gray-600 font-normal font-['Inter']">{{ card.description }}</div>
+  <div class="mt-4 flex flex-col gap-2">
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-600">Department:</span>
+      <span class="text-gray-900 font-medium">{{ card.department }}</span>
+    </div>
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-600">Default Fields:</span>
+      <span class="text-gray-900 font-medium">{{ card.fields }} fields</span>
+    </div>
+    <div class="flex justify-between items-center text-sm">
+      <span class="text-gray-600">Guest Portal:</span>
+      {% if card.exposed %}
+        <span class="px-2 py-1 bg-green-500/10 rounded-full text-green-500 text-xs font-medium font-['Inter'] inline-block">Exposed</span>
+      {% else %}
+        <span class="px-2 py-1 bg-gray-200 rounded-full text-gray-600 text-xs font-medium font-['Inter'] inline-block">Hidden</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="mt-4 flex gap-2">
+    <button class="flex-1 rounded-lg border border-sky-600 text-sky-600 text-sm font-medium py-2">Edit</button>
+    <button class="w-10 rounded-lg border border-gray-200 flex items-center justify-center">
+      <img src="{% static 'images/manage_users/close.svg' %}" alt="Delete" class="w-4 h-4" />
+    </button>
+  </div>
+</div>

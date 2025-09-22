@@ -1,0 +1,51 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+{% block content %}
+<div class="w-full min-h-screen bg-black/0 border-gray-200">
+  {% include 'dashboard/components/messaging_setup/header.html' %}
+
+  <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="col-span-2">
+        {% include 'dashboard/components/messaging_setup/connection_panel.html' %}
+        <div class="mt-6">
+          {% include 'dashboard/components/messaging_setup/templates_panel.html' with templates=templates %}
+        </div>
+      </div>
+      <div>
+        {% include 'dashboard/components/messaging_setup/stats_panel.html' with stats=stats %}
+      </div>
+    </div>
+
+    <div>
+      <!-- Default Schedules and other sections included inline to match design -->
+      <div class="bg-white rounded-xl shadow p-6 outline outline-1 outline-gray-200">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <div class="text-xl font-semibold">Default Schedules</div>
+            <div class="text-sm text-gray-600">Configure when automated messages are sent to guests</div>
+          </div>
+        </div>
+        <!-- small static mock of schedules -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-lg p-4 bg-neutral-50">
+            <div class="font-semibold">Pre-Arrival</div>
+            <div class="text-xs text-gray-600">Send Before</div>
+            <div class="mt-2 bg-white rounded-lg p-2">24 hours</div>
+          </div>
+          <div class="rounded-lg p-4 bg-neutral-50">
+            <div class="font-semibold">Mid-Stay Check-in</div>
+            <div class="text-xs text-gray-600">Send On Day</div>
+            <div class="mt-2 bg-white rounded-lg p-2">Day 2</div>
+          </div>
+          <div class="rounded-lg p-4 bg-neutral-50">
+            <div class="font-semibold">Post-Checkout Review</div>
+            <div class="text-xs text-gray-600">Send After</div>
+            <div class="mt-2 bg-white rounded-lg p-2">2 hours</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

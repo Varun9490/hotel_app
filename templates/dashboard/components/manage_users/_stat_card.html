@@ -1,0 +1,20 @@
+{% load static %}
+<!-- Reusable stat card for Manage Users -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+  <div class="flex items-center justify-between">
+    <div class="{{ icon_wrapper_class|default:'w-8 h-10 rounded-lg bg-sky-600/10 flex items-center justify-center' }}">
+      <img src="{% static icon %}" alt="{{ icon_alt|default:'' }}" class="{{ icon_class|default:'w-4 h-4' }}" />
+    </div>
+    <span class="{{ delta_class|default:'text-xs font-medium text-green-500' }}">
+      {% if delta_prefix_plus %}
+        {% if delta %}+{{ delta }}{% endif %}
+      {% else %}
+        {{ delta }}
+      {% endif %}
+    </span>
+  </div>
+  <div class="mt-6">
+    <div class="text-2xl font-bold text-gray-900">{{ value|default:'0' }}</div>
+    <div class="mt-1 text-sm text-gray-600 font-normal">{{ label|default:'' }}</div>
+  </div>
+</div>

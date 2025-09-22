@@ -1,4 +1,5 @@
 import json
+import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User, Group
@@ -8,7 +9,10 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.http import JsonResponse
+from django.http import HttpResponseBadRequest
+from django.views.decorators.http import require_http_methods
 from django.db import connection
+from django.conf import settings
 
 # Import all models from hotel_app
 from hotel_app.models import (
@@ -148,7 +152,9 @@ def dashboard_view(request):
     - total_departments: count of Department objects
     - open_complaints: count of Complaint objects with pending/open status
     """
-    # Live counts
+    today = timezone.localdate()
+
+    # Live counts (defensive)
     try:
         total_users = User.objects.count()
     except Exception:
@@ -160,21 +166,361 @@ def dashboard_view(request):
         total_departments = 0
 
     try:
-        open_complaints = Complaint.objects.filter(status__in=["pending", "open"]).count()
+        total_locations = Location.objects.count()
     except Exception:
-        # Fallback to Complaint model count if status field differs
+        total_locations = 0
+
+    try:
+        open_complaints = Complaint.objects.filter(status__in=["pending", "in_progress"]).count()
+    except Exception:
         try:
             open_complaints = Complaint.objects.count()
         except Exception:
             open_complaints = 0
 
-    # Keep other cards as examples/static values for now
+    try:
+        resolved_complaints = Complaint.objects.filter(status="resolved").count()
+    except Exception:
+        resolved_complaints = 0
+
+    # Vouchers
+    try:
+        vouchers_issued = Voucher.objects.count()
+        vouchers_redeemed = Voucher.objects.filter(status="redeemed").count()
+        vouchers_expired = Voucher.objects.filter(status="expired").count()
+    except Exception:
+        vouchers_issued = vouchers_redeemed = vouchers_expired = 0
+
+    # Reviews
+    try:
+        average_review_rating = Review.objects.aggregate(avg=Avg("rating"))["avg"] or 0
+    except Exception:
+        average_review_rating = 0
+
+    # Complaint trends for charting
+    try:
+        complaint_trends = list(Complaint.objects.values("status").annotate(count=Count("id")))
+    except Exception:
+        complaint_trends = []
+
+    # Requests chart data (try to derive from RequestType + ServiceRequest if available)
+    try:
+        request_types = list(RequestType.objects.all())
+        requests_labels = [rt.name for rt in request_types]
+        try:
+            from hotel_app.models import ServiceRequest
+            requests_values = [ServiceRequest.objects.filter(request_type=rt).count() for rt in request_types]
+        except Exception:
+            requests_values = [1 for _ in requests_labels]
+    except Exception:
+        requests_labels = ['Housekeeping', 'Maintenance', 'Concierge', 'F&B', 'IT Support', 'Other']
+        requests_values = [95, 75, 45, 35, 25, 15]
+
+    requests_data = {
+        'labels': requests_labels,
+        'values': requests_values,
+    }
+
+    # Feedback chart data (7-day buckets using Review if possible)
+    try:
+        labels = []
+        positive = []
+        neutral = []
+        negative = []
+        for i in range(6, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            labels.append(day.strftime('%a'))
+            reviews_on_day = Review.objects.filter(created_at__date=day)
+            positive.append(reviews_on_day.filter(rating__gte=4).count())
+            neutral.append(reviews_on_day.filter(rating=3).count())
+            negative.append(reviews_on_day.filter(rating__lte=2).count())
+        feedback_data = {
+            'labels': labels,
+            'positive': positive,
+            'neutral': neutral,
+            'negative': negative,
+        }
+    except Exception:
+        feedback_data = {
+            'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'positive': [70, 80, 75, 90, 85, 95, 100],
+            'neutral': [20, 25, 30, 25, 35, 30, 25],
+            'negative': [15, 10, 20, 15, 12, 10, 8],
+        }
+
+    # Occupancy
+    try:
+        # Prefer datetime fields if set, otherwise use date fields
+        occupancy_qs = Guest.objects.filter(
+            Q(checkin_date__lte=today, checkout_date__gte=today) |
+            Q(checkin_datetime__date__lte=today, checkout_datetime__date__gte=today)
+        )
+        occupancy_today = occupancy_qs.count()
+        occupancy_rate = float(occupancy_today) / max(1, total_locations) * 100 if total_locations else 0
+    except Exception:
+        occupancy_today = 0
+        occupancy_rate = 0
+
+    occupancy_data = {'occupied': occupancy_today, 'rate': round(occupancy_rate, 1)}
+
+    # DEBUG-only: seed minimal demo data if site is empty so dashboard looks functional locally
+    try:
+        if getattr(settings, 'DEBUG', False) and (total_users == 0 or Guest.objects.count() == 0):
+            # Create demo department
+            demo_dept, _ = Department.objects.get_or_create(name='Demo Department')
+
+            # Create a demo user
+            try:
+                demo_user = User.objects.create_user(username='demo_user', password='password123', email='demo@example.com')
+            except Exception:
+                # If user exists or cannot be created, fetch any existing user
+                demo_user = User.objects.first()
+
+            # Create building/floor/location
+            from hotel_app.models import Building, Floor, LocationType, LocationFamily, Booking
+            building, _ = Building.objects.get_or_create(name='Main Building')
+            floor, _ = Floor.objects.get_or_create(building=building, floor_number=1)
+            ltype, _ = LocationType.objects.get_or_create(name='Guest Room')
+            lfamily, _ = LocationFamily.objects.get_or_create(name='Rooms')
+            location, _ = Location.objects.get_or_create(building=building, floor=floor, room_no='101', defaults={'name': 'Room 101', 'type': ltype, 'family': lfamily, 'capacity': 2})
+
+            # Create demo guest
+            guest, _ = Guest.objects.get_or_create(full_name='Demo Guest', defaults={
+                'email': 'guest@example.com',
+                'room_number': '101',
+                'checkin_date': today - datetime.timedelta(days=1),
+                'checkout_date': today + datetime.timedelta(days=1),
+            })
+
+            # Booking
+            try:
+                booking, _ = Booking.objects.get_or_create(guest=guest, room_number='101', defaults={'check_in': timezone.now() - datetime.timedelta(days=1), 'check_out': timezone.now() + datetime.timedelta(days=1)})
+            except Exception:
+                booking = None
+
+            # Voucher
+            try:
+                if booking:
+                    Voucher.objects.get_or_create(booking=booking, guest=guest, defaults={'guest_name': guest.full_name, 'room_number': '101', 'check_in_date': guest.checkin_date, 'check_out_date': guest.checkout_date, 'status': 'active', 'quantity': 1})
+                else:
+                    Voucher.objects.get_or_create(guest=guest, defaults={'guest_name': guest.full_name, 'room_number': '101', 'check_in_date': guest.checkin_date, 'check_out_date': guest.checkout_date, 'status': 'active', 'quantity': 1})
+            except Exception:
+                pass
+
+            # Complaint
+            try:
+                Complaint.objects.get_or_create(subject='Demo complaint', defaults={'description': 'This is a demo complaint', 'status': 'pending'})
+            except Exception:
+                pass
+
+            # Review
+            try:
+                Review.objects.get_or_create(guest=guest, defaults={'rating': 4, 'comment': 'Demo review'})
+            except Exception:
+                pass
+
+            # Recompute counts
+            total_users = User.objects.count()
+            total_departments = Department.objects.count()
+            total_locations = Location.objects.count()
+            vouchers_issued = Voucher.objects.count()
+            vouchers_redeemed = Voucher.objects.filter(status='redeemed').count()
+            open_complaints = Complaint.objects.filter(status__in=['pending', 'in_progress']).count()
+            average_review_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
+    except Exception:
+        # Do not let seeding errors break the dashboard
+        pass
+
     context = {
         'total_users': total_users,
         'total_departments': total_departments,
+        'total_locations': total_locations,
         'open_complaints': open_complaints,
+        'resolved_complaints': resolved_complaints,
+        'vouchers_issued': vouchers_issued,
+        'vouchers_redeemed': vouchers_redeemed,
+        'vouchers_expired': vouchers_expired,
+        'average_review_rating': round(average_review_rating, 1) if average_review_rating else 0,
+        'complaint_trends': json.dumps(complaint_trends),
+        'requests_data': json.dumps(requests_data),
+        'feedback_data': json.dumps(feedback_data),
+        'occupancy_data': json.dumps(occupancy_data),
     }
+
     return render(request, 'dashboard/dashboard.html', context)
+
+
+@login_required
+def manage_users(request):
+    """Render the Manage Users / User Groups screen on the right panel.
+
+    Provides lightweight metrics and a groups list when available. Falls back
+    to sensible dummy values if some models/fields are missing.
+    """
+    User = None
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+    except Exception:
+        User = None
+
+    # Basic safe metrics
+    total_groups = 0
+    total_group_members = 0
+    recent_additions = 0
+    active_groups = 0
+    groups = None
+
+    try:
+        # Try optional models that may exist in this project
+        from hotel_app.models import UserGroup, UserGroupMembership
+        # Annotate member counts if possible
+        try:
+            groups_qs = UserGroup.objects.all()
+            # Attempt to annotate members_count if a related_name exists
+            try:
+                groups = groups_qs.annotate(members_count=Count('members'))
+            except Exception:
+                groups = groups_qs
+
+            total_groups = groups_qs.count()
+            # Sum members_count if available
+            try:
+                total_group_members = sum(getattr(g, 'members_count', 0) for g in groups)
+            except Exception:
+                # fallback to membership count
+                try:
+                    total_group_members = UserGroupMembership.objects.count()
+                except Exception:
+                    total_group_members = 0
+
+            # recent additions if created_at exists
+            try:
+                recent_additions = groups_qs.filter(created_at__gte=timezone.now()-datetime.timedelta(days=7)).count()
+            except Exception:
+                recent_additions = 0
+
+            # active groups (if boolean field exists)
+            try:
+                active_groups = UserGroup.objects.filter(active=True).count()
+            except Exception:
+                active_groups = 0
+
+        except Exception:
+            total_groups = 0
+            total_group_members = 0
+            groups = None
+    except Exception:
+        # If models are absent, keep defaults and let template show fallback content
+        total_groups = 0
+        total_group_members = 0
+        recent_additions = 0
+        active_groups = 0
+        groups = None
+
+    # total users (best-effort)
+    total_users = 0
+    try:
+        if User is not None:
+            total_users = User.objects.count()
+    except Exception:
+        total_users = 0
+
+    context = {
+        'total_users': total_users,
+        'total_groups': total_groups,
+        'total_group_members': total_group_members,
+        'recent_additions': recent_additions,
+        'active_groups': active_groups,
+        'groups': groups,
+    }
+
+    # Previously this view returned only the component fragment which lacks the
+    # full page head and CSS. Redirect to the full Manage Users page which
+    # renders `dashboard/users.html` (see `manage_users_all`). This ensures the
+    # head block (fonts, Tailwind, scripts) is included when opening
+    # `/dashboard/manage-users/`.
+    return redirect('dashboard:manage_users_all')
+
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def messaging_setup(request):
+    """Messaging Setup main screen. Provides templates, stats and connection info.
+
+    This view is defensive: it falls back to sensible mock data when models or
+    services are not available so templates can render during front-end work.
+    """
+    # Templates list (mock/fallback)
+    templates = []
+    try:
+        # If a Template model exists, prefer real data
+        from hotel_app.models import MessageTemplate
+        templates_qs = MessageTemplate.objects.all().order_by('-updated_at')[:20]
+        templates = [
+            {
+                'id': t.id,
+                'name': getattr(t, 'name', 'Template'),
+                'preview': getattr(t, 'preview', '') or getattr(t, 'body', '')[:120],
+                'updated_at': getattr(t, 'updated_at', None),
+            }
+            for t in templates_qs
+        ]
+    except Exception:
+        # Provide sample templates for UI
+        templates = [
+            {'id': 1, 'name': 'Welcome Message', 'preview': 'Hi {{guest_name}}, welcome to our hotel!', 'updated_at': None},
+            {'id': 2, 'name': 'Checkout Reminder', 'preview': 'Reminder: Your checkout is at 12:00 PM today.', 'updated_at': None},
+            {'id': 3, 'name': 'Post-Stay Review', 'preview': 'Thanks for staying with us — please share feedback.', 'updated_at': None},
+        ]
+
+    # Stats (mock/fallback)
+    stats = {
+        'connected': False,
+        'messages_sent_7d': 0,
+        'open_templates': len(templates),
+    }
+    try:
+        # If WhatsAppService provides connection info, use it
+        service = WhatsAppService()
+        stats['connected'] = service.is_connected()
+        stats['messages_sent_7d'] = service.messages_sent(days=7)
+    except Exception:
+        # keep fallback values
+        stats.setdefault('connected', False)
+
+    context = {
+        'templates': templates,
+        'stats': stats,
+    }
+    return render(request, 'dashboard/messaging_setup.html', context)
+
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def camera_settings(request):
+    """Camera settings and management page."""
+    # Provide minimal context to avoid template errors; template is mostly static UI
+    context = {}
+    return render(request, 'dashboard/camera_settings.html', context)
+
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def data_exports(request):
+    """Data & Exports page view.
+
+    Provides mock/context data for the template so UI renders while backend
+    export features are implemented.
+    """
+    context = {
+        'policies': [
+            {'name': 'Guest Messages', 'retention': '2 Years', 'note': 'Auto-delete after retention period'},
+            {'name': 'Analytics Data', 'retention': '5 Years', 'note': 'Archive after 2 years'},
+            {'name': 'Guest Personal Data', 'retention': '1 Year', 'note': 'GDPR compliant deletion'},
+        ],
+        'anonymize_enabled': True,
+        'export_formats': ['CSV', 'JSON', 'XML'],
+        'default_schedule': 'Daily',
+    }
+    return render(request, 'dashboard/data_exports.html', context)
 
 # ---- User Management ----
 @require_permission([ADMINS_GROUP])
@@ -189,6 +535,195 @@ def dashboard_users(request):
     }
     return render(request, "dashboard/users.html", context)
 
+@login_required
+def manage_users_all(request):
+    # Provide users queryset and related data to the template so the users table
+    # can render real data server-side and be used by the client-side poller.
+    users_qs = User.objects.all().select_related('userprofile').prefetch_related('groups')
+    total_users = users_qs.count()
+    ctx = dict(active_tab="all",
+               breadcrumb_title="Users",
+               page_title="Manage Users",
+               page_subtitle="Manage user accounts, roles, and permissions across your property.",
+               search_placeholder="Search users...",
+               primary_label="Invite User",
+               users=users_qs,
+               total_users=total_users)
+    return render(request, 'dashboard/users.html', ctx)
+
+
+@login_required
+def manage_users_api_users(request):
+    """Return a JSON list of users for the Manage Users frontend poller.
+
+    Each user contains: id, username, first_name, last_name, full_name, email,
+    avatar_url, roles (list), departments (single or null), is_active, last_login (iso),
+    last_active_human (e.g. '2 hours').
+    """
+    try:
+        from django.utils.timesince import timesince
+        from django.utils import timezone
+    except Exception:
+        timesince = None
+    # Support filters: q (search), role, department, status (active/inactive), enabled (true/false)
+    qs = User.objects.all().select_related('userprofile').prefetch_related('groups')
+    q = request.GET.get('q')
+    role = request.GET.get('role')
+    department = request.GET.get('department')
+    status = request.GET.get('status')
+    enabled = request.GET.get('enabled')
+    if q:
+        qs = qs.filter(Q(username__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
+    if role:
+        qs = qs.filter(groups__name__iexact=role)
+    if department:
+        qs = qs.filter(userprofile__department__name__iexact=department)
+    if status:
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+    if enabled is not None:
+        if enabled.lower() in ('1', 'true', 'yes'):
+            qs = qs.filter(userprofile__enabled=True)
+        elif enabled.lower() in ('0', 'false', 'no'):
+            qs = qs.filter(userprofile__enabled=False)
+
+    # Pagination
+    try:
+        from django.core.paginator import Paginator, EmptyPage
+    except Exception:
+        Paginator = None
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 10))
+    total_count = qs.count()
+    total_pages = 1
+    page_obj_list = qs
+    if Paginator:
+        paginator = Paginator(qs, page_size)
+        total_pages = paginator.num_pages
+        try:
+            page_obj = paginator.page(page)
+            page_obj_list = page_obj.object_list
+        except EmptyPage:
+            page_obj_list = []
+    users = []
+    for u in page_obj_list[:1000]:
+        profile = getattr(u, 'userprofile', None)
+        avatar = getattr(profile, 'avatar_url', None) or ''
+        dept = None
+        if profile and profile.department:
+            try:
+                dept = profile.department.name
+            except Exception:
+                dept = None
+        roles = [g.name for g in u.groups.all()]
+        last_login = u.last_login
+        if last_login and timesince:
+            try:
+                human = timesince(last_login, timezone.now()) + ' ago'
+            except Exception:
+                human = ''
+        else:
+            human = ''
+        users.append({
+            'id': u.pk,
+            'username': u.username,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'full_name': (u.get_full_name() or u.username),
+            'email': u.email,
+            'avatar_url': avatar,
+            'roles': roles,
+            'department': dept,
+            'is_active': bool(u.is_active),
+            'enabled': bool(getattr(profile, 'enabled', True)),
+            'last_login_iso': last_login.isoformat() if last_login else None,
+            'last_active_human': human,
+        })
+
+    return JsonResponse({'users': users, 'total': total_count, 'page': page, 'page_size': page_size, 'total_pages': total_pages})
+
+
+@login_required
+def manage_users_api_filters(request):
+    """Return available roles and departments for the Manage Users filters.
+
+    Expected JSON shape:
+    { roles: ["Admins","Staff",...], departments: ["Housekeeping", ...] }
+    """
+    roles = []
+    departments = []
+    try:
+        roles = list(Group.objects.values_list('name', flat=True).distinct())
+    except Exception:
+        roles = []
+    try:
+        departments = list(Department.objects.values_list('name', flat=True).distinct())
+    except Exception:
+        departments = []
+    return JsonResponse({'roles': roles, 'departments': departments})
+
+
+@require_http_methods(['POST'])
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+def manage_users_api_bulk_action(request):
+    """Bulk action endpoint. Expects JSON body with 'action' and 'user_ids' list.
+    Supported actions: enable, disable
+    """
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return HttpResponseBadRequest('invalid json')
+    action = body.get('action')
+    ids = body.get('user_ids') or []
+    if action not in ('enable', 'disable'):
+        return HttpResponseBadRequest('unsupported action')
+    if not isinstance(ids, list):
+        return HttpResponseBadRequest('user_ids must be list')
+    users = User.objects.filter(id__in=ids).select_related('userprofile')
+    changed = []
+    for u in users:
+        profile = getattr(u, 'userprofile', None)
+        if not profile:
+            continue
+        new_val = True if action == 'enable' else False
+        if profile.enabled != new_val:
+            profile.enabled = new_val
+            profile.save(update_fields=['enabled'])
+            changed.append(u.id)
+    return JsonResponse({'changed': changed, 'action': action})
+
+@login_required
+def manage_users_groups(request):
+    ctx = dict(active_tab="groups",
+               breadcrumb_title="User Groups",
+               page_title="User Groups",
+               page_subtitle="Organize staff members by department, role, or location for targeted communication and management.",
+               search_placeholder="Search groups...",
+               primary_label="Create Group")
+    return render(request, 'dashboard/groups.html', ctx)
+
+@login_required
+def manage_users_roles(request):
+    ctx = dict(active_tab="roles",
+               breadcrumb_title="Roles & Permissions",
+               page_title="Roles & Permissions",
+               page_subtitle="Create and manage permission templates for your teams.",
+               search_placeholder="Search roles...",
+               primary_label="New Role")
+    return render(request, 'dashboard/roles.html', ctx)
+
+@login_required
+def manage_users_profiles(request):
+    ctx = dict(active_tab="profiles",
+               breadcrumb_title="User Profiles",
+               page_title="User Profiles",
+               page_subtitle="Manage role templates and permissions for staff members",
+               search_placeholder="Search profiles...",
+               primary_label="Create Profile")
+    return render(request, 'dashboard/user_profiles.html', ctx)
 @require_permission([ADMINS_GROUP])
 def user_create(request):
     if request.method == "POST":
@@ -217,6 +752,20 @@ def user_delete(request, user_id):
         user.delete()
         messages.success(request, "User deleted successfully.")
     return redirect("dashboard:users")
+
+
+@require_permission([ADMINS_GROUP])
+def manage_users_toggle_enabled(request, user_id):
+    """Toggle the 'enabled' flag on a user's UserProfile. Expects POST."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    user = get_object_or_404(User, pk=user_id)
+    profile = getattr(user, 'userprofile', None)
+    if not profile:
+        return JsonResponse({'error': 'UserProfile missing'}, status=400)
+    profile.enabled = not bool(profile.enabled)
+    profile.save(update_fields=['enabled'])
+    return JsonResponse({'id': user.pk, 'enabled': profile.enabled})
 
 
 # ---- Department Management ----
@@ -806,3 +1355,54 @@ def get_guest_whatsapp_message(request, guest_id):
 def tailwind_test(request):
     """View for testing Tailwind CSS functionality."""
     return render(request, "dashboard/tailwind_test.html")
+
+
+@login_required
+def configure_requests(request):
+    """Render the Configure Requests page."""
+    # Sample data to render cards. In production replace with real queryset.
+    requests_list = [
+        {
+            'title': 'Extra Housekeeping',
+            'department': 'Housekeeping',
+            'description': 'Request additional cleaning services for your room including towel refresh, bed making, and bathroom cleaning.',
+            'fields': 4,
+            'exposed': True,
+            'icon': 'images/manage_users/house_keeping.svg',
+            'icon_bg': 'bg-green-500/10',
+            'tag_bg': 'bg-green-500/10',
+        },
+        {
+            'title': 'Room Maintenance',
+            'department': 'Maintenance',
+            'description': 'Report issues with room fixtures, appliances, or general maintenance needs requiring attention.',
+            'fields': 6,
+            'exposed': True,
+            'icon': 'images/manage_users/maintenance.svg',
+            'icon_bg': 'bg-yellow-400/10',
+            'tag_bg': 'bg-yellow-400/10',
+        },
+        {
+            'title': 'Concierge Services',
+            'department': 'Concierge',
+            'description': 'Request assistance with reservations, recommendations, transportation, and local information.',
+            'fields': 5,
+            'exposed': True,
+            'icon': 'images/manage_users/concierge.svg',
+            'icon_bg': 'bg-fuchsia-700/10',
+            'tag_bg': 'bg-fuchsia-700/10',
+        },
+    ]
+
+    counts = {
+        'all': 24,
+        'portal': 18,
+        'internal': 6,
+    }
+
+    context = {
+        'requests': requests_list,
+        'counts': counts,
+        'active_tab': 'all',
+    }
+    return render(request, 'dashboard/configure_requests.html', context)

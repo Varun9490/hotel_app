@@ -1,0 +1,9 @@
+<div class="w-full bg-white border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4">
+    <nav class="flex items-center gap-8">
+      <a href="#all" class="py-4 text-sm font-medium {% if active_tab == 'all' %}text-sky-600 border-b-2 border-sky-600{% else %}text-gray-600{% endif %}">All Requests ({{ counts.all }})</a>
+      <a href="#portal" class="py-4 text-sm font-medium {% if active_tab == 'portal' %}text-sky-600 border-b-2 border-sky-600{% else %}text-gray-600{% endif %}">Guest Portal ({{ counts.portal }})</a>
+      <a href="#internal" class="py-4 text-sm font-medium {% if active_tab == 'internal' %}text-sky-600 border-b-2 border-sky-600{% else %}text-gray-600{% endif %}">Internal Only ({{ counts.internal }})</a>
+    </nav>
+  </div>
+</div>

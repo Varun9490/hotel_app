@@ -1,0 +1,4 @@
+{% extends "dashboard/manage_users_base.html" %}
+{% block manage_content %}
+  {% include 'dashboard/components/manage_users/user_profiles_section.html' with users_count=total_users|default:"15" active_count=active_groups|default:"5" %}
+{% endblock manage_content %}

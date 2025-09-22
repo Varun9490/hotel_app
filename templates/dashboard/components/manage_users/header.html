@@ -1,0 +1,64 @@
+{% load static %}
+<header class="w-full bg-white border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <!-- Left: Breadcrumb + Title -->
+      <div class="flex-1">
+        <!-- Breadcrumb -->
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-gray-600 font-normal font-['Inter']">{{ crumb_section|default:"Admin" }}</span>
+          <span class="text-gray-400">/</span>
+          <span class="text-gray-900 font-medium font-['Inter']">{{ crumb_title|default:"Users" }}</span>
+        </div>
+        <!-- Title + subtitle -->
+        <h1 class="mt-2 text-2xl font-bold text-gray-900 font-['Inter']">{{ title|default:"Manage Users" }}</h1>
+        <p class="mt-1 text-sm text-gray-600 font-normal font-['Inter']">
+          {{ subtitle|default:"Manage user accounts, roles, and permissions across your property." }}
+        </p>
+      </div>
+
+      <!-- Right: Search + Primary -->
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <input type="text" name="q" placeholder="{{ search_placeholder|default:'Search...' }}"
+                 class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-['Inter']" />
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <img src="{% static 'images/dashboard/search.svg' %}" alt="Search" class="w-4 h-4" />
+          </div>
+        </div>
+
+        <a href="#"
+           class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-sky-600 text-white text-base font-medium font-['Inter'] hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+          <img src="{% static 'images/sidebar/settings.svg' %}" alt="Plus" class="w-3.5 h-3.5" />
+          <span>{{ primary_label|default:"Create" }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Centered Tabs -->
+  <div class="w-full bg-white border-t border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="w-full flex items-center justify-center gap-8">
+        {% with base_ns="dashboard" %}
+        <a href="{% url 'dashboard:manage_users_all' %}"
+           class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'all' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
+          All Users
+        </a>
+        <a href="{% url 'dashboard:manage_users_groups' %}"
+           class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'groups' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
+          Groups
+        </a>
+        <a href="{% url 'dashboard:manage_users_roles' %}"
+           class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'roles' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
+          Roles & Permissions
+        </a>
+        <a href="{% url 'dashboard:manage_users_profiles' %}"
+           class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'profiles' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
+          User Profiles
+        </a>
+        {% endwith %}
+      </nav>
+    </div>
+  </div>
+</header>

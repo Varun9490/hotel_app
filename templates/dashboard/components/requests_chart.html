@@ -6,17 +6,19 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const requestsData = [
-        { name: "Housekeeping", value: 52 },
-        { name: "Maintenance", value: 38 },
-        { name: "Concierge", value: 27 },
-        { name: "F&B", value: 22 },
-        { name: "IT Support", value: 15 },
-        { name: "Other", value: 8 }
-    ];
+    // Try to parse data provided by the view; fall back to sample data if parsing fails
+    let parsed;
+    try {
+        parsed = JSON.parse('{{ requests_data|escapejs }}');
+    } catch (e) {
+        parsed = {
+            labels: ["Housekeeping", "Maintenance", "Concierge", "F&B", "IT Support", "Other"],
+            values: [95, 75, 45, 35, 25, 15]
+        };
+    }
 
-    const labels = requestsData.map(item => item.name);
-    const values = requestsData.map(item => item.value);
+    const labels = parsed.labels || [];
+    const values = parsed.values || [];
 
     const ctx = document.getElementById('requests-chart').getContext('2d');
     new Chart(ctx, {

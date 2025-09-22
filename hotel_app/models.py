@@ -30,6 +30,7 @@ class UserProfile(models.Model):
     title = models.CharField(max_length=120, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     avatar_url = models.URLField(blank=True, null=True)
+    enabled = models.BooleanField(default=True)
     timezone = models.CharField(max_length=100, blank=True, null=True)
     preferences = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'hotel_app',
     'django_filters',
+    "django.contrib.humanize",
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,399 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% comment %}Users table component - static markup provided by the designer{% endcomment %}
+{% block content %}
+<div class="w-[1184px] h-[1087px] relative bg-black/0 border-gray-200">
+    <div class="w-[1184px] h-28 left-0 top-0 absolute bg-white border-b border-gray-200">
+        <div class="w-[1136px] h-20 left-[24px] top-[16px] absolute bg-black/0 border-gray-200 inline-flex justify-between items-center">
+            <div class="w-[453.86px] h-20 relative bg-black/0 border-gray-200">
+                <div class="w-[453.86px] h-5 left-0 top-0 absolute bg-black/0 border-gray-200 inline-flex justify-start items-center gap-2">
+                    <div class="w-11 h-5 relative bg-black/0 border-gray-200">
+                        <div class="w-11 h-5 left-0 top-[1px] absolute justify-start text-gray-600 text-sm font-normal font-['Inter']">Admin</div>
+                    </div>
+                    <div class="w-2 h-4 relative bg-black/0 border-gray-200">
+                        <div class="w-2 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center">
+                            <div class="w-2 h-3 relative bg-black/0 border-gray-200 overflow-hidden">
+                                <div class="w-1.5 h-2.5 left-[1.50px] top-[0.75px] absolute bg-gray-600"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-10 h-5 relative bg-black/0 border-gray-200">
+                        <div class="w-10 h-5 left-0 top-[1px] absolute justify-start text-gray-900 text-sm font-medium font-['Inter']">Users</div>
+                    </div>
+                </div>
+                <div class="w-[453.86px] h-8 left-0 top-[24px] absolute bg-black/0 border-gray-200">
+                    <div class="w-44 h-8 left-0 top-[1px] absolute justify-start text-gray-900 text-2xl font-bold font-['Inter']">Manage Users</div>
+                </div>
+                <div class="w-[453.86px] h-5 left-0 top-[56px] absolute bg-black/0 border-gray-200">
+                    <div class="w-[454px] h-5 left-0 top-[1px] absolute justify-start text-gray-600 text-sm font-normal font-['Inter']">Manage user accounts, roles, and permissions across your property.</div>
+                </div>
+            </div>
+            <div class="w-80 h-10 bg-black/0 border-gray-200 flex justify-start items-center gap-4">
+                <div class="w-64 h-10 relative bg-black/0 border-gray-200">
+                    <div class="w-64 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                        <div class="w-64 h-10 left-[40px] top-0 absolute justify-center text-gray-400 text-base font-normal font-['Inter'] leading-normal">Search users...</div>
+                    </div>
+                    <div class="w-4 h-6 left-[12px] top-[9px] absolute bg-black/0 border-gray-200">
+                        <div class="w-4 h-4 left-0 top-[4px] absolute inline-flex justify-center items-center">
+                            <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                <div class="w-4 h-4 left-0 top-0 absolute bg-gray-400"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-7 h-10 relative bg-black/0 rounded-lg border-gray-200">
+                    <div class="w-3.5 h-5 left-[8px] top-[10px] absolute bg-black/0 border-gray-200">
+                        <div class="w-3.5 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                            <div class="w-3.5 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                <div class="w-3.5 h-4 left-0 top-0 absolute bg-gray-600"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-7 h-10 relative bg-black/0 rounded-lg border-gray-200">
+                    <div class="w-3.5 h-5 left-[8px] top-[10px] absolute bg-black/0 border-gray-200">
+                        <div class="w-3.5 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                            <div class="w-3.5 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                <div class="w-3.5 h-4 left-0 top-0 absolute bg-gray-600"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="w-[1184px] h-[978px] left-0 top-[109px] absolute bg-black/0 border-gray-200">
+        <div class="w-[1136px] h-36 left-[24px] top-[24px] absolute bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200">
+            <div class="w-[1086px] h-24 left-[25px] top-[25px] absolute bg-black/0 border-gray-200 inline-flex justify-between items-center">
+                <div class="w-[793px] h-10 bg-black/0 border-gray-200 flex justify-start items-center gap-4">
+                    <div class="w-80 h-10 relative bg-black/0 border-gray-200">
+                        <div class="w-80 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                            <div class="w-80 h-10 left-[40px] top-0 absolute justify-center text-gray-400 text-base font-normal font-['Inter'] leading-normal">Search by name or email...</div>
+                        </div>
+                        <div class="w-4 h-6 left-[12px] top-[9px] absolute bg-black/0 border-gray-200">
+                            <div class="w-4 h-4 left-0 top-[4px] absolute inline-flex justify-center items-center">
+                                <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-4 h-4 left-0 top-0 absolute bg-gray-400"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-28 h-10 relative bg-black/0 border-gray-200">
+                        <div class="w-28 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                            <div class="w-16 h-10 left-[12px] top-0 absolute justify-center text-black text-base font-normal font-['Inter']">All Roles</div>
+                            <div class="w-6 h-6 left-[84px] top-[8px] absolute overflow-hidden">
+                                <div class="w-3.5 h-2 left-[6.50px] top-[9.08px] absolute bg-black"></div>
+                            </div>
+                        </div>
+                        <div class="w-3 h-4 left-[94px] top-[13px] absolute bg-black/0 border-gray-200">
+                            <div class="w-3 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center">
+                                <div class="w-3 h-3 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-2.5 h-1.5 left-[0.75px] top-[3.75px] absolute bg-gray-400"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-44 h-10 relative bg-black/0 border-gray-200">
+                        <div class="w-44 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                            <div class="w-32 h-10 left-[12px] top-0 absolute justify-center text-black text-base font-normal font-['Inter']">All Departments</div>
+                            <div class="w-6 h-6 left-[137px] top-[8px] absolute overflow-hidden">
+                                <div class="w-3.5 h-2 left-[6.50px] top-[9.08px] absolute bg-black"></div>
+                            </div>
+                        </div>
+                        <div class="w-3 h-4 left-[147px] top-[13px] absolute bg-black/0 border-gray-200">
+                            <div class="w-3 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center">
+                                <div class="w-3 h-3 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-2.5 h-1.5 left-[0.75px] top-[3.75px] absolute bg-gray-400"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-32 h-10 relative bg-black/0 border-gray-200">
+                        <div class="w-32 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                            <div class="w-16 h-10 left-[12px] top-0 absolute justify-center text-black text-base font-normal font-['Inter']">All Status</div>
+                            <div class="w-6 h-6 left-[102px] top-[8px] absolute overflow-hidden">
+                                <div class="w-3.5 h-2 left-[6.50px] top-[9.08px] absolute bg-black"></div>
+                            </div>
+                        </div>
+                        <div class="w-3 h-4 left-[112px] top-[13px] absolute bg-black/0 border-gray-200">
+                            <div class="w-3 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center">
+                                <div class="w-3 h-3 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-2.5 h-1.5 left-[0.75px] top-[3.75px] absolute bg-gray-400"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-72 h-24 bg-black/0 border-gray-200 flex justify-start items-center gap-3">
+                    <div class="w-24 h-24 relative opacity-50 bg-black/0 rounded-lg outline outline-1 outline-offset-[-1px] outline-green-500">
+                        <div class="w-3.5 h-5 left-[39.06px] top-[11px] absolute bg-black/0 border-gray-200">
+                            <div class="w-3.5 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                <div class="w-3.5 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-3.5 h-2.5 left-0 top-[3px] absolute bg-green-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-14 h-6 left-[24.53px] top-[35px] absolute text-center justify-start text-green-500 text-base font-normal font-['Inter']">Enable</div>
+                        <div class="w-16 h-6 left-[17px] top-[59px] absolute text-center justify-start text-green-500 text-base font-normal font-['Inter']">Selected</div>
+                    </div>
+                    <div class="w-24 h-24 relative opacity-50 bg-black/0 rounded-lg outline outline-1 outline-offset-[-1px] outline-red-500">
+                        <div class="w-4 h-5 left-[38.06px] top-[11px] absolute bg-black/0 border-gray-200">
+                            <div class="w-4 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-4 h-4 left-0 top-0 absolute bg-red-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-16 h-6 left-[22.14px] top-[35px] absolute text-center justify-start text-red-500 text-base font-normal font-['Inter']">Disable</div>
+                        <div class="w-16 h-6 left-[17px] top-[59px] absolute text-center justify-start text-red-500 text-base font-normal font-['Inter']">Selected</div>
+                    </div>
+                    <div class="w-20 h-20 relative bg-sky-600 rounded-lg border-gray-200">
+                        <div class="w-3.5 h-5 left-[25.39px] top-[10px] absolute bg-black/0 border-gray-200">
+                            <div class="w-3.5 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                <div class="w-3.5 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                    <div class="w-3 h-3 left-[0.50px] top-[1.50px] absolute bg-white"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-11 h-6 left-[16px] top-[34px] absolute text-center justify-start text-white text-base font-normal font-['Inter']">Invite</div>
+                        <div class="w-10 h-6 left-[18.55px] top-[58px] absolute text-center justify-start text-white text-base font-['Inter']">User</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="w-[1136px] h-[766px] left-[24px] top-[188px] absolute bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 overflow-hidden">
+            <div class="w-[1134px] h-20 left-[1px] top-[1px] absolute bg-black/0 border-b border-gray-200">
+                <div class="w-[1086px] h-10 left-[24px] top-[16px] absolute bg-black/0 border-gray-200 inline-flex justify-between items-center">
+                    <div class="relative bg-black/0 border-gray-200">
+                        <div id="users-total-count" class="justify-start text-gray-900 text-lg font-semibold font-['Inter']">Users ({{ total_users|default:0 }})</div>
+                    </div>
+                    <div class="w-16 h-10 bg-black/0 border-gray-200 flex justify-start items-center gap-2">
+                        <div class="w-8 h-10 relative bg-black/0 rounded-lg border-gray-200">
+                            <div class="w-4 h-5 left-[8px] top-[10px] absolute bg-black/0 border-gray-200">
+                                <div class="w-4 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                    <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                        <div class="w-4 h-4 left-0 top-0 absolute bg-gray-600"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-8 h-10 relative bg-black/0 rounded-lg border-gray-200">
+                            <div class="w-4 h-5 left-[8px] top-[10px] absolute bg-black/0 border-gray-200">
+                                <div class="w-4 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                    <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                                        <div class="w-4 h-3.5 left-0 top-[1px] absolute bg-gray-600"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-[1134px] h-[620px] left-[1px] top-[74px] absolute bg-black/0 border-gray-200 overflow-hidden">
+                <div class="w-full h-full left-0 top-0 absolute bg-black/0 border-gray-200">
+                    <div class="w-full h-14 bg-neutral-50 border-b border-gray-200">
+                        <div class="flex items-center gap-4 h-full px-6 text-xs font-medium text-neutral-500 tracking-wide">
+                            <div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div>
+                            <div class="flex-1 inline-flex items-center gap-1"><span>Name</span><div class="w-2 h-4 relative"><div class="w-2 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center"><div class="w-2 h-3 relative overflow-hidden"><div class="w-2 h-2.5 left-0 top-[0.75px] absolute bg-gray-400"></div></div></div></div></div>
+                            <div class="w-64 flex-shrink-0">Email</div>
+                            <div class="w-28 flex-shrink-0">Role</div>
+                            <div class="w-44 flex-shrink-0">Department(s)</div>
+                            <div class="w-24 flex-shrink-0">Status</div>
+                            <div class="w-28 flex-shrink-0">Last Active</div>
+                            <div class="w-28 flex-shrink-0 text-right">Actions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full h-[564px] left-0 top-[56px] absolute bg-white">
+                        {# Dynamic rows: `id` is targeted by javascript #}
+                        <div id="manage-users-rows">
+                            {% for user in users %}
+                            <div class="border-b border-gray-200"><div class="flex items-center gap-4 px-6 py-3"><div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div><div class="flex items-center gap-3 flex-1"><img class="w-10 h-10 rounded-full" src="{{ user.userprofile.avatar_url|default:'https://placehold.co/40x40' }}" alt="{{ user.get_full_name|default:user.username }}" /><div><div class="text-sm font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</div><div class="text-sm text-neutral-500">USR{{ user.pk }}</div></div></div><div class="w-64 flex-shrink-0 text-sm text-gray-900">{{ user.email }}</div><div class="w-28 flex-shrink-0"><div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex"><span class="text-xs font-medium text-fuchsia-700">{% if user.groups.all %}{{ user.groups.all.0.name }}{% else %}User{% endif %}</span></div></div><div class="w-44 flex-shrink-0 text-xs">{% if user.userprofile.department %}<div class="px-2 py-0.5 bg-neutral-100 rounded inline-flex"><span class="text-neutral-800">{{ user.userprofile.department.name }}</span></div>{% endif %}</div><div class="w-24 flex-shrink-0 text-xs">{% if user.is_active %}<span class="text-green-500">Active</span>{% else %}<span class="text-neutral-500">Inactive</span>{% endif %}</div><div class="w-28 flex-shrink-0 text-sm text-neutral-500">{{ user.last_login|default:""|timesince }}{% if user.last_login %} ago{% endif %}</div><div class="w-28 flex-shrink-0 text-right"><div class="w-5 h-10 inline-block"><div class="w-1 h-5 left-[8px] top-[10px] relative"><div class="w-1 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center"><div class="w-1 h-4 relative overflow-hidden"><div class="w-1 h-3.5 left-[0.25px] top-[1.25px] absolute bg-gray-400"></div></div></div></div></div></div></div></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-[1134px] h-16 left-[1px] top-[694px] absolute bg-black/0 border-t border-gray-200">
+                <div class="w-[1086px] h-9 left-[24px] top-[17px] absolute bg-black/0 border-gray-200 inline-flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div id="users-showing" class="text-neutral-500 text-sm font-normal font-['Inter']"></div>
+                         <div class="flex items-center gap-2">
+                            <select id="per-page-select" class="h-9 rounded-lg border-gray-300 text-sm focus:ring-sky-600 focus:border-sky-600">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                            </select>
+                            <label for="per-page-select" class="text-sm text-neutral-500 font-normal font-['Inter']">entries per page</label>
+                        </div>
+                    </div>
+                    <div id="pagination-controls" class="flex justify-start items-center gap-2">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Manage Users: search/filter/poller + functional pagination
+(function(){
+    // API and DOM element constants
+    const apiUrl = '{% url "dashboard:api_manage_users_users" %}';
+    const toggleUrlTemplate = '{% url "dashboard:api_manage_users_toggle_enabled" 0 %}'.replace('/0/', '/{id}/');
+    const rowsEl = document.getElementById('manage-users-rows');
+    const usersShowingEl = document.getElementById('users-showing');
+    const usersTotalCountEl = document.getElementById('users-total-count');
+    const paginationControlsEl = document.getElementById('pagination-controls');
+    const perPageSelectEl = document.getElementById('per-page-select');
+
+    // State variables
+    let currentPage = 1;
+    let perPage = parseInt(perPageSelectEl ? perPageSelectEl.value : 10) || 10;
+    let totalUsers = 0;
+    let otherQueryParams = {}; // To hold search/filter params
+
+    function getCsrf(){
+        const cookie = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='));
+        return cookie ? cookie.split('=')[1] : null;
+    }
+
+    // Renders the pagination controls
+    function renderPagination() {
+        if (!paginationControlsEl) return;
+        const totalPages = Math.max(1, Math.ceil(totalUsers / perPage));
+        let out = '';
+
+        // Previous button
+        out += `<button data-page="${currentPage - 1}" class="w-20 h-9 relative bg-black/0 rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200 text-gray-600 text-sm font-normal ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+        
+        // Page number logic (simplified for brevity)
+        let pagesToShow = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) pagesToShow.push(i);
+        } else {
+            pagesToShow.push(1);
+            if (currentPage > 3) pagesToShow.push('...');
+            if (currentPage > 2) pagesToShow.push(currentPage - 1);
+            if (currentPage !== 1 && currentPage !== totalPages) pagesToShow.push(currentPage);
+            if (currentPage < totalPages - 1) pagesToShow.push(currentPage + 1);
+            if (currentPage < totalPages - 2) pagesToShow.push('...');
+            pagesToShow.push(totalPages);
+        }
+        
+        // Remove duplicates that can arise from edge cases
+        pagesToShow = [...new Set(pagesToShow)];
+
+        pagesToShow.forEach(p => {
+            if (p === '...') {
+                out += `<div class="w-9 h-9 relative"><span class="absolute top-[9px] left-[12px] text-neutral-500 text-sm">...</span></div>`;
+            } else {
+                const isCurrent = p === currentPage;
+                out += `<button data-page="${p}" class="w-9 h-9 relative rounded-lg ${isCurrent ? 'bg-sky-600 text-white' : 'bg-black/0 outline outline-1 outline-offset-[-1px] outline-gray-200 text-gray-600'} text-sm">${p}</button>`;
+            }
+        });
+
+        // Next button
+        out += `<button data-page="${currentPage + 1}" class="w-14 h-9 relative bg-black/0 rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200 text-gray-600 text-sm font-normal ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+        
+        paginationControlsEl.innerHTML = out;
+        attachPaginationHandlers();
+    }
+
+    // Attaches click handlers to pagination buttons
+    function attachPaginationHandlers() {
+        document.querySelectorAll('#pagination-controls button[data-page]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const page = parseInt(this.dataset.page);
+                if (page && page !== currentPage) {
+                    load(page, perPage);
+                }
+            });
+        });
+    }
+
+    // Main function to load user data
+    async function load(page = 1, limit = 10, params = {}){
+        currentPage = page;
+        perPage = limit;
+        otherQueryParams = params;
+
+        const qs = new URLSearchParams({ page: currentPage, limit: perPage, ...otherQueryParams });
+        const res = await fetch(apiUrl + '?' + qs.toString(), {credentials: 'same-origin'});
+        if(!res.ok) return;
+        const data = await res.json();
+        totalUsers = data.total || 0;
+
+        // Update total count in header
+        if(usersTotalCountEl){
+            usersTotalCountEl.textContent = `Users (${totalUsers})`;
+        }
+        
+        // Update pagination text
+        if(usersShowingEl){
+            const start = totalUsers > 0 ? (currentPage - 1) * perPage + 1 : 0;
+            const end = Math.min(currentPage * perPage, totalUsers);
+            usersShowingEl.textContent = `Showing ${start} to ${end} of ${totalUsers} results`;
+        }
+        
+        // Render rows
+        if(!rowsEl) return;
+        let out = '';
+        (data.users || []).forEach(u => {
+            out += `
+            <div class="border-b border-gray-200">
+                <div class="flex items-center gap-4 px-6 py-3">
+                    <div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div>
+                    <div class="flex items-center gap-3 flex-1">
+                        <img class="w-10 h-10 rounded-full" src="${u.avatar_url||'https://placehold.co/40x40'}" alt="${u.full_name}">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${u.full_name}</div>
+                            <div class="text-sm text-neutral-500">USR${u.id}</div>
+                        </div>
+                    </div>
+                    <div class="w-64 flex-shrink-0 text-sm">${u.email||''}</div>
+                    <div class="w-28 flex-shrink-0"><div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex"><span class="text-xs font-medium text-fuchsia-700">${(u.roles&&u.roles[0])||'User'}</span></div></div>
+                    <div class="w-44 flex-shrink-0 text-xs">${u.department||''}</div>
+                    <div class="w-24 flex-shrink-0 text-xs">${u.is_active?'<span class="text-green-500">Active</span>':'<span class="text-neutral-500">Inactive</span>'}</div>
+                    <div class="w-28 flex-shrink-0 text-xs">${u.last_active_human||''}</div>
+                    <div class="w-28 flex-shrink-0 text-right"><button data-user-id="${u.id}" class="toggle-enabled px-2 py-1 rounded bg-gray-100 text-sm">${u.enabled? 'Disable' : 'Enable'}</button></div>
+                </div>
+            </div>`;
+        });
+        rowsEl.innerHTML = out;
+        
+        // Render pagination controls
+        renderPagination();
+        
+        // Attach toggle handlers
+        document.querySelectorAll('.toggle-enabled').forEach(btn=>{
+            btn.addEventListener('click', async function(){
+                const id = this.dataset.userId;
+                const url = toggleUrlTemplate.replace('{id}', id);
+                const csrftoken = getCsrf();
+                try {
+                    const r = await fetch(url, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrftoken}});
+                    if(!r.ok) throw new Error('Failed');
+                    const j = await r.json();
+                    this.textContent = j.enabled ? 'Disable' : 'Enable';
+                } catch(e) {
+                    console.error('Toggle failed', e);
+                }
+            });
+        });
+    }
+
+    // Event listener for per-page selector
+    if(perPageSelectEl) perPageSelectEl.addEventListener('change', () => {
+        const newPerPageValue = parseInt(perPageSelectEl.value);
+        load(1, newPerPageValue, otherQueryParams); // Go to first page on change
+    });
+
+    // Initial load
+    load(currentPage, perPage);
+    // Poll every 10s, refreshing the current view
+    setInterval(() => load(currentPage, perPage, otherQueryParams), 10000);
+})();
+</script>
+{% endblock %}
