@@ -75,6 +75,11 @@ urlpatterns = [
     # Filters endpoint used by the Manage Users frontend to populate selects
     path('api/manage-users/filters/', dashboard_views.manage_users_api_filters, name='api_manage_users_filters'),
     path('manage-users/groups/', dashboard_views.manage_users_groups, name='manage_users_groups'),
+    # API endpoints for groups dashboard
+    path('api/groups/notify-all/', dashboard_views.api_notify_all_groups, name='api_groups_notify_all'),
+    path('api/departments/<int:dept_id>/notify/', dashboard_views.api_notify_department, name='api_department_notify'),
+    path('api/departments/<int:dept_id>/members/', dashboard_views.api_department_members, name='api_department_members'),
+    path('api/groups/<int:group_id>/members/', dashboard_views.api_group_members, name='api_group_members'),
     path('manage-users/roles/', dashboard_views.manage_users_roles, name='manage_users_roles'),
     path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
     path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),

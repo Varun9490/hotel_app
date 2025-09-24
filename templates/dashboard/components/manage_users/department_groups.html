@@ -25,7 +25,11 @@
           <!-- Left: Icon + meta -->
           <div class="flex items-start gap-4">
             <div class="w-11 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <img src="{% static 'images/manage_users/house_keeping.svg' %}" alt="Housekeeping" class="w-6 h-6" />
+              {% if featured_group.image %}
+                <img src="{% static featured_group.image %}" alt="{{ featured_group.name|default:'Housekeeping' }}" class="w-6 h-6" />
+              {% else %}
+                <img src="{% static 'images/manage_users/house_keeping.svg' %}" alt="Housekeeping" class="w-6 h-6" />
+              {% endif %}
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2">
@@ -59,9 +63,9 @@
         <div class="space-y-3">
           {% if groups %}
             {% for group in groups|slice:":3" %}
-              <div class="p-3 bg-neutral-50 rounded-lg border border-gray-200 flex items-center justify-between">
+              <div class="p-3 bg-neutral-50 rounded-lg border border-gray-200 flex items-center justify-between group-row" data-group-id="{{ group.id }}">
                 <div class="flex items-center gap-3 sm:gap-4">
-                  <span class="w-2 h-2 rounded-full {% if group.members_count|default:0|add:'0' > 0 %}bg-green-500{% else %}bg-gray-300{% endif %}"></span>
+                  <span class="w-2 h-2 rounded-full {% if group.members_count|default:0 %}bg-green-500{% else %}bg-gray-300{% endif %}"></span>
                   <div class="flex items-center gap-3">
                     <div class="text-sm font-medium text-gray-900 font-['Inter']">{{ group.name }}</div>
                     <div class="text-xs text-neutral-500 font-normal font-['Inter']">({{ group.members_count|default:"0" }} members)</div>
@@ -70,6 +74,10 @@
                 <div class="flex items-center gap-3 text-xs sm:text-sm font-['Inter']">
                   <a href="#" class="text-sky-600">Add Users</a>
                   <a href="#" class="text-gray-600">Edit</a>
+                  <button type="button" class="ml-3 accordion-toggle" aria-expanded="false">
+                    <img src="{% static 'images/manage_users/open.svg' %}" alt="Open" class="w-4 h-4 open-icon" />
+                    <img src="{% static 'images/manage_users/close.svg' %}" alt="Close" class="w-4 h-4 close-icon hidden" />
+                  </button>
                 </div>
               </div>
             {% endfor %}

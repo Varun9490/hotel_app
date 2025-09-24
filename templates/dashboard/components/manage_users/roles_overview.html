@@ -1,77 +1,727 @@
 {% load static %}
-<section id="roles-overview" class="space-y-6">
-  <!-- Top bar -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">Roles & Permissions</h2>
-      <p class="text-sm text-gray-600">Create and manage permission templates for your teams.</p>
-    </div>
-    <div class="flex items-center gap-3">
-      <div class="relative">
-        <input type="text" placeholder="Search roles..." class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500" />
-        <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-          <img src="{% static 'images/dashboard/search.svg' %}" alt="Search" class="w-4 h-4" />
-        </div>
-      </div>
-      <button type="button" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-sky-600 text-white text-base font-medium hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
-        <img src="{% static 'images/manage_users/plus.svg' %}" alt="Plus" class="w-3.5 h-3.5" />
-        <span>Create Role</span>
-      </button>
-    </div>
-  </div>
 
-  <!-- Example role cards -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-sky-600/10 rounded-lg flex items-center justify-center">
-            <div class="w-4 h-4 bg-sky-600"></div>
-          </div>
-          <div>
-            <div class="text-lg font-semibold text-gray-900">Staff</div>
-            <div class="text-sm text-gray-600">Basic access</div>
-          </div>
-        </div>
-        <span class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</span>
-      </div>
-      <div class="mt-6 grid grid-cols-2 gap-2 text-sm text-gray-600">
-        <div class="flex items-center justify-between">
-          <span>View Requests</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span>Admin Panel</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-gray-200"></span>
-        </div>
-      </div>
-    </div>
-    <!-- Add more cards as needed -->
-  </div>
-
-  <!-- Permissions comparison table -->
-  <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+<section id="permission-matrix" class="max-w-[1184px] mx-auto space-y-6">
+  <!-- Top Bar -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="flex items-center justify-between">
       <div>
-        <div class="text-lg font-semibold text-gray-900">Module Permissions Overview</div>
-        <div class="text-sm text-gray-600">Compare permissions across different role templates</div>
+        <h2 class="text-lg font-semibold text-gray-900">Permission Matrix</h2>
+        <p class="text-sm text-gray-600">Configure permissions for different user roles across all system modules</p>
       </div>
+
       <div class="flex items-center gap-3">
-        <button class="rounded-lg outline outline-1 outline-gray-200 px-4 py-2">Export</button>
-        <button class="rounded-lg bg-sky-600 text-white px-4 py-2">Bulk Edit</button>
+        <button id="exportMatrixBtn" type="button" class="h-9 inline-flex items-center gap-2 px-4 rounded-lg outline outline-1 outline-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
+          <span class="inline-block w-3.5 h-3.5 bg-gray-600 rounded-sm"></span>
+          Export Matrix
+        </button>
+        <button id="assignUsersBtn" type="button" class="h-9 inline-flex items-center gap-2 px-4 rounded-lg outline outline-1 outline-sky-600 text-sky-600 text-sm font-medium hover:bg-sky-50">
+          <span class="inline-block w-4 h-3.5 bg-sky-600 rounded-sm"></span>
+          Assign to Users
+        </button>
       </div>
     </div>
-    <div class="mt-4 min-w-[1086px]">
-      <div class="grid grid-cols-7 gap-4 text-sm text-gray-900 font-semibold py-3 border-b border-neutral-100">
-        <div>Module</div>
-        <div class="text-center">Staff</div>
-        <div class="text-center">Manager</div>
-        <div class="text-center">Concierge</div>
-        <div class="text-center">Maintenance</div>
-        <div class="text-center">Housekeeping</div>
-        <div class="text-center">Super Admin</div>
+  </div>
+
+  <!-- Matrix -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <form id="permission-form" action="" method="POST">
+      {% csrf_token %}
+      <!-- Header -->
+      <div class="bg-neutral-50 border-b border-gray-200">
+        <div class="min-w-[1134px] grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))]">
+          <div class="px-6 py-5 text-base font-semibold text-gray-900 leading-tight">
+            <span class="block">MODULE /</span>
+            <span class="block">PERMISSION</span>
+          </div>
+          <div class="px-4 py-5 text-center text-base font-semibold text-gray-900 border-l border-gray-200">GUEST</div>
+          <div class="px-4 py-5 text-center text-base font-semibold text-gray-900 border-l border-gray-200">STAFF</div>
+          <div class="px-4 py-5 text-center text-base font-semibold text-gray-900 border-l border-gray-200">SUPERVISOR</div>
+          <div class="px-4 py-5 text-center text-base font-semibold text-gray-900 border-l border-gray-200">MANAGER</div>
+          <div class="px-4 py-5 text-center text-base font-semibold text-gray-900 border-l border-gray-200">ADMIN</div>
+        </div>
       </div>
-      <div class="py-4 text-sm text-gray-600">Add rows here…</div>
-    </div>
+
+      <!-- Guest Management -->
+      <div class="min-w-[1134px]">
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200 bg-neutral-50/50">
+          <div class="px-6 py-3 flex items-center gap-3">
+            <span class="inline-block w-5 h-4 bg-sky-600 rounded-sm"></span>
+            <span class="text-sm font-semibold text-neutral-700 tracking-tight">Guest Management</span>
+          </div>
+          <div class="col-span-5"></div>
+        </div>
+
+        <!-- Row: View Guest Profiles -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">View Guest Profiles</div>
+            <div class="mt-2 text-sm text-gray-600">
+              Access guest information and stay history
+            </div>
+          </div>
+          <!-- Toggles -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <!-- guest -->
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.view_guest_profiles.guest"
+                     data-permission="view_guest_profiles" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can view guest profiles</span>
+            </label>
+          </div>
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <!-- staff -->
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_guest_profiles.staff"
+                     data-permission="view_guest_profiles" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can view guest profiles</span>
+            </label>
+          </div>
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <!-- supervisor -->
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_guest_profiles.supervisor"
+                     data-permission="view_guest_profiles" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can view guest profiles</span>
+            </label>
+          </div>
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <!-- manager -->
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_guest_profiles.manager"
+                     data-permission="view_guest_profiles" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can view guest profiles</span>
+            </label>
+          </div>
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <!-- admin -->
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_guest_profiles.admin"
+                     data-permission="view_guest_profiles" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can view guest profiles</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Create Guest Records -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Create Guest Records</div>
+            <div class="mt-2 text-sm text-gray-600">Add new guest profiles to the system</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.create_guest_records.guest"
+                     data-permission="create_guest_records" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can create guest records</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.create_guest_records.staff"
+                     data-permission="create_guest_records" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can create guest records</span>
+            </label>
+          </div>
+          <!-- supervisor -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.create_guest_records.supervisor"
+                     data-permission="create_guest_records" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can create guest records</span>
+            </label>
+          </div>
+          <!-- manager -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.create_guest_records.manager"
+                     data-permission="create_guest_records" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can create guest records</span>
+            </label>
+          </div>
+          <!-- admin -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.create_guest_records.admin"
+                     data-permission="create_guest_records" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can create guest records</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Edit Guest Information -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Edit Guest Information</div>
+            <div class="mt-2 text-sm text-gray-600">Modify existing guest profiles and preferences</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.edit_guest_information.guest"
+                     data-permission="edit_guest_information" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can edit guest information</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.edit_guest_information.staff"
+                     data-permission="edit_guest_information" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can edit guest information</span>
+            </label>
+          </div>
+          <!-- supervisor -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.edit_guest_information.supervisor"
+                     data-permission="edit_guest_information" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can edit guest information</span>
+            </label>
+          </div>
+          <!-- manager -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.edit_guest_information.manager"
+                     data-permission="edit_guest_information" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can edit guest information</span>
+            </label>
+          </div>
+          <!-- admin -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.edit_guest_information.admin"
+                     data-permission="edit_guest_information" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can edit guest information</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Delete Guest Records -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Delete Guest Records</div>
+            <div class="mt-2 text-sm text-gray-600">Remove guest profiles from the system</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.delete_guest_records.guest"
+                     data-permission="delete_guest_records" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can delete guest records</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.delete_guest_records.staff"
+                     data-permission="delete_guest_records" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can delete guest records</span>
+            </label>
+          </div>
+          <!-- supervisor -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.delete_guest_records.supervisor"
+                     data-permission="delete_guest_records" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can delete guest records</span>
+            </label>
+          </div>
+          <!-- manager -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.delete_guest_records.manager"
+                     data-permission="delete_guest_records" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can delete guest records</span>
+            </label>
+          </div>
+          <!-- admin -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.delete_guest_records.admin"
+                     data-permission="delete_guest_records" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can delete guest records</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Requests -->
+      <div class="min-w-[1134px]">
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200 bg-neutral-50/50">
+          <div class="px-6 py-3 flex items-center gap-3">
+            <span class="inline-block w-3 h-4 bg-teal-500 rounded-sm"></span>
+            <span class="text-sm font-semibold text-neutral-700 tracking-tight">Service Requests</span>
+          </div>
+          <div class="col-span-5"></div>
+        </div>
+
+        <!-- Row: View Service Requests -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">View Service Requests</div>
+            <div class="mt-2 text-sm text-gray-600">Access and view guest service requests</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.view_service_requests.guest"
+                     data-permission="view_service_requests" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can view service requests</span>
+            </label>
+          </div>
+          <!-- staff (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_service_requests.staff"
+                     data-permission="view_service_requests" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can view service requests</span>
+            </label>
+          </div>
+          <!-- supervisor (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_service_requests.supervisor"
+                     data-permission="view_service_requests" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can view service requests</span>
+            </label>
+          </div>
+          <!-- manager (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_service_requests.manager"
+                     data-permission="view_service_requests" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can view service requests</span>
+            </label>
+          </div>
+          <!-- admin (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_service_requests.admin"
+                     data-permission="view_service_requests" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can view service requests</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Assign Service Requests -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Assign Service Requests</div>
+            <div class="mt-2 text-sm text-gray-600">Assign requests to staff members</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.assign_service_requests.guest"
+                     data-permission="assign_service_requests" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can assign service requests</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.assign_service_requests.staff"
+                     data-permission="assign_service_requests" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can assign service requests</span>
+            </label>
+          </div>
+          <!-- supervisor (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.assign_service_requests.supervisor"
+                     data-permission="assign_service_requests" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can assign service requests</span>
+            </label>
+          </div>
+          <!-- manager (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.assign_service_requests.manager"
+                     data-permission="assign_service_requests" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can assign service requests</span>
+            </label>
+          </div>
+          <!-- admin (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.assign_service_requests.admin"
+                     data-permission="assign_service_requests" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can assign service requests</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Configure Request Types -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Configure Request Types</div>
+            <div class="mt-2 text-sm text-gray-600">Manage available service request categories</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.configure_request_types.guest"
+                     data-permission="configure_request_types" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can configure request types</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.configure_request_types.staff"
+                     data-permission="configure_request_types" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can configure request types</span>
+            </label>
+          </div>
+          <!-- supervisor -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.configure_request_types.supervisor"
+                     data-permission="configure_request_types" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can configure request types</span>
+            </label>
+          </div>
+          <!-- manager (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.configure_request_types.manager"
+                     data-permission="configure_request_types" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can configure request types</span>
+            </label>
+          </div>
+          <!-- admin (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.configure_request_types.admin"
+                     data-permission="configure_request_types" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can configure request types</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics & Reports -->
+      <div class="min-w-[1134px]">
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200 bg-neutral-50/50">
+          <div class="px-6 py-3 flex items-center gap-3">
+            <span class="inline-block w-4 h-3.5 bg-fuchsia-700 rounded-sm"></span>
+            <span class="text-sm font-semibold text-neutral-700 tracking-tight">Analytics & Reports</span>
+          </div>
+          <div class="col-span-5"></div>
+        </div>
+
+        <!-- Row: View Analytics Dashboard -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))] border-b border-gray-200">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">View Analytics Dashboard</div>
+            <div class="mt-2 text-sm text-gray-600">Access performance metrics and insights</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.view_analytics_dashboard.guest"
+                     data-permission="view_analytics_dashboard" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can view analytics</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.view_analytics_dashboard.staff"
+                     data-permission="view_analytics_dashboard" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can view analytics</span>
+            </label>
+          </div>
+          <!-- supervisor (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_analytics_dashboard.supervisor"
+                     data-permission="view_analytics_dashboard" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can view analytics</span>
+            </label>
+          </div>
+          <!-- manager (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_analytics_dashboard.manager"
+                     data-permission="view_analytics_dashboard" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can view analytics</span>
+            </label>
+          </div>
+          <!-- admin (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.view_analytics_dashboard.admin"
+                     data-permission="view_analytics_dashboard" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can view analytics</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row: Export Data -->
+        <div class="grid grid-cols-[minmax(260px,1.6fr)_repeat(5,minmax(140px,1fr))]">
+          <div class="px-6 py-4">
+            <div class="text-base font-medium text-gray-900">Export Data</div>
+            <div class="mt-2 text-sm text-gray-600">Download reports and analytics data</div>
+          </div>
+          <!-- guest -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.export_data.guest"
+                     data-permission="export_data" data-role="guest">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Guest can export data</span>
+            </label>
+          </div>
+          <!-- staff -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.export_data.staff"
+                     data-permission="export_data" data-role="staff">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Staff can export data</span>
+            </label>
+          </div>
+          <!-- supervisor -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer"
+                     name="perm.export_data.supervisor"
+                     data-permission="export_data" data-role="supervisor">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Supervisor can export data</span>
+            </label>
+          </div>
+          <!-- manager (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.export_data.manager"
+                     data-permission="export_data" data-role="manager">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Manager can export data</span>
+            </label>
+          </div>
+          <!-- admin (on) -->
+          <div class="px-4 py-4 border-l border-gray-200 flex items-center justify-center">
+            <label class="relative inline-flex items-center w-11 h-6 cursor-pointer">
+              <input type="checkbox" class="sr-only peer" checked
+                     name="perm.export_data.admin"
+                     data-permission="export_data" data-role="admin">
+              <div class="w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-sky-600 transition-colors"></div>
+              <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full border transition-transform peer-checked:translate-x-5"></div>
+              <span class="sr-only">Admin can export data</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Changes -->
+      <div class="border-t border-gray-200"></div>
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Save Changes</h3>
+          <p class="text-sm text-gray-600">Add an audit note to track permission changes</p>
+        </div>
+
+        <div class="mt-4">
+          <label for="auditNote" class="block text-sm font-medium text-neutral-700 mb-2">Audit Note</label>
+          <textarea id="auditNote" name="audit_note" rows="4"
+                    class="w-full bg-white rounded-lg border border-gray-200 p-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                    placeholder="Describe the reason for these permission changes..."></textarea>
+        </div>
+
+        <div class="mt-4 flex items-center gap-3">
+          <button id="cancelBtn" type="button" class="h-9 px-4 rounded-lg outline outline-1 outline-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
+            Cancel
+          </button>
+          <button id="savePermissionsBtn" type="submit" class="h-9 px-4 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            Save Permissions
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 </section>
+
+<script>
+  (function () {
+    const form = document.getElementById('permission-form');
+    const exportBtn = document.getElementById('exportMatrixBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('savePermissionsBtn');
+
+    // Enable Save when something changes
+    const markDirty = () => { saveBtn.disabled = false; };
+    form.querySelectorAll('input[type="checkbox"][data-permission][data-role]').forEach(el => {
+      el.addEventListener('change', markDirty);
+    });
+    form.querySelector('#auditNote')?.addEventListener('input', markDirty);
+
+    // Cancel resets the form to defaults
+    cancelBtn.addEventListener('click', () => {
+      form.reset();
+      saveBtn.disabled = true;
+    });
+
+    // Export current matrix as JSON
+    function gatherMatrix() {
+      const data = {};
+      form.querySelectorAll('input[type="checkbox"][data-permission][data-role]').forEach(el => {
+        const perm = el.dataset.permission;
+        const role = el.dataset.role;
+        data[perm] = data[perm] || {};
+        data[perm][role] = el.checked;
+      });
+      return data;
+    }
+
+    function downloadJSON(filename, dataObj) {
+      const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    exportBtn.addEventListener('click', () => {
+      const matrix = gatherMatrix();
+      downloadJSON('permission-matrix.json', matrix);
+    });
+
+    // Optional: keep the Save button disabled until edits
+    saveBtn.disabled = true;
+  })();
+</script>

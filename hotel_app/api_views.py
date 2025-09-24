@@ -215,6 +215,37 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             return [IsStaffUser()]
         return [permissions.IsAuthenticated()]
 
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser()])
+    def assign(self, request, pk=None):
+        """Assign a complaint to a staff user. Payload: {"user_id": <id>}"""
+        complaint = self.get_object()
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_object_or_404(User, pk=user_id)
+        complaint.assigned_to = user
+        complaint.save()
+        return Response({'status': 'assigned', 'assigned_to': user_id})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffUser()])
+    def change_status(self, request, pk=None):
+        """Change status of a complaint. Payload: {"status": "in_progress"|"resolved"|"pending"}"""
+        complaint = self.get_object()
+        new_status = request.data.get('status')
+        if new_status not in dict(Complaint.STATUS_CHOICES).keys():
+            return Response({'error': 'invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        complaint.status = new_status
+        # set timestamps accordingly
+        if new_status == 'in_progress' and not complaint.started_at:
+            complaint.started_at = timezone.now()
+        if new_status == 'resolved' and not complaint.resolved_at:
+            complaint.resolved_at = timezone.now()
+            # compute sla breach on resolution
+            if complaint.due_at and complaint.resolved_at > complaint.due_at:
+                complaint.sla_breached = True
+        complaint.save()
+        return Response({'status': 'ok', 'new_status': new_status})
+
 # Reviews
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()

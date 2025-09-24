@@ -1,17 +1,351 @@
 {% extends "dashboard/manage_users_base.html" %}
+{% load static %}
 {% block manage_content %}
-  {% include 'dashboard/components/manage_users/stats.html' with card1_icon='images/sidebar/departments_highlighted.svg' card1_icon_alt='Total Groups' card1_delta='+2' card1_delta_class='text-xs font-medium text-green-500' card1_value=total_groups|default:'8' card1_label='Total Groups' card2_icon='images/sidebar/manage_users.svg' card2_icon_alt='Members Assigned' card2_delta='+12' card2_delta_class='text-xs font-medium text-green-500' card2_value=total_group_members|default:'247' card2_label='Members Assigned' card3_icon='images/dashboard/notifications.svg' card3_icon_alt='Recent' card3_delta='24h' card3_delta_class='text-xs text-gray-600' card3_value=recent_additions|default:'18' card3_label='Recent Additions' card4_icon='images/sidebar/messaging_highlighted.svg' card4_icon_alt='Bulk' card4_delta='Active' card4_delta_class='text-xs text-sky-600' card4_value=active_groups|default:'5' card4_label='Bulk Notifications' %}
+<div class="w-[1184px] min-h-screen bg-black/0 border-gray-200 mx-auto">
 
+  <!-- Top Stats Cards -->
+  <div class="px-6 pt-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-  {% include 'dashboard/components/manage_users/department_groups.html' %}
+      <!-- Total Groups -->
+      <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-10 bg-sky-600/10 rounded-lg flex items-center justify-center">
+            <img src="{% static 'images/manage_users/total_groups.svg' %}" alt="Total Groups" class="w-4 h-4" />
+          </div>
+          <div class="text-green-500 text-xs font-medium font-['Inter']">+2</div>
+        </div>
+        <div class="mt-6">
+          <div class="text-gray-900 text-2xl font-bold font-['Inter']">{{ total_groups }}</div>
+          <div class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Total Groups</div>
+        </div>
+      </div>
+
+      <!-- Members Assigned -->
+      <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div class="w-9 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
+            <img src="{% static 'images/manage_users/members_assigned.svg' %}" alt="Members Assigned" class="w-5 h-4" />
+          </div>
+          <div class="text-green-500 text-xs font-medium font-['Inter']">+12</div>
+        </div>
+        <div class="mt-6">
+          <div class="text-gray-900 text-2xl font-bold font-['Inter']">{{ total_group_members }}</div>
+          <div class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Members Assigned</div>
+        </div>
+      </div>
+
+      <!-- Recent Additions -->
+      <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div class="w-9 h-10 bg-yellow-400/10 rounded-lg flex items-center justify-center">
+            <img src="{% static 'images/manage_users/recent_additions.svg' %}" alt="Recent Additions" class="w-5 h-4" />
+          </div>
+          <div class="text-gray-600 text-xs font-normal font-['Inter']">24h</div>
+        </div>
+        <div class="mt-6">
+          <div class="text-gray-900 text-2xl font-bold font-['Inter']">{{ recent_additions }}</div>
+          <div class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Recent Additions</div>
+        </div>
+      </div>
+
+      <!-- Active Groups / Bulk Notifications -->
+      <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div class="w-7 h-10 bg-fuchsia-700/10 rounded-lg flex items-center justify-center">
+            <img src="{% static 'images/manage_users/bulk_notifications.svg' %}" alt="Bulk Notifications" class="w-3.5 h-4" />
+          </div>
+          <div class="text-sky-600 text-xs font-medium font-['Inter']">Active</div>
+        </div>
+        <div class="mt-6">
+          <div class="text-gray-900 text-2xl font-bold font-['Inter']">{{ active_groups }}</div>
+          <div class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Bulk Notifications</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Department Groups Panel -->
+  <div class="w-[1136px] bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200 mx-6 mt-6">
+    <!-- Panel Header -->
+    <div class="border-b border-gray-200 px-6 py-5">
+      <div class="flex items-center justify-between">
+        <div class="text-gray-900 text-lg font-semibold font-['Inter']">Department Groups</div>
+        <div class="flex items-center gap-3">
+          <button type="button" class="w-20 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center gap-2 px-3">
+            <span class="w-3.5 h-2.5 ">
+              <img src="{% static 'images/manage_users/filter.svg' %}" alt="Filter"  />
+            </span>
+            <span class="text-gray-600 text-sm font-normal font-['Inter']">Filter</span>
+          </button>
+          <button type="button" class="w-36 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center gap-2 px-3">
+            <span class="w-3.5 h-2.5 ">
+              <img src="{% static 'images/manage_users/notify.svg' %}" alt="Notify" />
+            </span>
+            <span class="text-sky-600 text-sm font-normal font-['Inter']">Bulk Notify All</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Department Groups List (Accordion) -->
+    <div class="px-6 py-6 space-y-6" id="departments-accordion">
+      {% for dept in departments %}
+  <div class="department-group w-full bg-black/0 rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200 p-4" id="department-group-{{ forloop.counter0 }}" data-dept-id="{{ dept.featured_group.id }}">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="w-11 h-12 {{ dept.featured_group.icon_bg|default:'bg-green-500/10' }} rounded-lg flex items-center justify-center overflow-hidden">
+              <!-- Department icon loaded by name mapping -->
+              <img
+                class="h-6 w-6 dept-icon"
+                data-icon-name="{{ dept.featured_group.name|default:'Housekeeping' }}"
+                alt="{{ dept.featured_group.name|default:'Housekeeping' }} icon"
+                src="{% static 'images/manage_users/housekeeping.svg' %}"
+              />
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <div class="text-gray-900 text-lg font-semibold font-['Inter'] truncate">
+                  {{ dept.featured_group.name|default:"Housekeeping" }}
+                </div>
+                <div class="{{ dept.featured_group.tag_bg|default:'bg-green-500/10' }} rounded-full">
+                  <div class="px-2 py-1">
+                    <span class="text-{{ dept.featured_group.icon_color|default:'green-500' }} text-xs font-medium font-['Inter']">
+                      <span class="dept-members-count">{{ dept.featured_group.members_count|default:"42" }}</span> members
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">
+                {{ dept.featured_group.description|default:"Room cleaning, maintenance, and guest services" }}
+              </div>
+              <div class="flex items-center gap-4 text-neutral-500 text-xs font-normal font-['Inter'] mt-2">
+                <div>Supervisors: <span class="dept-supervisors-count">{{ dept.featured_group.supervisors_count|default:"6" }}</span></div>
+                <div>Staff: <span class="dept-staff-count">{{ dept.featured_group.staff_count|default:"36" }}</span></div>
+                <div>Last updated: <span class="dept-updated-at">{{ dept.featured_group.updated_at|default:"2h ago" }}</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" class="w-32 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center gap-2 dept-notify-btn" data-dept-id="{{ dept.featured_group.id }}">
+              <span class="w-3.5 h-2.5 ">
+                <img src="{% static 'images/manage_users/notify.svg' %}" alt="Notify"  />
+              </span>
+              <span class="text-sky-600 text-sm font-normal font-['Inter']">Notify Group</span>
+            </button>
+
+            <!-- Accordion Toggle Button (no border, closed by default) -->
+            <button
+              type="button"
+              class="w-8 h-8 rounded-lg flex items-center justify-center dept-accordion-toggle bg-transparent hover:bg-gray-50 border-none focus:outline-none"
+              aria-expanded="false"
+              aria-controls="dept-content-{{ forloop.counter0 }}"
+              data-target="dept-content-{{ forloop.counter0 }}"
+              title="Toggle details"
+            >
+              <!-- Open (expand) icon shown when collapsed -->
+              <img src="{% static 'images/manage_users/open.svg' %}" alt="Open" class="h-4 w-4 open-icon" />
+              <!-- Close (collapse) icon shown when expanded -->
+              <img src="{% static 'images/manage_users/close.svg' %}" alt="Close" class="h-4 w-4 close-icon hidden" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Accordion Content: hidden by default -->
+        <div id="dept-content-{{ forloop.counter0 }}" class="mt-4 space-y-3 dept-accordion-content hidden">
+          {% for group in dept.groups|slice:":3" %}
+          <div class="group-item w-full p-3 bg-neutral-50 rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 {{ group.dot_bg|default:'bg-green-500' }} rounded-full"></div>
+              <div class="text-gray-900 text-sm font-medium font-['Inter']">{{ group.name }}</div>
+              <div class="text-neutral-500 text-xs font-normal font-['Inter']">({{ group.members_count|default:"0" }} members)</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="text-sky-600 text-xs font-normal font-['Inter']">Add Users</button>
+              <button type="button" class="text-gray-600 text-xs font-normal font-['Inter']">Edit</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
 {% endblock manage_content %}
-{% extends "dashboard/base_dashboard.html" %} {% block dashboard_content %}
-<div class="container mt-4">
-  {% extends "dashboard/manage_users_base.html" %}
-  {% block manage_content %}
-    {% include 'dashboard/components/manage_users/stats.html' with card1_icon='images/sidebar/departments_highlighted.svg' card1_icon_alt='Total Groups' card1_delta='+2' card1_delta_class='text-xs font-medium text-green-500' card1_value=total_groups|default:'8' card1_label='Total Groups' card2_icon='images/sidebar/manage_users.svg' card2_icon_alt='Members Assigned' card2_delta='+12' card2_delta_class='text-xs font-medium text-green-500' card2_value=total_group_members|default:'247' card2_label='Members Assigned' card3_icon='images/dashboard/notifications.svg' card3_icon_alt='Recent' card3_delta='24h' card3_delta_class='text-xs text-gray-600' card3_value=recent_additions|default:'18' card3_label='Recent Additions' card4_icon='images/sidebar/messaging_highlighted.svg' card4_icon_alt='Bulk' card4_delta='Active' card4_delta_class='text-xs text-sky-600' card4_value=active_groups|default:'5' card4_label='Bulk Notifications' %}
 
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Static base path for icons
+    const BASE = "{% static 'images/manage_users/' %}";
 
-    {% include 'dashboard/components/manage_users/department_groups.html' %}
-  {% endblock manage_content %}
-  >
+    // Explicit mapping as requested:
+    // housekeeping -> housekeeping.svg
+    // front office -> front_office.svg
+    // food & beverage -> food_beverage.svg
+    // maintainence -> maintainence.svg
+    // security -> security.svg
+    // Also handle common variants: "food & beverages", "food and beverage(s)", "maintenance"
+    const ICON_MAP = {
+      'housekeeping': 'housekeeping.svg',
+      'front office': 'front_office.svg',
+      'food & beverage': 'food_beverage.svg',
+      'food & beverages': 'food_beverage.svg',
+      'food and beverage': 'food_beverage.svg',
+      'food and beverages': 'food_beverage.svg',
+      'maintainence': 'maintainence.svg',
+      'maintenance': 'maintainence.svg',
+      'security': 'security.svg'
+    };
+
+    function normalizeName(name) {
+      return (name || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    // Assign icons without infinite reloads; safe fallback
+    document.querySelectorAll('.dept-icon').forEach(function (img) {
+      const raw = img.getAttribute('data-icon-name') || '';
+      const key = normalizeName(raw);
+      const file = ICON_MAP[key] || 'housekeeping.svg'; // fallback
+      // prevent infinite error loop if fallback also 404s
+      img.onerror = function () {
+        this.onerror = null;
+        this.src = BASE + 'housekeeping.svg';
+      };
+      img.src = BASE + file;
+    });
+
+    // Accordion behavior: all closed by default, toggle without borders
+    const toggles = document.querySelectorAll('.dept-accordion-toggle');
+
+    function collapse(btn) {
+      const targetId = btn.getAttribute('data-target');
+      const content = document.getElementById(targetId);
+      if (!content) return;
+      btn.setAttribute('aria-expanded', 'false');
+      content.classList.add('hidden');
+      const openIcon = btn.querySelector('.open-icon');
+      const closeIcon = btn.querySelector('.close-icon');
+      if (openIcon) openIcon.classList.remove('hidden');
+      if (closeIcon) closeIcon.classList.add('hidden');
+    }
+
+    function expand(btn) {
+      const targetId = btn.getAttribute('data-target');
+      const content = document.getElementById(targetId);
+      if (!content) return;
+      btn.setAttribute('aria-expanded', 'true');
+      content.classList.remove('hidden');
+      const openIcon = btn.querySelector('.open-icon');
+      const closeIcon = btn.querySelector('.close-icon');
+      if (openIcon) openIcon.classList.add('hidden');
+      if (closeIcon) closeIcon.classList.remove('hidden');
+    }
+
+    // Initialize: collapsed
+    toggles.forEach(function (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      const targetId = btn.getAttribute('data-target');
+      const content = document.getElementById(targetId);
+      if (content && !content.classList.contains('hidden')) {
+        content.classList.add('hidden');
+      }
+      const openIcon = btn.querySelector('.open-icon');
+      const closeIcon = btn.querySelector('.close-icon');
+      if (openIcon) openIcon.classList.remove('hidden');
+      if (closeIcon) closeIcon.classList.add('hidden');
+
+      btn.addEventListener('click', function () {
+        const isExpanded = this.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+          collapse(this);
+        } else {
+          expand(this);
+        }
+      });
+    });
+
+    // --- Dynamic data & notify wiring ---
+    const csrftoken = (function getCSRF(){
+      const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+      if(el) return el.value;
+      const cookieMatch = document.cookie.match(/csrftoken=([^;]+)/);
+      return cookieMatch ? cookieMatch[1] : '';
+    })();
+
+    function apiFetch(url, opts) {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      if (opts.method && opts.method.toUpperCase() !== 'GET') {
+        opts.headers['X-CSRFToken'] = csrftoken;
+      }
+      opts.headers['Accept'] = 'application/json';
+      return fetch(url, opts).then(r => r.json());
+    }
+
+    // Fetch department members counts and update counts in-place
+    document.querySelectorAll('.department-group[data-dept-id]').forEach(async function(el){
+      const deptId = el.getAttribute('data-dept-id');
+      if(!deptId) return;
+      try{
+        const resp = await apiFetch(`/dashboard/api/departments/${deptId}/members/`);
+        if(resp && resp.members){
+          const members = resp.members;
+          const membersCountEl = el.querySelector('.dept-members-count');
+          const supervisorsEl = el.querySelector('.dept-supervisors-count');
+          const staffEl = el.querySelector('.dept-staff-count');
+          const updatedEl = el.querySelector('.dept-updated-at');
+
+          if(membersCountEl) membersCountEl.textContent = members.length;
+
+          // rudimentary supervisor/staff split based on title available via extra API is not implemented here;
+          // try to compute using email/phone heuristics (best-effort) and keep staff as members - supervisors
+          if(supervisorsEl) supervisorsEl.textContent = members.filter(m=>/supervisor|manager/i.test(m.full_name||'')).length || '0';
+          if(staffEl) staffEl.textContent = Math.max(0, members.length - (parseInt(supervisorsEl.textContent) || 0));
+          if(updatedEl) updatedEl.textContent = 'just now';
+        }
+      }catch(e){
+        // ignore errors - keep server-side values
+      }
+    });
+
+    // Bulk Notify All button (top panel)
+    const bulkBtn = document.querySelector('button:has(.text-sky-600[textContent="Bulk Notify All"])');
+    // If :has not supported, fallback to selecting by text in multiple buttons
+    function findBulkNotify(){
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.find(b=>b.textContent && b.textContent.trim().includes('Bulk Notify All'));
+    }
+    const bulkNotifyBtn = bulkBtn || findBulkNotify();
+    if(bulkNotifyBtn){
+      bulkNotifyBtn.addEventListener('click', async function(){
+        const message = prompt('Enter bulk notification message (leave blank for default):');
+        try{
+          const body = JSON.stringify({message: message});
+          const resp = await apiFetch('/dashboard/api/groups/notify-all/', {method: 'POST', body: body, headers: {'Content-Type': 'application/json'}});
+          alert(`Bulk notify attempted. Sent: ${resp.sent || 0}, Failed: ${resp.failed || 0}`);
+        }catch(e){
+          alert('Bulk notify failed (network/error).');
+        }
+      });
+    }
+
+    // Per-department notify buttons
+    document.querySelectorAll('.dept-notify-btn').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const deptId = this.getAttribute('data-dept-id');
+        const message = prompt('Enter notification message for this group (leave blank for default):');
+        try{
+          const body = JSON.stringify({message: message});
+          const resp = await apiFetch(`/dashboard/api/departments/${deptId}/notify/`, {method: 'POST', body: body, headers: {'Content-Type': 'application/json'}});
+          alert(`Notify attempted. Sent: ${resp.sent || 0}, Failed: ${resp.failed || 0}`);
+        }catch(e){
+          alert('Notify failed (network/error).');
+        }
+      });
+    });
+  });
+</script>
+{% endblock extra_js %}

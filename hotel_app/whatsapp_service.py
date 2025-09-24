@@ -119,6 +119,15 @@ class WhatsAppService:
                 return self._mock_send_text(phone, message)
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    # Public helper to allow sending simple text notifications from other modules
+    def send_text(self, phone, message):
+        """Public method: send a text message (wrapped around internal implementation). Returns True/False."""
+        try:
+            resp = self._send_text_message(phone, message)
+            return resp.get('success', False)
+        except Exception:
+            return False
     
     def _mock_send_image(self, phone, qr_base64_data, guest):
         """Mock image sending for development"""

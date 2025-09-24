@@ -63,10 +63,10 @@
       <div class="space-y-1">
         <a
           href="{% url 'dashboard:manage_users' %}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:manage_users' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if '/dashboard/manage-users' in request.path %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
         >
           <img
-            src="{% if request.resolver_match.view_name == 'dashboard:manage_users' %}
+            src="{% if '/dashboard/manage-users' in request.path %}
                {% static 'images/sidebar/manage_users_highlighted.svg' %}
              {% else %}
                {% static 'images/sidebar/manage_users.svg' %}

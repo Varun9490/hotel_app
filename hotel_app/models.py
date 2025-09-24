@@ -19,6 +19,10 @@ class Department(models.Model):
 class UserGroup(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
+    # Added fields for richer metadata and association with departments
+    description = models.TextField(blank=True, null=True)
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_groups')
+
     def __str__(self):
         return str(self.name)
 
@@ -760,6 +764,15 @@ class Complaint(models.Model):
     subject = models.CharField(max_length=255)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    # SLA and assignment fields
+    priority = models.CharField(max_length=20, choices=[('low','Low'),('medium','Medium'),('high','High')], default='medium')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_complaints')
+    sla_hours = models.PositiveIntegerField(default=48, help_text='SLA time in hours to resolve')
+    due_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    sla_breached = models.BooleanField(default=False)
+    resolution_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(null=True, blank=True, default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -768,6 +781,23 @@ class Complaint(models.Model):
 
     def __str__(self):
         return self.subject
+
+    def compute_due_at(self):
+        """Compute due_at from created_at and sla_hours."""
+        if self.created_at and self.sla_hours:
+            return self.created_at + timezone.timedelta(hours=self.sla_hours)
+        return None
+
+    def save(self, *args, **kwargs):
+        # Ensure due_at is set when creating or when sla_hours changes
+        if not self.due_at:
+            self.due_at = self.compute_due_at()
+
+        # Update sla_breached flag if resolved_at exists
+        if self.resolved_at and self.due_at:
+            self.sla_breached = self.resolved_at > self.due_at
+
+        super().save(*args, **kwargs)
 
 
 class Review(models.Model):

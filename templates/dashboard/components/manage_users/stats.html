@@ -1,4 +1,54 @@
 {% load static %}
+<div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+  <!-- Total Groups -->
+  <div class="w-full h-40 bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="w-52 mx-auto mt-6 flex justify-between items-center">
+      <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+        <img src="{% static card1_icon %}" alt="{{ card1_icon_alt }}" class="w-5 h-5" />
+      </div>
+      <span class="{{ card1_delta_class }}">{{ card1_delta }}</span>
+    </div>
+    <div class="w-52 mx-auto mt-6 text-gray-900 text-2xl font-bold font-['Inter']">{{ card1_value }}</div>
+    <div class="w-52 mx-auto mt-1 text-gray-600 text-sm font-normal font-['Inter']">{{ card1_label }}</div>
+  </div>
+
+  <!-- Members Assigned -->
+  <div class="w-full h-40 bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="w-52 mx-auto mt-6 flex justify-between items-center">
+      <div class="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+        <img src="{% static card2_icon %}" alt="{{ card2_icon_alt }}" class="w-5 h-5" />
+      </div>
+      <span class="{{ card2_delta_class }}">{{ card2_delta }}</span>
+    </div>
+    <div class="w-52 mx-auto mt-6 text-gray-900 text-2xl font-bold font-['Inter']">{{ card2_value }}</div>
+    <div class="w-52 mx-auto mt-1 text-gray-600 text-sm font-normal font-['Inter']">{{ card2_label }}</div>
+  </div>
+
+  <!-- Recent Additions -->
+  <div class="w-full h-40 bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="w-52 mx-auto mt-6 flex justify-between items-center">
+      <div class="w-10 h-10 rounded-lg bg-yellow-400/10 flex items-center justify-center">
+        <img src="{% static card3_icon %}" alt="{{ card3_icon_alt }}" class="w-5 h-5" />
+      </div>
+      <span class="{{ card3_delta_class }}">{{ card3_delta }}</span>
+    </div>
+    <div class="w-52 mx-auto mt-6 text-gray-900 text-2xl font-bold font-['Inter']">{{ card3_value }}</div>
+    <div class="w-52 mx-auto mt-1 text-gray-600 text-sm font-normal font-['Inter']">{{ card3_label }}</div>
+  </div>
+
+  <!-- Bulk Notifications -->
+  <div class="w-full h-40 bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="w-52 mx-auto mt-6 flex justify-between items-center">
+      <div class="w-10 h-10 rounded-lg bg-fuchsia-700/10 flex items-center justify-center">
+        <img src="{% static card4_icon %}" alt="{{ card4_icon_alt }}" class="w-5 h-5" />
+      </div>
+      <span class="{{ card4_delta_class }}">{{ card4_delta }}</span>
+    </div>
+    <div class="w-52 mx-auto mt-6 text-gray-900 text-2xl font-bold font-['Inter']">{{ card4_value }}</div>
+    <div class="w-52 mx-auto mt-1 text-gray-600 text-sm font-normal font-['Inter']">{{ card4_label }}</div>
+  </div>
+</div>
+{% load static %}
 <!-- Stats cards component for Manage Users (uses reusable _stat_card.html) -->
 <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
   {% include 'dashboard/components/manage_users/_stat_card.html' with icon=card1_icon icon_alt=card1_icon_alt icon_wrapper_class='w-8 h-10 rounded-lg bg-sky-600/10 flex items-center justify-center' icon_class='w-4 h-4' delta=card1_delta delta_class=card1_delta_class value=card1_value label=card1_label %}

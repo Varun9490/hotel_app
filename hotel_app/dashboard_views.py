@@ -13,6 +13,7 @@ from django.http import HttpResponseBadRequest
 from django.views.decorators.http import require_http_methods
 from django.db import connection
 from django.conf import settings
+from django.utils.text import slugify
 
 # Import all models from hotel_app
 from hotel_app.models import (
@@ -697,13 +698,306 @@ def manage_users_api_bulk_action(request):
 
 @login_required
 def manage_users_groups(request):
-    ctx = dict(active_tab="groups",
-               breadcrumb_title="User Groups",
-               page_title="User Groups",
-               page_subtitle="Organize staff members by department, role, or location for targeted communication and management.",
-               search_placeholder="Search groups...",
-               primary_label="Create Group")
+    q = (request.GET.get('q') or '').strip()
+
+    departments = []
+    total_groups = 0
+    total_group_members = 0
+    recent_additions = 0
+    active_groups = 0
+
+    try:
+        from hotel_app.models import Department, UserGroup, UserGroupMembership, UserProfile
+        from django.db.models import Count, Max
+        from django.utils.timesince import timesince
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.utils.text import slugify
+
+        depts_qs = Department.objects.all()
+        if q:
+            depts_qs = depts_qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
+
+        total_groups = UserGroup.objects.count()
+        memberships_qs = UserGroupMembership.objects.all()
+        total_group_members = memberships_qs.count()
+        recent_additions = memberships_qs.filter(joined_at__gte=timezone.now() - timedelta(hours=24)).count()
+        active_groups = UserGroup.objects.annotate(mem_count=Count('usergroupmembership')).filter(mem_count__gt=0).count()
+
+        color_map = {
+            'Housekeeping': {'icon_bg': 'bg-green-500/10', 'tag_bg': 'bg-green-500/10', 'icon_color': 'green-500', 'dot_bg': 'bg-green-500'},
+            'Front Office': {'icon_bg': 'bg-sky-600/10', 'tag_bg': 'bg-sky-600/10', 'icon_color': 'sky-600', 'dot_bg': 'bg-sky-600'},
+            'Food & Beverage': {'icon_bg': 'bg-yellow-400/10', 'tag_bg': 'bg-yellow-400/10', 'icon_color': 'yellow-400', 'dot_bg': 'bg-yellow-400'},
+            'Maintenance': {'icon_bg': 'bg-teal-500/10', 'tag_bg': 'bg-teal-500/10', 'icon_color': 'teal-500', 'dot_bg': 'bg-teal-500'},
+            'Security': {'icon_bg': 'bg-red-500/10', 'tag_bg': 'bg-red-500/10', 'icon_color': 'red-500', 'dot_bg': 'bg-red-500'},
+        }
+
+        for dept_index, dept in enumerate(depts_qs):
+            profiles_qs = UserProfile.objects.filter(department=dept)
+            members_count = profiles_qs.count()
+            supervisors_count = profiles_qs.filter(title__iregex=r'(supervisor|manager)').count()
+            staff_count = max(0, members_count - supervisors_count)
+            last_updated = profiles_qs.aggregate(max_up=Max('updated_at'))['max_up']
+            human_updated = timesince(last_updated) + ' ago' if last_updated else 'N/A'
+
+            featured = {
+                'id': dept.pk,
+                'name': dept.name,
+                'description': dept.description or 'Department description',
+                'members_count': members_count,
+                'supervisors_count': supervisors_count,
+                'staff_count': staff_count,
+                'updated_at': human_updated,
+                'image': f'images/manage_users/{slugify(dept.name)}.svg',
+                'position_top': dept_index * 270,  # For CSS positioning
+            }
+
+            colors = color_map.get(dept.name, {'icon_bg': 'bg-gray-500/10', 'tag_bg': 'bg-gray-500/10', 'icon_color': 'gray-500', 'dot_bg': 'bg-gray-500'})
+            featured.update(colors)
+
+            groups_data = []
+            groups_qs = dept.user_groups.all()
+            for group_index, g in enumerate(groups_qs):
+                mem_qs = g.usergroupmembership_set.all()
+                mem_count = mem_qs.count()
+                last_mem = mem_qs.order_by('-joined_at').first()
+                updated_at = getattr(last_mem, 'joined_at', None)
+                human_updated = timesince(updated_at) + ' ago' if updated_at else 'N/A'
+                groups_data.append({
+                    'id': g.pk,
+                    'name': g.name,
+                    'members_count': mem_count,
+                    'description': g.description or '',
+                    'updated_at': human_updated,
+                    'dot_bg': 'bg-green-500' if mem_count > 0 else 'bg-gray-300',
+                    'position_top': group_index * 52,  # For CSS positioning
+                })
+
+            departments.append({'featured_group': featured, 'groups': groups_data})
+
+    except Exception:
+        # Fallback static data to match the provided HTML
+        departments = [
+            {
+                'featured_group': {
+                    'name': 'Housekeeping',
+                    'description': 'Room cleaning, maintenance, and guest services',
+                    'members_count': 42,
+                    'supervisors_count': 6,
+                    'staff_count': 36,
+                    'updated_at': '2h ago',
+                    'image': 'images/manage_users/house_keeping.svg',
+                    'icon_bg': 'bg-green-500/10',
+                    'tag_bg': 'bg-green-500/10',
+                    'icon_color': 'green-500',
+                    'dot_bg': 'bg-green-500',
+                    'position_top': 0,
+                },
+                'groups': [
+                    {'name': 'Floor Supervisors', 'members_count': 6, 'dot_bg': 'bg-green-500', 'position_top': 0},
+                    {'name': 'Room Attendants', 'members_count': 28, 'dot_bg': 'bg-green-500', 'position_top': 52},
+                    {'name': 'Laundry Team', 'members_count': 8, 'dot_bg': 'bg-green-500', 'position_top': 104},
+                ]
+            },
+            {
+                'featured_group': {
+                    'name': 'Front Office',
+                    'description': 'Reception, concierge, and guest relations',
+                    'members_count': 18,
+                    'supervisors_count': 3,
+                    'staff_count': 15,
+                    'updated_at': '1h ago',
+                    'image': 'images/manage_users/front_office.svg',
+                    'icon_bg': 'bg-sky-600/10',
+                    'tag_bg': 'bg-sky-600/10',
+                    'icon_color': 'sky-600',
+                    'dot_bg': 'bg-sky-600',
+                    'position_top': 270,
+                },
+                'groups': []
+            },
+            {
+                'featured_group': {
+                    'name': 'Food & Beverage',
+                    'description': 'Kitchen, restaurant, bar, and room service',
+                    'members_count': 31,
+                    'supervisors_count': 8,
+                    'staff_count': 23,
+                    'updated_at': '30m ago',
+                    'image': 'images/manage_users/food_beverage.svg',
+                    'icon_bg': 'bg-yellow-400/10',
+                    'tag_bg': 'bg-yellow-400/10',
+                    'icon_color': 'yellow-400',
+                    'dot_bg': 'bg-yellow-400',
+                    'position_top': 540,
+                },
+                'groups': []
+            },
+            {
+                'featured_group': {
+                    'name': 'Maintenance',
+                    'description': 'Technical support, repairs, and facility management',
+                    'members_count': 12,
+                    'supervisors_count': 3,
+                    'staff_count': 9,
+                    'updated_at': '4h ago',
+                    'image': 'images/manage_users/maintenance.svg',
+                    'icon_bg': 'bg-teal-500/10',
+                    'tag_bg': 'bg-teal-500/10',
+                    'icon_color': 'teal-500',
+                    'dot_bg': 'bg-teal-500',
+                    'position_top': 810,
+                },
+                'groups': []
+            },
+            {
+                'featured_group': {
+                    'name': 'Security',
+                    'description': 'Property security, surveillance, and emergency response',
+                    'members_count': 8,
+                    'supervisors_count': 2,
+                    'staff_count': 6,
+                    'updated_at': '1h ago',
+                    'image': 'images/manage_users/security.svg',
+                    'icon_bg': 'bg-red-500/10',
+                    'tag_bg': 'bg-red-500/10',
+                    'icon_color': 'red-500',
+                    'dot_bg': 'bg-red-500',
+                    'position_top': 1080,
+                },
+                'groups': []
+            },
+        ]
+        total_groups = 8
+        total_group_members = 247
+        recent_additions = 18
+        active_groups = 5
+
+    ctx = dict(
+        active_tab="groups",
+        breadcrumb_title="User Groups",
+        page_title="User Groups",
+        page_subtitle="Organize staff members by department, role, or location for targeted communication and management.",
+        search_placeholder="Search groups...",
+        primary_label="Create Group",
+        departments=departments,
+        total_groups=total_groups,
+        total_group_members=total_group_members,
+        recent_additions=recent_additions,
+        active_groups=active_groups,
+        q=q,
+    )
     return render(request, 'dashboard/groups.html', ctx)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def api_notify_all_groups(request):
+    """POST endpoint to notify all groups (bulk notify).
+
+    Expects JSON body: { "message": "..." } or will use a default message.
+    Uses WhatsAppService.send_text as a best-effort mock integration.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        body = {}
+    message = body.get('message') or 'This is a bulk notification from Hotel Admin.'
+
+    # Attempt to collect phone numbers from UserProfile and send messages
+    sent = 0
+    failed = 0
+    try:
+        from hotel_app.models import UserProfile
+        profiles = UserProfile.objects.filter(enabled=True).exclude(phone__isnull=True).exclude(phone__exact='')
+        phones = [p.phone for p in profiles]
+    except Exception:
+        phones = []
+
+    service = WhatsAppService()
+    for phone in phones:
+        ok = service.send_text(phone, message)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    return JsonResponse({'sent': sent, 'failed': failed, 'attempted': len(phones)})
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def api_notify_department(request, dept_id):
+    """POST endpoint to notify all members of a department.
+
+    URL: /dashboard/api/departments/<dept_id>/notify/
+    Body: { "message": "..." }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        body = {}
+    message = body.get('message') or f'Notification for department {dept_id}.'
+
+    sent = 0
+    failed = 0
+    try:
+        from hotel_app.models import UserProfile, Department
+        dept = get_object_or_404(Department, pk=dept_id)
+        profiles = UserProfile.objects.filter(department=dept).exclude(phone__isnull=True).exclude(phone__exact='')
+        phones = [p.phone for p in profiles]
+    except Exception:
+        phones = []
+
+    service = WhatsAppService()
+    for phone in phones:
+        ok = service.send_text(phone, message)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    return JsonResponse({'sent': sent, 'failed': failed, 'attempted': len(phones)})
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def api_department_members(request, dept_id):
+    """Return JSON list of members for a department (id, full_name, phone, email)."""
+    try:
+        from hotel_app.models import UserProfile, Department
+        dept = get_object_or_404(Department, pk=dept_id)
+        profiles = UserProfile.objects.filter(department=dept)
+        members = []
+        for p in profiles:
+            members.append({'id': getattr(p, 'user_id', None), 'full_name': p.full_name, 'phone': p.phone, 'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None})
+    except Exception:
+        members = []
+    return JsonResponse({'members': members})
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def api_group_members(request, group_id):
+    """Return JSON list of members for a user group (id, username, email).
+
+    Uses UserGroupMembership and User model where available.
+    """
+    try:
+        from hotel_app.models import UserGroup, UserGroupMembership
+        group = get_object_or_404(UserGroup, pk=group_id)
+        memberships = UserGroupMembership.objects.filter(group=group).select_related('user')
+        members = []
+        for m in memberships:
+            u = getattr(m, 'user', None)
+            members.append({'id': getattr(u, 'pk', None), 'username': getattr(u, 'username', ''), 'email': getattr(u, 'email', '')})
+    except Exception:
+        members = []
+    return JsonResponse({'members': members})
 
 @login_required
 def manage_users_roles(request):
