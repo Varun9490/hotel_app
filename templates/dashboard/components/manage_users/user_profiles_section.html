@@ -1,124 +1,597 @@
-  {% load static %}
-  <!-- User Profiles section placeholder for Manage Users -->
-  <section id="user_profiles" class="mt-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="text-sm text-gray-600 font-normal font-['Inter']">User Profiles</div>
-          <h2 class="text-2xl font-bold text-gray-900 font-['Inter']">User Profiles</h2>
-          <div class="mt-1 text-sm text-gray-600">Manage role templates and permissions for staff members</div>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="relative">
-            <input type="text" name="q" placeholder="Search profiles..." class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-['Inter']" />
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-              <img src="{% static 'images/dashboard/search.svg' %}" alt="Search" class="w-4 h-4" />
-            </div>
-          </div>
-          <button type="button" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-sky-600 text-white text-base font-medium font-['Inter'] hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
-            <img src="{% static 'images/manage_users/plus.svg' %}" alt="Plus" class="w-3.5 h-3.5" />
-            <span>Create Profile</span>
-          </button>
-        </div>
-      </div>
+{% load static %}
 
-      <!-- Top cards row (mirrors design) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-sky-600/10 rounded-lg flex items-center justify-center">
-                <div class="w-4 h-4 bg-sky-600"></div>
-              </div>
-              <div>
-                <div class="text-lg font-semibold text-gray-900">Staff</div>
-                <div class="text-sm text-gray-600">Basic access level</div>
-              </div>
+<section id="user_profiles" class="mt-8">
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+
+    <!-- Role Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- User Add/Edit Modal (simplified, insert at top for demo) -->
+        <div id="userAddEditModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+          <div class="w-full max-w-md rounded-lg bg-white p-6">
+            <div class="flex items-start justify-between">
+              <h3 class="modal-title text-lg font-semibold">Add/Edit User</h3>
+              <button onclick="document.getElementById('userAddEditModal').classList.add('hidden')" class="text-gray-500">Close</button>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-            </div>
-          </div>
-          <div class="mt-6 flex items-center justify-between">
-            <div class="text-sm text-gray-600">12 users assigned</div>
-            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
+            <form id="userAddEditForm" class="mt-4 space-y-4">
+              <input type="text" name="full_name" placeholder="Full Name" class="w-full rounded border px-3 py-2" required />
+              <input type="email" name="email" placeholder="Email" class="w-full rounded border px-3 py-2" required />
+              <!-- Department selector -->
+              <select name="department" class="w-full rounded border px-3 py-2" required>
+                <option value="">Select Department</option>
+                {% for dept in departments %}
+                  <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="w-full rounded bg-sky-600 py-2 text-white font-semibold">Save</button>
+            </form>
           </div>
         </div>
-
-        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-teal-500/10 rounded-lg flex items-center justify-center">
-                <div class="w-4 h-4 bg-teal-500"></div>
-              </div>
-              <div>
-                <div class="text-lg font-semibold text-gray-900">Manager</div>
-                <div class="text-sm text-gray-600">Supervisory access</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-            </div>
-          </div>
-          <div class="mt-6 flex items-center justify-between">
-            <div class="text-sm text-gray-600">5 users assigned</div>
-            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-[0px_1px_2px_rgba(0,0,0,0.05)] border border-gray-200 p-5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-fuchsia-700/10 rounded-lg flex items-center justify-center">
-                <div class="w-4 h-3.5 bg-fuchsia-700"></div>
-              </div>
-              <div>
-                <div class="text-lg font-semibold text-gray-900">Concierge</div>
-                <div class="text-sm text-gray-600">Guest service specialist</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-              <div class="w-8 h-8 rounded-lg bg-gray-100"></div>
-            </div>
-          </div>
-          <div class="mt-6 flex items-center justify-between">
-            <div class="text-sm text-gray-600">8 users assigned</div>
-            <div class="text-xs text-green-500 bg-green-50 rounded-full px-2 py-1">Active</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Module Permissions Overview (table placeholder) -->
-      <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <div>
-            <div class="text-lg font-semibold text-gray-900">Module Permissions Overview</div>
-            <div class="text-sm text-gray-600">Compare permissions across different role templates</div>
-          </div>
+  <!-- Staff -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
           <div class="flex items-center gap-3">
-            <button class="rounded-lg outline outline-1 outline-gray-200 px-4 py-2">Export</button>
-            <button class="rounded-lg bg-sky-600 text-white px-4 py-2">Bulk Edit</button>
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-sky-600/10">
+              <span class="block h-4 w-4 rounded bg-sky-600"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Staff</h3>
+              <p class="text-sm text-gray-600">Basic access level</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
           </div>
         </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>View Requests</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Update Status</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Send Messages</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Admin Panel</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Staff|default:12 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
+          </div>
+        </div>
+      </div>
 
-        <div class="mt-4 overflow-auto">
-          <!-- Placeholder table header -->
-          <div class="min-w-[1086px]">
-            <div class="grid grid-cols-7 gap-4 text-sm text-gray-900 font-semibold py-3 border-b border-neutral-100">
-              <div>Module</div>
-              <div class="text-center">Staff</div>
-              <div class="text-center">Manager</div>
-              <div class="text-center">Concierge</div>
-              <div class="text-center">Maintenance</div>
-              <div class="text-center">Housekeeping</div>
-              <div class="text-center">Super Admin</div>
+      <!-- Manager -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-teal-500/10">
+              <span class="block h-4 w-4 rounded bg-teal-500"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Manager</h3>
+              <p class="text-sm text-gray-600">Supervisory access</p>
             </div>
-            <!-- rows would go here -->
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>All Staff Permissions</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>View Reports</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Manage Team</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>System Config</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Manager|default:5 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Concierge -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-700/10">
+              <span class="block h-3.5 w-5 rounded bg-fuchsia-700"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Concierge</h3>
+              <p class="text-sm text-gray-600">Guest service specialist</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Guest Requests</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Guest Messaging</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Service Coordination</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Billing Access</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Concierge|default:8 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maintenance -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-400/10">
+              <span class="block h-4 w-4 rounded bg-yellow-400"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Maintenance</h3>
+              <p class="text-sm text-gray-600">Technical support</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Maintenance Requests</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Equipment Status</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Work Orders</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Guest Areas</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Maintenance|default:6 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Housekeeping -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/10">
+              <span class="block h-4 w-4 rounded bg-green-500"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Housekeeping</h3>
+              <p class="text-sm text-gray-600">Room service & cleaning</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Room Status</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Cleaning Requests</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Inventory Updates</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Guest Data</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Housekeeping|default:15 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Super Admin -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="p-4 flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-red-500/10">
+              <span class="block h-4 w-4 rounded bg-red-500"></span>
+            </span>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Super Admin</h3>
+              <p class="text-sm text-gray-600">Full system access</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
+              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+            </button>
+            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
+              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <ul class="space-y-3">
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>All Permissions</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>System Configuration</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>User Management</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+            <li class="flex items-center justify-between text-sm text-gray-700">
+              <span>Billing &amp; Plans</span>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+              </span>
+            </li>
+          </ul>
+          <div class="mt-4 flex items-center justify-between">
+            <p class="text-sm text-gray-600">{{ role_counts.Super_Admin|default:2 }} users assigned</p>
+            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
           </div>
         </div>
       </div>
     </div>
-  </section>
+
+    <!-- Module Permissions Overview -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-gray-200 px-6 py-5">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Module Permissions Overview</h3>
+          <p class="text-sm text-gray-600">Compare permissions across different role templates</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <img src="{% static 'images/manage_users/profiles/export.svg' %}" alt="Export" class="h-4 w-4">
+            <span>Export</span>
+          </button>
+          <button class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            <img src="{% static 'images/manage_users/profiles/bulk_edit.svg' %}" alt="Bulk edit" class="h-4 w-4">
+            <span>Bulk Edit</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="px-6 py-5">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Module</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Staff</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Manager</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Concierge</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Maintenance</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Housekeeping</th>
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Super Admin</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <!-- Guest Requests -->
+              <tr>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">Guest Requests</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
+                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
+                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+              </tr>
+
+              <!-- Messaging System -->
+              <tr>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">Messaging System</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+              </tr>
+
+              <!-- Reports & Analytics -->
+              <tr>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">Reports &amp; Analytics</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
+                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+              </tr>
+
+              <!-- User Management -->
+              <tr>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">User Management</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
+                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+              </tr>
+
+              <!-- System Settings -->
+              <tr>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">System Settings</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-4 flex flex-wrap items-center gap-6 text-sm text-gray-600">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-500">
+              <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="" class="h-2.5 w-2.5">
+            </span>
+            <span>Full Access</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400">
+              <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="" class="h-2.5 w-2.5">
+            </span>
+            <span>View Only</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-300">
+              <img src="{% static '/images/manage_users/profiles/cross.svg' %}" alt="" class="h-2.5 w-2.5">
+            </span>
+            <span>No Access</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

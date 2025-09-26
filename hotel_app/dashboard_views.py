@@ -496,32 +496,9 @@ def messaging_setup(request):
     return render(request, 'dashboard/messaging_setup.html', context)
 
 
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def camera_settings(request):
-    """Camera settings and management page."""
-    # Provide minimal context to avoid template errors; template is mostly static UI
-    context = {}
-    return render(request, 'dashboard/camera_settings.html', context)
-
-
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def data_exports(request):
-    """Data & Exports page view.
-
-    Provides mock/context data for the template so UI renders while backend
-    export features are implemented.
-    """
-    context = {
-        'policies': [
-            {'name': 'Guest Messages', 'retention': '2 Years', 'note': 'Auto-delete after retention period'},
-            {'name': 'Analytics Data', 'retention': '5 Years', 'note': 'Archive after 2 years'},
-            {'name': 'Guest Personal Data', 'retention': '1 Year', 'note': 'GDPR compliant deletion'},
-        ],
-        'anonymize_enabled': True,
-        'export_formats': ['CSV', 'JSON', 'XML'],
-        'default_schedule': 'Daily',
-    }
-    return render(request, 'dashboard/data_exports.html', context)
+# Camera Settings and Data & Exports pages removed per request. If you want them restored,
+# re-add their view functions and URL patterns and recreate the templates under
+# templates/dashboard/camera_settings.html and templates/dashboard/data_exports.html
 
 # ---- User Management ----
 @require_permission([ADMINS_GROUP])
@@ -542,6 +519,23 @@ def manage_users_all(request):
     # can render real data server-side and be used by the client-side poller.
     users_qs = User.objects.all().select_related('userprofile').prefetch_related('groups')
     total_users = users_qs.count()
+    # Build role counts for the UI (best-effort)
+    role_names = ['Staff', 'Manager', 'Concierge', 'Maintenance', 'Housekeeping', 'Super Admin']
+    role_counts = {}
+    try:
+        for rn in role_names:
+            role_counts[rn.replace(' ', '_')] = User.objects.filter(groups__name__iexact=rn).distinct().count()
+    except Exception:
+        # Fallback: zero counts
+        for rn in role_names:
+            role_counts[rn.replace(' ', '_')] = 0
+
+    # Departments list for dropdowns/modals
+    try:
+        departments = list(Department.objects.all().values('id', 'name'))
+    except Exception:
+        departments = []
+
     ctx = dict(active_tab="all",
                breadcrumb_title="Users",
                page_title="Manage Users",
@@ -549,7 +543,9 @@ def manage_users_all(request):
                search_placeholder="Search users...",
                primary_label="Invite User",
                users=users_qs,
-               total_users=total_users)
+               total_users=total_users,
+               role_counts=role_counts,
+               departments=departments)
     return render(request, 'dashboard/users.html', ctx)
 
 
@@ -1029,6 +1025,39 @@ def user_create(request):
             messages.error(request, "Please correct the errors below.")
     return redirect("dashboard:users")
 
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def manage_user_detail(request, user_id):
+    """Render a full-page user detail / edit view for a single user.
+
+    Context provided to template:
+    - user: User instance
+    - profile: UserProfile or None
+    - groups: list of Group objects the user belongs to
+    - departments: list of Department objects (for assignment/select)
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        UserModel = get_user_model()
+    except Exception:
+        UserModel = User
+
+    user = get_object_or_404(UserModel, pk=user_id)
+    profile = getattr(user, 'userprofile', None)
+    groups = user.groups.all()
+    try:
+        departments = Department.objects.all()
+    except Exception:
+        departments = []
+
+    context = {
+        'user_obj': user,
+        'profile': profile,
+        'groups': groups,
+        'departments': departments,
+    }
+    return render(request, 'dashboard/manage_user_detail.html', context)
+
 @require_permission([ADMINS_GROUP])
 def user_update(request, user_id):
     user = get_object_or_404(User, pk=user_id)
@@ -1065,13 +1094,188 @@ def manage_users_toggle_enabled(request, user_id):
 # ---- Department Management ----
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_departments(request):
-    departments = Department.objects.all().annotate(user_count=Count("userprofile"))
+    # Keep existing department queryset for list rendering and metrics
+    depts_qs = Department.objects.all().annotate(user_count=Count("userprofile"))
+    # Server-side status filter (optional): active / paused / archived
+    status = request.GET.get('status', '').lower()
+    if status:
+        if status == 'active':
+            depts_qs = depts_qs.filter(user_count__gt=0)
+        elif status == 'archived':
+            depts_qs = depts_qs.filter(user_count__lte=0)
+        elif status == 'paused':
+            depts_qs = depts_qs.filter(user_count__gt=0, user_count__lte=2)
+
+    # Simple pagination
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    page = request.GET.get('page', 1)
+    paginator = Paginator(depts_qs, 10)  # 10 departments per page
+    try:
+        depts_page = paginator.page(page)
+    except PageNotAnInteger:
+        depts_page = paginator.page(1)
+    except EmptyPage:
+        depts_page = paginator.page(paginator.num_pages)
     form = DepartmentForm()
+
+    # Build a serializable list for the template with featured_group (matching the template expectations)
+    departments = []
+    try:
+        from hotel_app.models import UserProfile
+        for index, d in enumerate(depts_page):
+            profiles = UserProfile.objects.filter(department=d)
+            members = []
+            lead = None
+            for p in profiles:
+                members.append({'user_id': getattr(p, 'user_id', None), 'full_name': p.full_name, 'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None, 'avatar_url': getattr(p, 'avatar_url', None)})
+                if p.title and 'department head' in p.title.lower():
+                    lead = {'user_id': getattr(p, 'user_id', None), 'full_name': p.full_name, 'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None, 'avatar_url': getattr(p, 'avatar_url', None)}
+
+            # Basic visual metadata (defaults)
+            # set image relative path for template to call {% static %}; template will fallback if file missing
+            image = f'images/manage_users/{slugify(d.name)}.svg' if d.name else ''
+            icon_bg = 'bg-gray-500/10'
+            tag_bg = 'bg-gray-500/10'
+            icon_color = 'gray-500'
+            dot_bg = 'bg-gray-500'
+
+            # Dummy metrics
+            members_count = profiles.count()
+            open_tickets = 0
+            performance_pct = f"{min(100, 50 + members_count)}%"
+            performance_color = 'green-500' if members_count > 5 else 'yellow-400'
+            performance_width = '8' if members_count > 5 else '4'
+
+            sla_label = 'Good' if members_count > 5 else 'Monitor'
+            sla_tag_bg = 'bg-green-100' if sla_label == 'Good' else 'bg-yellow-100'
+            sla_color = 'green-700' if sla_label == 'Good' else 'yellow-700'
+
+            status_label = 'Active' if members_count > 0 else 'Inactive'
+            status_bg = 'bg-green-500/10' if members_count > 0 else 'bg-gray-200'
+            status_color = 'green-500' if members_count > 0 else 'gray-500'
+
+            featured_group = {
+                'id': d.pk,
+                'name': d.name,
+                'description': d.description or 'Department description',
+                'members_count': members_count,
+                'image': image,
+                'icon_bg': icon_bg,
+                'tag_bg': tag_bg,
+                'icon_color': icon_color,
+                'dot_bg': dot_bg,
+                'position_top': index * 270,
+            }
+
+            # Attach groups info for groups template (best-effort)
+            try:
+                groups_qs = d.user_groups.all()
+                groups_list = []
+                for g in groups_qs:
+                    groups_list.append({'pk': g.pk, 'name': g.name, 'members_count': getattr(g, 'members_count', 0), 'dot_bg': 'bg-green-500'})
+                featured_group['groups'] = groups_list
+            except Exception:
+                featured_group['groups'] = []
+
+            departments.append({
+                'featured_group': featured_group,
+                'members': members,
+                'lead': lead,
+                'open_tickets': open_tickets,
+                'sla_label': sla_label,
+                'sla_tag_bg': sla_tag_bg,
+                'sla_color': sla_color,
+                'performance_pct': performance_pct,
+                'performance_color': performance_color,
+                'performance_width': performance_width,
+                'status_label': status_label,
+                'status_bg': status_bg,
+                'status_color': status_color,
+            })
+    except Exception:
+        # fallback to simple data matching the expected structure
+        for index, d in enumerate(depts_page):
+            featured_group = {'id': getattr(d, 'pk', ''), 'name': getattr(d, 'name', ''), 'description': getattr(d, 'description', '') or '', 'members_count': getattr(d, 'user_count', 0), 'image': '', 'icon_bg': 'bg-gray-500/10', 'tag_bg': 'bg-gray-500/10', 'icon_color': 'gray-500', 'dot_bg': 'bg-gray-500', 'position_top': index * 270}
+            departments.append({'featured_group': featured_group, 'members': [], 'lead': None, 'open_tickets': 0, 'sla_label': 'N/A', 'sla_tag_bg': 'bg-gray-200', 'sla_color': 'gray-600', 'performance_pct': '0%', 'performance_color': 'gray-500', 'performance_width': '2', 'status_label': 'Unknown', 'status_bg': 'bg-gray-200', 'status_color': 'gray-500'})
+
+    # Render the Manage Users base template when navigated via the Manage Users tabs.
+    # The template expects `active_tab` to determine which header/content to show.
     context = {
         "departments": departments,
+        "page_obj": depts_page,
+        "paginator": paginator,
+        "total_departments": depts_qs.count(),
         "form": form,
+        "active_tab": 'departments',
+        "crumb_section": 'Admin',
+        "crumb_title": 'Departments',
+        "title": 'Manage Departments',
+        "subtitle": 'Manage hotel departments, heads, and staff assignments',
     }
-    return render(request, "dashboard/departments.html", context)
+    return render(request, "dashboard/manage_users_base.html", context)
+
+
+@require_permission([ADMINS_GROUP])
+@require_http_methods(['POST'])
+def add_group_member(request, group_id):
+    """Add a user to a UserGroup and ensure their UserProfile.department is set to the group's department."""
+    try:
+        from hotel_app.models import UserGroup, UserGroupMembership, UserProfile
+        group = get_object_or_404(UserGroup, pk=group_id)
+    except Exception:
+        return JsonResponse({'error': 'group not found'}, status=404)
+
+    user_id = request.POST.get('user_id') or request.POST.get('id')
+    if not user_id:
+        return JsonResponse({'error': 'user_id required'}, status=400)
+
+    try:
+        user = User.objects.get(pk=int(user_id))
+    except Exception:
+        return JsonResponse({'error': 'user not found'}, status=404)
+
+    # create membership if not exists
+    membership, created = UserGroupMembership.objects.get_or_create(user=user, group=group)
+
+    # ensure user's profile department set to group's department
+    profile = getattr(user, 'userprofile', None)
+    if not profile:
+        from hotel_app.models import UserProfile as UP
+        profile = UP.objects.create(user=user, full_name=(user.get_full_name() or user.username))
+
+    if group.department and profile.department_id != group.department_id:
+        profile.department = group.department
+        profile.save(update_fields=['department'])
+
+    return JsonResponse({'success': True, 'created': created, 'user_id': user.pk, 'group_id': group.pk})
+
+
+@require_permission([ADMINS_GROUP])
+@require_http_methods(['POST'])
+def remove_group_member(request, group_id):
+    """Remove a user from a UserGroup. Does not change department membership automatically."""
+    try:
+        from hotel_app.models import UserGroup, UserGroupMembership
+        group = get_object_or_404(UserGroup, pk=group_id)
+    except Exception:
+        return JsonResponse({'error': 'group not found'}, status=404)
+
+    user_id = request.POST.get('user_id') or request.POST.get('id')
+    if not user_id:
+        return JsonResponse({'error': 'user_id required'}, status=400)
+
+    try:
+        user = User.objects.get(pk=int(user_id))
+    except Exception:
+        return JsonResponse({'error': 'user not found'}, status=404)
+
+    try:
+        membership = UserGroupMembership.objects.get(user=user, group=group)
+        membership.delete()
+    except UserGroupMembership.DoesNotExist:
+        return JsonResponse({'error': 'membership not found'}, status=404)
+
+    return JsonResponse({'success': True, 'user_id': user.pk, 'group_id': group.pk})
 
 @require_permission([ADMINS_GROUP])
 def department_create(request):
@@ -1099,6 +1303,55 @@ def department_delete(request, dept_id):
         department.delete()
         messages.success(request, "Department deleted successfully.")
     return redirect("dashboard:departments")
+
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_http_methods(['POST'])
+def assign_department_lead(request, dept_id):
+    """Assign a department lead.
+
+    Expects POST body form data: user_id (int)
+    Sets the chosen user's UserProfile.department to dept and title to 'Department Head'.
+    Clears the title on any other profile in the same department previously marked as Department Head.
+    Returns JSON with success and lead info.
+    """
+    try:
+        dept = get_object_or_404(Department, pk=dept_id)
+    except Exception:
+        return JsonResponse({'error': 'department not found'}, status=404)
+
+    user_id = request.POST.get('user_id') or request.POST.get('lead_user_id')
+    if not user_id:
+        return JsonResponse({'error': 'user_id required'}, status=400)
+
+    try:
+        user = User.objects.get(pk=int(user_id))
+    except Exception:
+        return JsonResponse({'error': 'user not found'}, status=404)
+
+    profile = getattr(user, 'userprofile', None)
+    if not profile:
+        # If no profile exists, create a minimal one
+        from hotel_app.models import UserProfile
+        profile = UserProfile.objects.create(user=user, full_name=(user.get_full_name() or user.username))
+
+    # Clear existing leads in this department (best-effort)
+    try:
+        from hotel_app.models import UserProfile as UP
+        previous_leads = UP.objects.filter(department=dept, title__icontains='Department Head').exclude(user=user)
+        for pl in previous_leads:
+            pl.title = ''
+            pl.save(update_fields=['title'])
+    except Exception:
+        # ignore if model shape differs
+        pass
+
+    # Assign selected user as department lead
+    profile.department = dept
+    profile.title = 'Department Head'
+    profile.save(update_fields=['department', 'title'])
+
+    return JsonResponse({'success': True, 'lead': {'user_id': user.pk, 'full_name': profile.full_name, 'department': dept.name}})
 
 
 # ---- Group Management ----

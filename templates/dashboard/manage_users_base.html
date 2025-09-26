@@ -65,15 +65,82 @@
                 User Profiles
               </span>
             </a>
+            <a href="{% url 'dashboard:departments' %}"
+               class="w-28 self-stretch relative bg-transparent border-b-2 {% if active_tab == 'departments' %}border-sky-600{% else %}border-transparent{% endif %}">
+              <span class="w-full h-5 absolute left-[4px] top-[17px] text-center text-sm font-medium font-['Inter'] {% if active_tab == 'departments' %}text-sky-600{% else %}text-gray-600{% endif %}">
+                Departments
+              </span>
+            </a>
           </div>
         </div>
       </div>
     </div>
   </header>
 
+  <!-- Departments header variant when the Departments tab is active -->
+  {% comment %} {% if active_tab == 'departments' %}
+  <div class="w-[1184px] h-28 relative bg-white border-b border-gray-200">
+    <div class="w-[1136px] h-20 left-[24px] top-[16px] absolute bg-black/0 border-gray-200 inline-flex justify-between items-center">
+        <div class="w-96 h-20 relative bg-black/0 border-gray-200">
+            <div class="w-96 h-5 left-0 top-0 absolute bg-black/0 border-gray-200 inline-flex justify-start items-center gap-2">
+                <div class="w-11 h-5 relative bg-black/0 border-gray-200">
+                    <div class="w-11 h-5 left-0 top-[1px] absolute justify-start text-gray-600 text-sm font-normal font-['Inter']">Admin</div>
+                </div>
+                <div class="w-2 h-4 relative bg-black/0 border-gray-200">
+                    <div class="w-2 h-3 left-0 top-[1.50px] absolute inline-flex justify-center items-center">
+                        <div class="w-2 h-3 relative bg-black/0 border-gray-200 overflow-hidden">
+                            <div class="w-1.5 h-2.5 left-[1.50px] top-[0.75px] absolute bg-gray-600"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-20 h-5 relative bg-black/0 border-gray-200">
+                    <div class="w-20 h-5 left-0 top-[1px] absolute justify-start text-gray-900 text-sm font-medium font-['Inter']">Departments</div>
+                </div>
+            </div>
+            <div class="w-96 h-8 left-0 top-[28px] absolute bg-black/0 border-gray-200">
+                <div class="w-40 h-8 left-0 top-[1px] absolute justify-start text-gray-900 text-2xl font-bold font-['Inter']">Departments</div>
+            </div>
+            <div class="w-96 h-5 left-0 top-[60px] absolute bg-black/0 border-gray-200">
+                <div class="w-96 h-5 left-0 top-[1px] absolute justify-start text-gray-600 text-sm font-normal font-['Inter']">Manage hotel departments, heads, and staff assignments</div>
+            </div>
+        </div>
+        <div class="w-96 h-10 bg-black/0 border-gray-200 flex justify-start items-center gap-4">
+            <div class="w-64 h-10 relative bg-black/0 border-gray-200">
+                <div class="w-64 h-10 left-0 top-0 absolute bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-gray-200">
+                    <div class="w-64 h-10 left-[40px] top-0 absolute justify-center text-gray-400 text-base font-normal font-['Inter'] leading-normal">Search departments...</div>
+                </div>
+                <div class="w-4 h-6 left-[12px] top-[9px] absolute bg-black/0 border-gray-200">
+                    <div class="w-4 h-4 left-0 top-[4px] absolute inline-flex justify-center items-center">
+                        <div class="w-4 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                            <div class="w-4 h-4 left-0 top-0 absolute bg-gray-400"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-44 h-10 px-4 py-2 bg-sky-600 rounded-lg border-gray-200 flex justify-start items-center gap-2">
+                <div class="w-3.5 h-6 relative bg-black/0 border-gray-200">
+                    <div class="w-3.5 h-4 left-0 top-[4px] absolute inline-flex justify-center items-center">
+                        <div class="w-3.5 h-4 relative bg-black/0 border-gray-200 overflow-hidden">
+                            <div class="w-3 h-3 left-[0.50px] top-[1.50px] absolute bg-white"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-32 h-6 relative bg-black/0 border-gray-200">
+                    <div class="w-32 h-6 left-0 top-[2px] absolute text-center justify-start text-white text-base font-normal font-['Inter']">Add Department</div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+  {% endif %} {% endcomment %}
+
   <main class="w-full">
     <div class="max-w-7xl mx-auto px-0 py-0">
-      {% block manage_content %}{% endblock manage_content %}
+    {% if active_tab == 'departments' %}
+        {% include 'dashboard/departments_list.html' %}
+    {% else %}
+        {% block manage_content %}{% endblock manage_content %}
+    {% endif %}
     </div>
   </main>
 {% endblock content %}

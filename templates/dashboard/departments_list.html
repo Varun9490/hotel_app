@@ -1,0 +1,528 @@
+{% load static %}
+<!-- departments_list.html: Responsive, functional with pagination, actions dropdown, modals, exact logos -->
+
+<div class="mx-auto w-full max-w-[1184px]">
+  <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+      <h2 class="text-lg font-semibold text-gray-900">All Departments</h2>
+
+      <div class="flex items-center gap-3">
+        <select id="statusFilter" class="h-9 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="archived">Archived</option>
+        </select>
+
+        <button type="button" onclick="exportVisible()" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 hover:bg-gray-50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M16 6l-4-4-4 4M12 2v14" />
+          </svg>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table id="departmentsTable" class="min-w-full table-fixed divide-y divide-gray-200">
+        <thead class="bg-neutral-50">
+          <tr>
+            <th scope="col" class="w-[28rem] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Name</th>
+            <th scope="col" class="w-[20rem] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Department Head</th>
+            <th scope="col" class="w-28 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Users</th>
+            <th scope="col" class="w-40 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Open Tickets</th>
+            <th scope="col" class="w-56 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">SLA Performance</th>
+            <th scope="col" class="w-32 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Status</th>
+            <th scope="col" class="w-40 px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-gray-100 bg-white">
+          {% for dept in departments %}
+          <tr class="hover:bg-gray-50" data-dept-id="{{ dept.featured_group.id }}">
+            <!-- Name -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-4">
+                <div class="h-10 w-10 {{ dept.featured_group.icon_bg|default:'bg-gray-100' }} rounded-lg ring-1 ring-inset ring-gray-200 flex items-center justify-center">
+                  {% with dept.featured_group.name|slugify as slug %}
+                    {% if dept.featured_group.image %}
+                      <img src="{% static dept.featured_group.image %}" class="h-6 w-6" alt="{{ dept.featured_group.name }} icon" />
+                    {% elif slug == 'front-office' %}
+                      <img src="{% static 'images/manage_users/front_office.svg' %}" class="h-6 w-6" alt="Front Office icon" />
+                    {% elif slug == 'housekeeping' %}
+                      <img src="{% static 'images/manage_users/housekeeping.svg' %}" class="h-6 w-6" alt="Housekeeping icon" />
+                    {% elif slug == 'food-beverage' %}
+                      <img src="{% static 'images/manage_users/food_beverage.svg' %}" class="h-6 w-6" alt="Food & Beverage icon" />
+                    {% elif slug == 'security' %}
+                      <img src="{% static 'images/manage_users/security.svg' %}" class="h-6 w-6" alt="Security icon" />
+                    {% elif slug == 'maintenance' or slug == 'maintainence' %}
+                      <img src="{% static 'images/manage_users/maintainence.svg' %}" class="h-6 w-6" alt="Maintenance icon" />
+                    {% elif slug == 'open' %}
+                      <img src="{% static 'images/manage_users/open.svg' %}" class="h-6 w-6" alt="Open icon" />
+                    {% elif slug == 'close' %}
+                      <img src="{% static 'images/manage_users/close.svg' %}" class="h-6 w-6" alt="Close icon" />
+                    {% elif slug == 'enable' %}
+                      <img src="{% static 'images/manage_users/enable.svg' %}" class="h-6 w-6" alt="Enable icon" />
+                    {% elif slug == 'disable' %}
+                      <img src="{% static 'images/manage_users/disable.svg' %}" class="h-6 w-6" alt="Disable icon" />
+                    {% elif slug == 'bulk-notifications' %}
+                      <img src="{% static 'images/manage_users/bulk_notifications.svg' %}" class="h-6 w-6" alt="Bulk notifications icon" />
+                    {% elif slug == 'filter' %}
+                      <img src="{% static 'images/manage_users/filter.svg' %}" class="h-6 w-6" alt="Filter icon" />
+                    {% elif slug == 'notify' %}
+                      <img src="{% static 'images/manage_users/notify.svg' %}" class="h-6 w-6" alt="Notify icon" />
+                    {% elif slug == 'total-groups' %}
+                      <img src="{% static 'images/manage_users/total_groups.svg' %}" class="h-6 w-6" alt="Total groups icon" />
+                    {% elif slug == 'members-assigned' %}
+                      <img src="{% static 'images/manage_users/members_assigned.svg' %}" class="h-6 w-6" alt="Members assigned icon" />
+                    {% elif slug == 'recent-additions' %}
+                      <img src="{% static 'images/manage_users/recent_additions.svg' %}" class="h-6 w-6" alt="Recent additions icon" />
+                    {% elif slug == 'plus' %}
+                      <img src="{% static 'images/manage_users/plus.svg' %}" class="h-6 w-6" alt="Plus icon" />
+                    {% else %}
+                      <img src="{% static 'images/manage_users/name.svg' %}" class="h-6 w-6" alt="Department icon" />
+                    {% endif %}
+                  {% endwith %}
+                </div>
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-medium text-gray-900">{{ dept.featured_group.name }}</div>
+                  <div class="truncate text-sm text-gray-500">{{ dept.featured_group.description }}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Department Head -->
+            <td class="px-6 py-4">
+              {% if dept.lead %}
+              <div class="flex items-center gap-3">
+                <img class="h-8 w-8 rounded-full ring-1 ring-gray-200" src="{{ dept.lead.avatar_url|default:'https://placehold.co/32x32' }}" alt="Lead avatar" />
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-medium text-gray-900">{{ dept.lead.full_name }}</div>
+                  <div class="truncate text-sm text-gray-500">{{ dept.lead.email }}</div>
+                </div>
+              </div>
+              {% else %}
+              <div class="text-sm text-gray-500">
+                <span class="font-medium text-gray-900">No lead assigned</span><br />
+                Assign a department lead
+              </div>
+              {% endif %}
+            </td>
+
+            <!-- Users -->
+            <td class="px-6 py-4">
+              <div class="text-sm font-medium text-gray-900">{{ dept.featured_group.members_count }}</div>
+              <div class="text-xs text-gray-500">Active staff</div>
+            </td>
+
+            <!-- Open Tickets -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-900">{{ dept.open_tickets|default:0 }}</span>
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ dept.sla_tag_bg|default:'bg-gray-100' }} {{ dept.sla_color|default:'text-gray-700' }}">
+                  {{ dept.sla_label|default:'N/A' }}
+                </span>
+              </div>
+            </td>
+
+            <!-- SLA Performance -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="h-2 w-32 rounded-full bg-gray-200">
+                  <div class="h-2 rounded-full {{ dept.performance_color|default:'bg-green-500' }}" style="width: {{ dept.performance_pct|default:'0%' }};"></div>
+                </div>
+                <div class="text-sm font-medium {{ dept.performance_color|default:'text-green-600' }}">{{ dept.performance_pct|default:'0%' }}</div>
+              </div>
+            </td>
+
+            <!-- Status -->
+            <td class="px-6 py-4">
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ dept.status_bg|default:'bg-green-500/10' }} {{ dept.status_color|default:'text-green-600' }}">
+                {{ dept.status_label|default:'Active' }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="px-6 py-4 text-right">
+              <div class="relative inline-block text-left">
+                <button type="button" id="actionsBtn-{{ dept.featured_group.id }}" onclick="toggleActionsMenu({{ dept.featured_group.id }})" class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50">
+                  Actions
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+
+                <!-- Dropdown -->
+                <div id="actionsMenu-{{ dept.featured_group.id }}" class="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-md border border-gray-200 bg-white shadow-lg hidden">
+                  <div class="py-1">
+                    <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onclick="closeActionsMenu(); openMembersModal({{ dept.featured_group.id }})">View Members</button>
+                    <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onclick="closeActionsMenu(); openAssignLeadModal({{ dept.featured_group.id }})">Assign Lead</button>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">No departments found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer / Pagination -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-neutral-50 px-6 py-3">
+      <p class="text-sm text-gray-600">
+        Showing {{ departments|length }}{% if total_departments %} of {{ total_departments }}{% endif %} departments
+      </p>
+
+      {% if is_paginated %}
+      <div id="serverPagination" class="inline-flex items-center gap-2">
+        <button class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                onclick="goToPage({{ page_obj.previous_page_number }})" {% if not page_obj.has_previous %}disabled{% endif %}>Previous</button>
+
+        {% for i in page_obj.paginator.page_range %}
+          <button class="rounded-md px-3 py-1.5 text-sm {% if page_obj.number == i %}bg-sky-600 text-white{% else %}border border-gray-200 bg-white text-gray-800 hover:bg-gray-50{% endif %}"
+                  onclick="goToPage({{ i }})">{{ i }}</button>
+        {% endfor %}
+
+        <button class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                onclick="goToPage({{ page_obj.next_page_number }})" {% if not page_obj.has_next %}disabled{% endif %}>Next</button>
+      </div>
+      {% else %}
+      <div id="clientPagination" class="inline-flex items-center gap-2">
+        <button id="clientPrev" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">Previous</button>
+        <div id="clientPages" class="flex items-center gap-2"></div>
+        <button id="clientNext" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">Next</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Members Modal -->
+<div id="membersModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-2xl rounded-lg bg-white p-6" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between">
+      <h3 class="modal-title text-lg font-semibold">Members</h3>
+      <button onclick="closeModal('membersModal')" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
+    </div>
+    <div class="modal-body mt-4 min-h-[120px] text-sm text-gray-700">
+      <div class="text-gray-500">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Lead Modal -->
+<div id="assignLeadModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-md rounded-lg bg-white p-6" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between">
+      <h3 class="text-lg font-semibold">Assign Lead</h3>
+      <button onclick="closeModal('assignLeadModal')" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
+    </div>
+    <form id="assignLeadForm" class="mt-4 space-y-4" onsubmit="submitAssignLead(event)">
+      <input type="hidden" id="assignLeadDeptId" name="dept_id" />
+      <div>
+        <label class="block text-sm font-medium text-gray-700">User Email or ID</label>
+        <input id="assignLeadValue" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. jane@company.com or 123" required />
+        <p class="mt-1 text-xs text-gray-500">Paste an email address or a numeric user ID.</p>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50" onclick="closeModal('assignLeadModal')">Cancel</button>
+        <button id="assignLeadSubmit" type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700">Assign</button>
+      </div>
+      <div id="assignLeadError" class="text-sm text-red-600 hidden"></div>
+    </form>
+  </div>
+</div>
+
+<!-- Tailwind safelist to ensure dynamic color classes are available in production builds -->
+<span class="hidden
+  bg-green-500 bg-yellow-500 bg-red-500 bg-sky-600 bg-gray-100 bg-sky-100 bg-blue-100 bg-indigo-100 bg-purple-100 bg-pink-100 bg-orange-100 bg-amber-100 bg-lime-100 bg-teal-100 bg-cyan-100
+  text-green-600 text-yellow-600 text-red-600 text-sky-600 text-gray-700
+  bg-green-500/10 bg-yellow-500/10 bg-red-500/10
+"></span>
+
+<script>
+// --------------- Utils ---------------
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+function getParam(name) {
+  const url = new URL(window.location);
+  return url.searchParams.get(name);
+}
+
+function setParam(name, value, replaceOthers = false) {
+  const url = new URL(window.location);
+  if (replaceOthers) url.searchParams.delete('page'); // reset pagination when filter changes
+  if (!value) url.searchParams.delete(name);
+  else url.searchParams.set(name, value);
+  window.location = url.toString();
+}
+
+// --------------- Status filter ---------------
+(function initStatusFilter() {
+  const statusFilter = document.getElementById('statusFilter');
+  const current = getParam('status') || '';
+  if (statusFilter) {
+    statusFilter.value = current;
+    statusFilter.addEventListener('change', function() {
+      setParam('status', this.value, true);
+    });
+  }
+})();
+
+// --------------- Pagination (server-side) ---------------
+function goToPage(page) {
+  const url = new URL(window.location);
+  url.searchParams.set('page', page);
+  window.location = url.toString();
+}
+
+// --------------- Client-side pagination (fallback if no server paginator) ---------------
+(function initClientPagination() {
+  const server = document.getElementById('serverPagination');
+  if (server) return; // server-side is present; skip client-side pagination
+
+  const tbody = document.querySelector('#departmentsTable tbody');
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const perPage = 10;
+  let currentPage = 1;
+  let totalPages = Math.max(1, Math.ceil(rows.length / perPage));
+
+  function render() {
+    rows.forEach((r, idx) => {
+      const pageIndex = Math.floor(idx / perPage) + 1;
+      r.style.display = pageIndex === currentPage ? '' : 'none';
+    });
+
+    // Render page buttons
+    const pagesEl = document.getElementById('clientPages');
+    const prevEl = document.getElementById('clientPrev');
+    const nextEl = document.getElementById('clientNext');
+    if (!pagesEl) return;
+
+    pagesEl.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'rounded-md px-3 py-1.5 text-sm ' + (i === currentPage ? 'bg-sky-600 text-white' : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50');
+      btn.textContent = i;
+      btn.addEventListener('click', () => { currentPage = i; render(); });
+      pagesEl.appendChild(btn);
+    }
+    prevEl.disabled = currentPage === 1;
+    nextEl.disabled = currentPage === totalPages;
+  }
+
+  document.getElementById('clientPrev')?.addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); } });
+  document.getElementById('clientNext')?.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; render(); } });
+
+  render();
+})();
+
+// --------------- Actions dropdown ---------------
+let openMenuId = null;
+function toggleActionsMenu(deptId) {
+  const id = 'actionsMenu-' + deptId;
+  const menu = document.getElementById(id);
+  if (!menu) return;
+
+  // Close previous
+  if (openMenuId && openMenuId !== id) {
+    document.getElementById(openMenuId)?.classList.add('hidden');
+  }
+
+  const willOpen = menu.classList.contains('hidden');
+  if (willOpen) {
+    menu.classList.remove('hidden');
+    openMenuId = id;
+  } else {
+    menu.classList.add('hidden');
+    openMenuId = null;
+  }
+}
+function closeActionsMenu() {
+  if (openMenuId) {
+    document.getElementById(openMenuId)?.classList.add('hidden');
+    openMenuId = null;
+  }
+}
+
+// Close menus on outside click or Escape
+document.addEventListener('click', (e) => {
+  if (!openMenuId) return;
+  const menu = document.getElementById(openMenuId);
+  const btnId = openMenuId.replace('Menu', 'Btn');
+  const btn = document.getElementById(btnId);
+  if (!menu || !btn) return;
+
+  const clickedInside = menu.contains(e.target) || btn.contains(e.target);
+  if (!clickedInside) closeActionsMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeActionsMenu();
+    closeModal('membersModal');
+    closeModal('assignLeadModal');
+  }
+});
+
+// --------------- Members modal ---------------
+function openMembersModal(deptId) {
+  showModal('membersModal', true);
+  const modal = document.getElementById('membersModal');
+  modal.querySelector('.modal-title').textContent = 'Members — Department ' + deptId;
+  const body = modal.querySelector('.modal-body');
+  body.innerHTML = '<div class="text-gray-500">Loading...</div>';
+
+  fetch('{% url "dashboard:api_department_members" 0 %}'.replace('/0/', '/' + deptId + '/'))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.members || data.members.length === 0) {
+        body.innerHTML = '<p class="text-sm text-gray-500">No members found.</p>';
+        return;
+      }
+      const list = document.createElement('div');
+      list.className = 'divide-y divide-gray-100';
+      data.members.forEach(m => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 py-3';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="truncate text-sm font-medium text-gray-900">${m.full_name || ''}</div>
+            <div class="truncate text-xs text-gray-500">${m.email || ''}</div>
+          </div>
+          <div>
+            <button class="px-2 py-1 text-xs bg-sky-600 text-white rounded hover:bg-sky-700" onclick="assignLeadById(${deptId}, ${m.id})">Assign Lead</button>
+          </div>`;
+        list.appendChild(row);
+      });
+      body.innerHTML = '';
+      body.appendChild(list);
+    })
+    .catch(() => {
+      body.innerHTML = '<p class="text-sm text-red-600">Failed to fetch members.</p>';
+    });
+}
+
+// Assign lead directly by member id
+function assignLeadById(deptId, userId) {
+  fetch(`/dashboard/manage-users/departments/${deptId}/assign-lead/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken')},
+    body: `user_id=${encodeURIComponent(userId)}`
+  })
+  .then(r => r.json())
+  .then(j => { if (j.success) location.reload(); else alert('Failed: ' + (j.error || 'unknown')); })
+  .catch(() => alert('Error assigning lead'));
+}
+
+// --------------- Assign Lead modal ---------------
+function openAssignLeadModal(deptId) {
+  document.getElementById('assignLeadDeptId').value = String(deptId);
+  document.getElementById('assignLeadValue').value = '';
+  document.getElementById('assignLeadError').classList.add('hidden');
+  showModal('assignLeadModal', true);
+}
+
+function submitAssignLead(e) {
+  e.preventDefault();
+  const btn = document.getElementById('assignLeadSubmit');
+  const deptId = document.getElementById('assignLeadDeptId').value;
+  const val = document.getElementById('assignLeadValue').value.trim();
+  const errorEl = document.getElementById('assignLeadError');
+  if (!val) return;
+
+  btn.disabled = true;
+  errorEl.classList.add('hidden');
+  const isId = /^[0-9]+$/.test(val);
+  const form = new URLSearchParams();
+  form.set('dept_id', deptId);
+  if (isId) form.set('user_id', val);
+  else form.set('email', val);
+
+  fetch(`/dashboard/manage-users/departments/${deptId}/assign-lead/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken')},
+    body: form.toString()
+  })
+  .then(r => r.json())
+  .then(j => {
+    if (j.success) {
+      location.reload();
+    } else {
+      errorEl.textContent = 'Failed: ' + (j.error || 'unknown');
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+    }
+  })
+  .catch(() => {
+    errorEl.textContent = 'Network error assigning lead';
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+  });
+}
+
+// --------------- Modal helpers ---------------
+function showModal(id, open) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (open) {
+    el.classList.remove('hidden');
+    el.classList.add('flex');
+  } else {
+    el.classList.add('hidden');
+    el.classList.remove('flex');
+  }
+}
+function closeModal(id) { showModal(id, false); }
+
+// Close modals when clicking on backdrop
+document.getElementById('membersModal')?.addEventListener('click', () => closeModal('membersModal'));
+document.getElementById('assignLeadModal')?.addEventListener('click', () => closeModal('assignLeadModal'));
+
+// --------------- Export visible rows ---------------
+function exportVisible() {
+  const rows = Array.from(document.querySelectorAll('#departmentsTable tbody tr')).filter(tr => tr.style.display !== 'none');
+  const head = ['Name', 'Department Head', 'Users', 'Open Tickets', 'SLA Performance', 'Status'];
+  const data = rows.map(tr => {
+    const tds = tr.querySelectorAll('td');
+    const name = tds[0]?.innerText.replace(/\s+/g,' ').trim() || '';
+    const headTxt = tds[1]?.innerText.replace(/\s+/g,' ').trim() || '';
+    const users = tds[2]?.innerText.replace(/\s+/g,' ').trim() || '';
+    const tickets = tds[3]?.innerText.replace(/\s+/g,' ').trim() || '';
+    const sla = tds[4]?.innerText.replace(/\s+/g,' ').trim() || '';
+    const status = tds[5]?.innerText.replace(/\s+/g,' ').trim() || '';
+    return [name, headTxt, users, tickets, sla, status];
+  });
+
+  const csv = [head, ...data].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'departments.csv';
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  a.remove();
+}
+</script>

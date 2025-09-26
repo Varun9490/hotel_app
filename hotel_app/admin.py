@@ -94,6 +94,54 @@ for model in models_to_register:
         admin.site.register(model)
 
 
+# Ensure Department admin allows editing/assigning users (via UserProfile) inline
+class DepartmentUserProfileInline(admin.TabularInline):
+    model = models.UserProfile
+    fk_name = 'department'
+    fields = ('user', 'full_name', 'title', 'phone', 'enabled')
+    extra = 0
+    show_change_link = True
+
+
+# Unregister existing Department registration if present, then register custom admin
+if models.Department in admin.site._registry:
+    try:
+        admin.site.unregister(models.Department)
+    except Exception:
+        pass
+
+
+@admin.register(models.Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name', 'description')
+    inlines = [DepartmentUserProfileInline]
+
+
+# Add UserProfile inline to the User admin so department can be set when editing a user
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+
+
+class UserProfileStackedInline(admin.StackedInline):
+    model = models.UserProfile
+    can_delete = False
+    verbose_name_plural = 'profile'
+    fk_name = 'user'
+
+
+try:
+    # If User is already registered, unregister and re-register with inline
+    if User in admin.site._registry:
+        admin.site.unregister(User)
+except Exception:
+    pass
+
+
+@admin.register(User)
+class CustomUserAdmin(DjangoUserAdmin):
+    inlines = (UserProfileStackedInline,)
+
+
 # Custom Admin Classes
 @admin.register(models.Location)
 class LocationAdmin(admin.ModelAdmin):

@@ -7,7 +7,7 @@ app_name = 'dashboard'   # ✅ Required for namespacing
 urlpatterns = [
     path('', dashboard_views.dashboard_view, name='main'),
     path('users/', dashboard_views.dashboard_users, name='users'),
-    path('departments/', dashboard_views.dashboard_departments, name='departments'),
+    path('manage-users/departments/', dashboard_views.dashboard_departments, name='departments'),
     path('groups/', dashboard_views.dashboard_groups, name='groups'),
     path('locations/', dashboard_views.dashboard_locations, name='locations'),
     path('request-types/', dashboard_views.dashboard_request_types, name='request_types'),
@@ -19,9 +19,9 @@ urlpatterns = [
     path('users/create/', dashboard_views.user_create, name='user_create'),
     path('users/<int:user_id>/update/', dashboard_views.user_update, name='user_update'),
     path('users/<int:user_id>/delete/', dashboard_views.user_delete, name='user_delete'),
-    path('departments/create/', dashboard_views.department_create, name='department_create'),
-    path('departments/<int:dept_id>/update/', dashboard_views.department_update, name='department_update'),
-    path('departments/<int:dept_id>/delete/', dashboard_views.department_delete, name='department_delete'),
+    path('manage-users/departments/create/', dashboard_views.department_create, name='department_create'),
+    path('manage-users/departments/<int:dept_id>/update/', dashboard_views.department_update, name='department_update'),
+    path('manage-users/departments/<int:dept_id>/delete/', dashboard_views.department_delete, name='department_delete'),
     path('groups/create/', dashboard_views.group_create, name='group_create'),
     path('groups/<int:group_id>/update/', dashboard_views.group_update, name='group_update'),
     path('groups/<int:group_id>/delete/', dashboard_views.group_delete, name='group_delete'),
@@ -68,6 +68,7 @@ urlpatterns = [
     path('manage-users/', dashboard_views.manage_users, name='manage_users'),
     # Manage Users screens (new per-screen routes)
     path('manage-users/all/', dashboard_views.manage_users_all, name='manage_users_all'),
+    path('manage-users/users/<int:user_id>/', dashboard_views.manage_user_detail, name='manage_user_detail'),
     # API endpoint for Manage Users polling
     path('api/manage-users/users/', dashboard_views.manage_users_api_users, name='api_manage_users_users'),
     path('api/manage-users/users/<int:user_id>/toggle-enabled/', dashboard_views.manage_users_toggle_enabled, name='api_manage_users_toggle_enabled'),
@@ -75,15 +76,17 @@ urlpatterns = [
     # Filters endpoint used by the Manage Users frontend to populate selects
     path('api/manage-users/filters/', dashboard_views.manage_users_api_filters, name='api_manage_users_filters'),
     path('manage-users/groups/', dashboard_views.manage_users_groups, name='manage_users_groups'),
+    # Group membership management
+    path('manage-users/groups/<int:group_id>/add-member/', dashboard_views.add_group_member, name='add_group_member'),
+    path('manage-users/groups/<int:group_id>/remove-member/', dashboard_views.remove_group_member, name='remove_group_member'),
     # API endpoints for groups dashboard
     path('api/groups/notify-all/', dashboard_views.api_notify_all_groups, name='api_groups_notify_all'),
     path('api/departments/<int:dept_id>/notify/', dashboard_views.api_notify_department, name='api_department_notify'),
     path('api/departments/<int:dept_id>/members/', dashboard_views.api_department_members, name='api_department_members'),
+    path('manage-users/departments/<int:dept_id>/assign-lead/', dashboard_views.assign_department_lead, name='assign_department_lead'),
     path('api/groups/<int:group_id>/members/', dashboard_views.api_group_members, name='api_group_members'),
     path('manage-users/roles/', dashboard_views.manage_users_roles, name='manage_users_roles'),
     path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
     path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),
     path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),
-    path('camera-settings/', dashboard_views.camera_settings, name='camera_settings'),
-    path('data-exports/', dashboard_views.data_exports, name='data_exports'),
 ]

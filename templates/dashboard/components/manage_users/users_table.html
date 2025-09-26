@@ -251,7 +251,10 @@ function toggleArrow(id){
           </div>
 
           <div class="text-right">
-            <button class="px-2 py-1 rounded bg-gray-100 text-sm" title="Actions">•••</button>
+            <div class="inline-flex items-center gap-2 justify-end">
+              <button class="edit-user-btn px-2 py-1 rounded bg-gray-100 text-sm" data-user-id="${u.id}" title="Edit User">Edit</button>
+              <button class="delete-user-btn px-2 py-1 rounded bg-red-50 text-sm text-red-600" data-user-id="${u.id}" title="Delete Account">Delete</button>
+            </div>
           </div>
         </div>
       </div>`;
@@ -395,5 +398,35 @@ function toggleArrow(id){
   if(inviteBtn){
     inviteBtn.addEventListener('click', ()=>{});
   }
+
+  // Delegate click handlers for edit/delete buttons
+  // Build a URL template using Django's URL tag (replace the trailing 0 with the id)
+  const detailUrlTemplate = '{% url "dashboard:manage_user_detail" 0 %}';
+  document.addEventListener('click', function(e){
+    const edit = e.target.closest('.edit-user-btn');
+    if(edit){
+      const id = parseInt(edit.dataset.userId,10);
+      if(!id) return;
+      try{
+        const url = detailUrlTemplate.replace('/0/', `/${id}/`);
+        window.location.href = url;
+      }catch(err){
+        // fallback: navigate relative to manage-users
+        window.location.href = `/manage-users/users/${id}/`;
+      }
+      return;
+    }
+
+    const del = e.target.closest('.delete-user-btn');
+    if(del){
+      const id = parseInt(del.dataset.userId,10);
+      if(!confirm('Delete this account? This action cannot be undone.')) return;
+      const csrftoken = (function(){ const c=document.cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith('csrftoken=')); return c?c.split('=')[1]:null; })();
+      fetch(apiUrl + id + '/', {method:'DELETE', credentials:'same-origin', headers:{'X-CSRFToken':csrftoken}}).then(r=>{
+        if(r.ok) load(); else alert('Delete failed');
+      }).catch(()=>alert('Delete failed'));
+      return;
+    }
+  });
 })();
 </script>

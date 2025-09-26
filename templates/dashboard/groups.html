@@ -162,8 +162,8 @@
               <div class="text-neutral-500 text-xs font-normal font-['Inter']">({{ group.members_count|default:"0" }} members)</div>
             </div>
             <div class="flex items-center gap-2">
-              <button type="button" class="text-sky-600 text-xs font-normal font-['Inter']">Add Users</button>
-              <button type="button" class="text-gray-600 text-xs font-normal font-['Inter']">Edit</button>
+              <button type="button" class="text-sky-600 text-xs font-normal font-['Inter']" onclick="openGroupMembersModal({{ group.pk|default:0 }}, '{{ group.name|escapejs }}')">Add Users</button>
+              <button type="button" class="text-gray-600 text-xs font-normal font-['Inter']" onclick="openGroupEdit({{ group.pk|default:0 }}, '{{ group.name|escapejs }}')">Edit</button>
             </div>
           </div>
           {% endfor %}
@@ -347,5 +347,92 @@
       });
     });
   });
+</script>
+<!-- Group Members Modal -->
+<div id="groupMembersModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-2xl rounded-lg bg-white p-6">
+    <div class="flex items-start justify-between">
+      <h3 id="groupMembersTitle" class="text-lg font-semibold">Group Members</h3>
+      <button onclick="document.getElementById('groupMembersModal').classList.add('hidden')" class="text-gray-500">Close</button>
+    </div>
+    <div id="groupMembersBody" class="mt-4">
+      <div class="mb-3">
+        <label class="text-xs text-gray-600">Add user by ID</label>
+        <div class="flex items-center gap-2 mt-1">
+          <input id="addMemberUserId" class="rounded border border-gray-200 px-3 py-2 w-full" placeholder="User ID" />
+          <button id="addMemberBtn" class="rounded bg-sky-600 text-white px-3 py-2">Add</button>
+        </div>
+      </div>
+      <div id="groupMembersList" class="space-y-2">
+        <!-- members loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openGroupMembersModal(groupId, groupName){
+  const modal = document.getElementById('groupMembersModal');
+  const title = document.getElementById('groupMembersTitle');
+  const bodyList = document.getElementById('groupMembersList');
+  title.textContent = 'Members — ' + (groupName || groupId);
+  bodyList.innerHTML = '<p class="text-sm text-gray-500">Loading...</p>';
+  modal.classList.remove('hidden');
+
+  fetch(`/dashboard/api/groups/${groupId}/members/`)
+    .then(r => r.json())
+    .then(j => {
+      const members = j.members || [];
+      if(members.length === 0){
+        bodyList.innerHTML = '<p class="text-sm text-gray-500">No members.</p>';
+      } else {
+        bodyList.innerHTML = '';
+        members.forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between p-2 bg-neutral-50 rounded';
+          row.innerHTML = `<div class="min-w-0"><div class="text-sm font-medium text-gray-900">${m.username||m.full_name||'User'}</div><div class="text-xs text-gray-500">${m.email||''}</div></div><div><button class="text-red-600 text-xs" onclick="removeMember(${groupId}, ${m.id})">Remove</button></div>`;
+          bodyList.appendChild(row);
+        });
+      }
+    }).catch(()=>{ bodyList.innerHTML = '<p class="text-sm text-red-500">Failed to load members.</p>' });
+
+  document.getElementById('addMemberBtn').onclick = function(){
+    const uid = document.getElementById('addMemberUserId').value.trim();
+    if(!uid) return alert('Enter user id');
+    fetch(`/dashboard/manage-users/groups/${groupId}/add-member/`, {method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken': (document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||getCookie('csrftoken')}, body: `user_id=${encodeURIComponent(uid)}`})
+      .then(r=>r.json()).then(j=>{ if(j.success){ openGroupMembersModal(groupId, groupName); } else alert('Failed: '+(j.error||'unknown')) }).catch(()=>alert('Add failed'));
+  };
+}
+
+function removeMember(groupId, userId){
+  if(!confirm('Remove user from group?')) return;
+  fetch(`/dashboard/manage-users/groups/${groupId}/remove-member/`, {method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken': (document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||getCookie('csrftoken')}, body: `user_id=${encodeURIComponent(userId)}`})
+    .then(r=>r.json()).then(j=>{ if(j.success){ document.getElementById('groupMembersModal').classList.remove('hidden'); openGroupMembersModal(groupId); } else alert('Failed: '+(j.error||'unknown')) }).catch(()=>alert('Remove failed'));
+}
+
+function openGroupEdit(groupId, groupName){
+  // Simple fallback: prompt to rename group
+  const newName = prompt('Rename group '+ (groupName||groupId) + '\n(Leave blank to cancel)');
+  if(!newName) return;
+  // naive POST to update group via existing group_update view
+  fetch(`/dashboard/groups/${groupId}/update/`, {method:'POST', headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken': (document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||getCookie('csrftoken')}, body: `name=${encodeURIComponent(newName)}`})
+    .then(()=>location.reload())
+    .catch(()=>alert('Failed to update group'));
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
 </script>
 {% endblock extra_js %}

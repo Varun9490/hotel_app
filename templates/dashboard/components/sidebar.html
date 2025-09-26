@@ -109,38 +109,7 @@
 
           <span class="font-medium">Messaging Setup</span>
         </a>
-        <a
-          href="{% url 'dashboard:camera_settings' %}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:camera_settings' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
-        >
-          <img
-      src="{% if request.resolver_match.view_name == 'dashboard:camera_settings' %}
-          {% static 'images/sidebar/camera_highlighted.svg' %}
-        {% else %}
-          {% static 'images/sidebar/camera.svg' %}
-        {% endif %}"
-            alt="Camera Settings Icon"
-            class="w-5 h-5"
-          />
-
-          <span class="font-medium">Camera Settings</span>
-        </a>
-        <a
-          href="{% url 'dashboard:data_exports' %}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:data_exports' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
-        >
-          <img
-      src="{% if request.resolver_match.view_name == 'dashboard:data_exports' %}
-          {% static 'images/sidebar/data_and_export_highlighted.svg' %}
-        {% else %}
-          {% static 'images/sidebar/data_and_export.svg' %}
-        {% endif %}"
-            alt="Data & Exports Icon"
-            class="w-5 h-5"
-          />
-
-          <span class="font-medium">Data & Exports</span>
-        </a>
+        <!-- Camera Settings and Data & Exports removed per request -->
       </div>
     </div>
 
