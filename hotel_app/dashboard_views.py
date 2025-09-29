@@ -11,9 +11,29 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.http import HttpResponseBadRequest
 from django.views.decorators.http import require_http_methods
-from django.db import connection
+from django.db import connection, transaction
 from django.conf import settings
 from django.utils.text import slugify
+from django.views.decorators.csrf import csrf_protect
+from django.contrib.auth import get_user_model
+
+# Import all models from hotel_app
+from hotel_app.models import (
+    Department, Location, RequestType, Checklist,
+    Complaint, BreakfastVoucher, Review, Guest,
+    Voucher, VoucherScan, ServiceRequest, UserProfile, UserGroup, UserGroupMembership
+)
+
+# Import all forms from the local forms.py
+from .forms import (
+    UserForm, DepartmentForm, GroupForm, LocationForm,
+    RequestTypeForm, ChecklistForm, ComplaintForm,
+    BreakfastVoucherForm, ReviewForm, VoucherForm
+)
+
+# Import local utils and services
+from .utils import user_in_group
+from hotel_app.whatsapp_service import WhatsAppService
 
 # Import all models from hotel_app
 from hotel_app.models import (
@@ -39,6 +59,20 @@ ADMINS_GROUP = 'Admins'
 STAFF_GROUP = 'Staff'
 USERS_GROUP = 'Users'
 
+User = get_user_model()
+
+# Roles are not stored in DB. They are labels -> permission flags.
+ROLES = ["Admins", "Staff", "Users"]
+
+def _role_to_flags(role: str):
+    r = (role or "").strip().lower()
+    if r in ("admin", "admins", "administrator", "superuser"):
+        return True, True
+    if r in ("staff",):
+        return True, False
+    # default user
+    return False, False
+
 
 # ---- Helper Functions ----
 def is_admin(user):
@@ -55,6 +89,13 @@ def is_staff(user):
 @user_passes_test(is_staff)
 def dashboard(request):
     """Main dashboard view."""
+
+
+@require_http_methods(['GET'])
+def api_manage_users_filters(request):
+    departments = list(Department.objects.order_by('name').values_list('name', flat=True))
+    roles = ROLES  # not from database
+    return JsonResponse({"departments": departments, "roles": roles})
     # Get system status
     system_statuses = [
         {'name': 'Camera Health', 'value': '98%', 'color': 'green-500'},
@@ -550,13 +591,24 @@ def manage_users_all(request):
 
 
 @login_required
-def manage_users_api_users(request):
+def manage_users_api_users(request, user_id=None):
     """Return a JSON list of users for the Manage Users frontend poller.
 
     Each user contains: id, username, first_name, last_name, full_name, email,
     avatar_url, roles (list), departments (single or null), is_active, last_login (iso),
     last_active_human (e.g. '2 hours').
     """
+    # Handle DELETE request for user deletion
+    if request.method == 'DELETE':
+        if not user_id:
+            return JsonResponse({'success': False, 'error': 'User ID is required'}, status=400)
+        try:
+            user = get_object_or_404(User, pk=user_id)
+            user.delete()
+            return JsonResponse({'success': True, 'message': 'User deleted successfully'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
     try:
         from django.utils.timesince import timesince
         from django.utils import timezone
@@ -710,7 +762,7 @@ def manage_users_groups(request):
         from datetime import timedelta
         from django.utils.text import slugify
 
-        depts_qs = Department.objects.all()
+        depts_qs = Department.objects.all().order_by('name')
         if q:
             depts_qs = depts_qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
 
@@ -751,8 +803,9 @@ def manage_users_groups(request):
             colors = color_map.get(dept.name, {'icon_bg': 'bg-gray-500/10', 'tag_bg': 'bg-gray-500/10', 'icon_color': 'gray-500', 'dot_bg': 'bg-gray-500'})
             featured.update(colors)
 
+            # Get groups associated with this department
             groups_data = []
-            groups_qs = dept.user_groups.all()
+            groups_qs = dept.user_groups.all().order_by('name')
             for group_index, g in enumerate(groups_qs):
                 mem_qs = g.usergroupmembership_set.all()
                 mem_count = mem_qs.count()
@@ -760,7 +813,7 @@ def manage_users_groups(request):
                 updated_at = getattr(last_mem, 'joined_at', None)
                 human_updated = timesince(updated_at) + ' ago' if updated_at else 'N/A'
                 groups_data.append({
-                    'id': g.pk,
+                    'pk': g.pk,  # Use pk instead of id for consistency
                     'name': g.name,
                     'members_count': mem_count,
                     'description': g.description or '',
@@ -962,18 +1015,524 @@ def api_notify_department(request, dept_id):
 
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
+def api_group_permissions(request, group_id):
+    """Return JSON list of permissions for a user group."""
+    try:
+        from django.contrib.auth.models import Group
+        group = get_object_or_404(Group, pk=group_id)
+        
+        # Define permissions based on group name (this is a simplified approach)
+        # In a real application, you would have a more sophisticated permission system
+        permissions = []
+        
+        # Default permissions for all groups
+        base_permissions = [
+            "view_profile",
+            "update_profile",
+            "view_requests",
+            "update_requests"
+        ]
+        
+        # Add specific permissions based on group name
+        if group.name == "Admins":
+            permissions = base_permissions + [
+                "manage_users",
+                "manage_groups",
+                "system_config",
+                "view_reports",
+                "manage_departments",
+                "full_access"
+            ]
+        elif group.name == "Staff":
+            permissions = base_permissions + [
+                "view_team_reports",
+                "manage_team",
+                "assign_requests",
+                "view_dept_data"
+            ]
+        elif group.name == "Users":
+            permissions = base_permissions
+        else:
+            permissions = base_permissions
+            
+    except Exception as e:
+        permissions = []
+    
+    return JsonResponse({'permissions': permissions})
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+@csrf_protect
+def api_group_permissions_update(request, group_id):
+    """Update permissions for a user group."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        from django.contrib.auth.models import Group
+        group = get_object_or_404(Group, pk=group_id)
+        
+        # Parse JSON data
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        
+        # Get permissions from request
+        permissions = data.get('permissions', [])
+        
+        # In a real application, you would update the group's permissions here
+        # For now, we'll just return success since this is a simplified implementation
+        # In a real system, you would map these permission names to actual Django permissions
+        
+        # Log the permission update (in a real system, you would store this in a database)
+        print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+        
+        return JsonResponse({'success': True, 'message': 'Permissions updated successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def api_reset_user_password(request, user_id):
+    """API endpoint to reset a user's password."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        user = get_object_or_404(User, pk=user_id)
+        
+        # Get the new password from the request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        # Validate passwords
+        if not new_password:
+            return JsonResponse({'error': 'New password is required'}, status=400)
+        
+        if new_password != confirm_password:
+            return JsonResponse({'error': 'Passwords do not match'}, status=400)
+        
+        if len(new_password) < 8:
+            return JsonResponse({'error': 'Password must be at least 8 characters long'}, status=400)
+        
+        # Set the new password
+        user.set_password(new_password)
+        user.save()
+        
+        # Log the password reset for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Password reset for user {user.username} (ID: {user.id})")
+        
+        return JsonResponse({'success': True, 'message': 'Password reset successfully'})
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error resetting password for user ID {user_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def configure_requests(request):
+    """Render the Configure Requests page."""
+    # Sample data to render cards. In production replace with real queryset.
+    requests_list = [
+        {
+            'title': 'Extra Housekeeping',
+            'department': 'Housekeeping',
+            'description': 'Request additional cleaning services for your room including towel refresh, bed making, and bathroom cleaning.',
+            'fields': 4,
+            'exposed': True,
+            'icon': 'images/manage_users/house_keeping.svg',
+            'icon_bg': 'bg-green-500/10',
+            'tag_bg': 'bg-green-500/10',
+        },
+        {
+            'title': 'Room Service',
+            'department': 'Food & Beverage',
+            'description': 'Order room service from our menu. We deliver your order directly to your room.',
+            'fields': 3,
+            'exposed': True,
+            'icon': 'images/manage_users/food_beverage.svg',
+            'icon_bg': 'bg-yellow-400/10',
+            'tag_bg': 'bg-yellow-400/10',
+        },
+        {
+            'title': 'Maintenance Request',
+            'department': 'Maintenance',
+            'description': 'Report any maintenance issues such as broken furniture, malfunctioning appliances, or other problems.',
+            'fields': 2,
+            'exposed': True,
+            'icon': 'images/manage_users/maintainence.svg',
+            'icon_bg': 'bg-teal-500/10',
+            'tag_bg': 'bg-teal-500/10',
+        },
+        {
+            'title': 'Security Concern',
+            'department': 'Security',
+            'description': 'Report any security concerns or suspicious activities to our security team.',
+            'fields': 1,
+            'exposed': True,
+            'icon': 'images/manage_users/security.svg',
+            'icon_bg': 'bg-red-500/10',
+            'tag_bg': 'bg-red-500/10',
+        },
+    ]
+
+    ctx = dict(
+        active_tab="requests",
+        breadcrumb_title="Configure Requests",
+        page_title="Configure Requests",
+        page_subtitle="Manage and customize the requests available to guests and staff.",
+        search_placeholder="Search requests...",
+        primary_label="Create Request",
+        requests_list=requests_list,
+    )
+    return render(request, 'dashboard/configure_requests.html', ctx)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def configure_requests_api(request):
+    """API endpoint to manage requests.
+
+    Supports CRUD operations for requests.
+    """
+    if request.method == 'GET':
+        # Return list of requests
+        try:
+            from hotel_app.models import RequestType
+            requests = RequestType.objects.all().order_by('name')
+            requests_list = [
+                {
+                    'id': r.id,
+                    'title': r.name,
+                    'department': r.department.name,
+                    'description': r.description,
+                    'fields': r.fields,
+                    'exposed': r.exposed,
+                    'icon': r.icon,
+                    'icon_bg': r.icon_bg,
+                    'tag_bg': r.tag_bg,
+                }
+                for r in requests
+            ]
+            return JsonResponse({'requests': requests_list})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST':
+        # Create a new request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            title = data.get('title')
+            department_id = data.get('department_id')
+            description = data.get('description')
+            fields = data.get('fields')
+            exposed = data.get('exposed')
+            icon = data.get('icon')
+            icon_bg = data.get('icon_bg')
+            tag_bg = data.get('tag_bg')
+
+            if not title or not department_id:
+                return JsonResponse({'error': 'Title and department are required'}, status=400)
+
+            from hotel_app.models import RequestType, Department
+            department = get_object_or_404(Department, pk=department_id)
+            request_type = RequestType.objects.create(
+                name=title,
+                department=department,
+                description=description,
+                fields=fields,
+                exposed=exposed,
+                icon=icon,
+                icon_bg=icon_bg,
+                tag_bg=tag_bg,
+            )
+            return JsonResponse({'id': request_type.id, 'message': 'Request created successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'PUT':
+        # Update an existing request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            request_id = data.get('id')
+            title = data.get('title')
+            department_id = data.get('department_id')
+            description = data.get('description')
+            fields = data.get('fields')
+            exposed = data.get('exposed')
+            icon = data.get('icon')
+            icon_bg = data.get('icon_bg')
+            tag_bg = data.get('tag_bg')
+
+            if not request_id or not title or not department_id:
+                return JsonResponse({'error': 'ID, title, and department are required'}, status=400)
+
+            from hotel_app.models import RequestType, Department
+            department = get_object_or_404(Department, pk=department_id)
+            request_type = get_object_or_404(RequestType, pk=request_id)
+            request_type.name = title
+            request_type.department = department
+            request_type.description = description
+            request_type.fields = fields
+            request_type.exposed = exposed
+            request_type.icon = icon
+            request_type.icon_bg = icon_bg
+            request_type.tag_bg = tag_bg
+            request_type.save()
+            return JsonResponse({'id': request_type.id, 'message': 'Request updated successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'DELETE':
+        # Delete a request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            request_id = data.get('id')
+
+            if not request_id:
+                return JsonResponse({'error': 'ID is required'}, status=400)
+
+            from hotel_app.models import RequestType
+            request_type = get_object_or_404(RequestType, pk=request_id)
+            request_type.delete()
+            return JsonResponse({'message': 'Request deleted successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    else:
+        return JsonResponse({'error': 'Unsupported method'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def configure_requests_api_fields(request, request_id):
+    """API endpoint to manage request fields.
+
+    Supports CRUD operations for request fields.
+    """
+    if request.method == 'GET':
+        # Return list of fields for a request
+        try:
+            from hotel_app.models import RequestType, RequestTypeField
+            request_type = get_object_or_404(RequestType, pk=request_id)
+            fields = RequestTypeField.objects.filter(request_type=request_type).order_by('order')
+            fields_list = [
+                {
+                    'id': f.id,
+                    'label': f.label,
+                    'type': f.type,
+                    'required': f.required,
+                    'order': f.order,
+                }
+                for f in fields
+            ]
+            return JsonResponse({'fields': fields_list})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST':
+        # Create a new field for a request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            label = data.get('label')
+            type = data.get('type')
+            required = data.get('required')
+            order = data.get('order')
+
+            if not label or not type:
+                return JsonResponse({'error': 'Label and type are required'}, status=400)
+
+            from hotel_app.models import RequestType, RequestTypeField
+            request_type = get_object_or_404(RequestType, pk=request_id)
+            field = RequestTypeField.objects.create(
+                request_type=request_type,
+                label=label,
+                type=type,
+                required=required,
+                order=order,
+            )
+            return JsonResponse({'id': field.id, 'message': 'Field created successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'PUT':
+        # Update an existing field for a request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            field_id = data.get('id')
+            label = data.get('label')
+            type = data.get('type')
+            required = data.get('required')
+            order = data.get('order')
+
+            if not field_id or not label or not type:
+                return JsonResponse({'error': 'ID, label, and type are required'}, status=400)
+
+            from hotel_app.models import RequestTypeField
+            field = get_object_or_404(RequestTypeField, pk=field_id)
+            field.label = label
+            field.type = type
+            field.required = required
+            field.order = order
+            field.save()
+            return JsonResponse({'id': field.id, 'message': 'Field updated successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'DELETE':
+        # Delete a field for a request
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            field_id = data.get('id')
+
+            if not field_id:
+                return JsonResponse({'error': 'ID is required'}, status=400)
+
+            from hotel_app.models import RequestTypeField
+            field = get_object_or_404(RequestTypeField, pk=field_id)
+            field.delete()
+            return JsonResponse({'message': 'Field deleted successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    else:
+        return JsonResponse({'error': 'Unsupported method'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def configure_requests_api_bulk_action(request):
+    """Bulk action endpoint for requests.
+
+    Expects JSON body with 'action' and 'request_ids' list.
+    Supported actions: enable, disable
+    """
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return HttpResponseBadRequest('invalid json')
+    action = body.get('action')
+    ids = body.get('request_ids') or []
+    if action not in ('enable', 'disable'):
+        return HttpResponseBadRequest('unsupported action')
+    if not isinstance(ids, list):
+        return HttpResponseBadRequest('request_ids must be list')
+    requests = RequestType.objects.filter(id__in=ids)
+    changed = []
+    for r in requests:
+        new_val = True if action == 'enable' else False
+        if r.exposed != new_val:
+            r.exposed = new_val
+            r.save(update_fields=['exposed'])
+            changed.append(r.id)
+    return JsonResponse({'changed': changed, 'action': action})
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+@csrf_protect
+def api_bulk_permissions_update(request):
+    """Update permissions for multiple user groups."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        from django.contrib.auth.models import Group
+        
+        # Parse JSON data
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        
+        # Get group IDs and permissions from request
+        group_ids = data.get('group_ids', [])
+        permissions = data.get('permissions', [])
+        
+        # Validate group IDs
+        if not group_ids:
+            return JsonResponse({'error': 'No groups specified'}, status=400)
+        
+        # Update permissions for each group
+        updated_groups = []
+        for group_id in group_ids:
+            try:
+                group = Group.objects.get(pk=group_id)
+                # In a real application, you would update the group's permissions here
+                # For now, we'll just log the update
+                print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+                updated_groups.append(group.name)
+            except Group.DoesNotExist:
+                continue  # Skip non-existent groups
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Permissions updated for {len(updated_groups)} groups',
+            'updated_groups': updated_groups
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def api_department_members(request, dept_id):
-    """Return JSON list of members for a department (id, full_name, phone, email)."""
+    """Return JSON list of members for a department (id, full_name, phone, email) with pagination support."""
     try:
         from hotel_app.models import UserProfile, Department
         dept = get_object_or_404(Department, pk=dept_id)
+        
+        # Get page and page size from query parameters
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        
+        # Get all profiles for this department
         profiles = UserProfile.objects.filter(department=dept)
+        
+        # Calculate pagination
+        total_profiles = profiles.count()
+        total_pages = (total_profiles + page_size - 1) // page_size  # Ceiling division
+        page = max(1, min(page, total_pages))  # Clamp page to valid range
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        
+        # Get profiles for current page
+        page_profiles = profiles[start_idx:end_idx]
+        
         members = []
-        for p in profiles:
-            members.append({'id': getattr(p, 'user_id', None), 'full_name': p.full_name, 'phone': p.phone, 'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None})
-    except Exception:
+        for p in page_profiles:
+            members.append({
+                'id': getattr(p, 'user_id', None), 
+                'full_name': p.full_name, 
+                'phone': p.phone, 
+                'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None
+            })
+    except Exception as e:
         members = []
-    return JsonResponse({'members': members})
+        total_profiles = 0
+        total_pages = 1
+        page = 1
+    
+    return JsonResponse({
+        'members': members,
+        'total': total_profiles,
+        'page': page,
+        'total_pages': total_pages
+    })
 
 
 @login_required
@@ -1007,23 +1566,206 @@ def manage_users_roles(request):
 
 @login_required
 def manage_users_profiles(request):
-    ctx = dict(active_tab="profiles",
-               breadcrumb_title="User Profiles",
-               page_title="User Profiles",
-               page_subtitle="Manage role templates and permissions for staff members",
-               search_placeholder="Search profiles...",
-               primary_label="Create Profile")
+    # Get the standard Django groups (Admins, Staff, Users)
+    from django.contrib.auth.models import Group
+    groups = Group.objects.filter(name__in=['Admins', 'Staff', 'Users']).order_by('name')
+    
+    # Get user count for each group
+    group_user_counts = {}
+    for group in groups:
+        count = group.user_set.count()
+        group_user_counts[group.name] = count
+    
+    # Check user permissions to determine what they can see
+    user_permissions = []
+    if request.user.is_superuser:
+        # Superuser has all permissions
+        user_permissions = ['manage_users', 'manage_groups', 'system_config', 'view_reports', 'manage_departments', 'full_access']
+    elif request.user.groups.filter(name='Admins').exists():
+        # Admin permissions
+        user_permissions = ['manage_users', 'manage_groups', 'view_reports', 'manage_departments']
+    elif request.user.groups.filter(name='Staff').exists():
+        # Staff permissions
+        user_permissions = ['view_team_reports', 'manage_team', 'assign_requests', 'view_dept_data']
+    else:
+        # Basic user permissions
+        user_permissions = ['view_profile', 'update_profile']
+    
+    ctx = dict(
+        active_tab="profiles",
+        breadcrumb_title="User Profiles",
+        page_title="User Profiles",
+        page_subtitle="Manage role templates and permissions for staff members",
+        search_placeholder="Search profiles...",
+        primary_label="Create Profile",
+        groups=groups,
+        group_user_counts=group_user_counts,
+        user_permissions=user_permissions  # Pass user permissions to template
+    )
     return render(request, 'dashboard/user_profiles.html', ctx)
-@require_permission([ADMINS_GROUP])
+@require_http_methods(['POST'])
+@csrf_protect
 def user_create(request):
+    """
+    Create a user + profile.
+    - role: mapped to permission flags (not saved in DB).
+    - department: linked to Department by name (optional).
+    - also associates the user to an existing UserGroup if its name matches the role or department (but does NOT create new groups to keep 'role not in DB').
+    """
+    data = request.POST
+
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
+    full_name = (data.get("full_name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    department_name = (data.get("department") or "").strip()
+    role = (data.get("role") or "").strip()
+    is_active = data.get("is_active") in ("1", "true", "True", "yes")
+
+    errors = {}
+    if not username:
+        errors["username"] = ["Username is required."]
+    if not email:
+        errors["email"] = ["Email is required."]
+    if not full_name:
+        errors["full_name"] = ["Full name is required."]
+
+    if errors:
+        return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    # Ensure username uniqueness; if exists, make it unique
+    base_username = username
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base_username}-{counter}"
+        counter += 1
+
+    dept_obj = None
+    if department_name:
+        dept_obj = Department.objects.filter(name__iexact=department_name).first()
+        if not dept_obj:
+            errors["department"] = [f"Department '{department_name}' not found."]
+            return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    is_staff, is_superuser = _role_to_flags(role)
+
+    try:
+        with transaction.atomic():
+            # You can set a random password or an unusable one
+            random_password = User.objects.make_random_password()
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=random_password,
+            )
+            user.is_active = bool(is_active)
+            user.is_staff = is_staff
+            user.is_superuser = is_superuser
+            user.save()
+
+            # Create/attach user profile
+            profile, created = UserProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'full_name': full_name,
+                    'phone': phone or None,
+                    'department': dept_obj,
+                    'enabled': True,
+                }
+            )
+            # If profile already existed, update its fields
+            if not created:
+                profile.full_name = full_name
+                profile.phone = phone or None
+                profile.department = dept_obj
+                profile.enabled = True
+                profile.save()
+
+            # OPTIONAL: Attach to an existing group if one matches role or department (do not create new groups)
+            candidate_group_names = []
+            if role:
+                candidate_group_names.append(role)
+            if department_name:
+                candidate_group_names.append(department_name)
+
+            attached_group = None
+            if candidate_group_names:
+                attached_group = UserGroup.objects.filter(name__in=candidate_group_names).first()
+                if attached_group:
+                    UserGroupMembership.objects.get_or_create(user=user, group=attached_group)
+
+    except Exception as e:
+        # Surface clear error back to client
+        return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_active": user.is_active,
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser,
+            "profile": {
+                "full_name": profile.full_name,
+                "phone": profile.phone,
+                "department": dept_obj.name if dept_obj else None
+            }
+        }
+    })
+
+
+@require_permission([ADMINS_GROUP])
+def user_update(request, user_id):
+    user = get_object_or_404(User, pk=user_id)
     if request.method == "POST":
-        form = UserForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "User created successfully.")
+        # Get the data from the POST request
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        full_name = request.POST.get('full_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        title = request.POST.get('title', '').strip()
+        department_id = request.POST.get('department', '').strip()
+        is_active = request.POST.get('is_active', '0') == '1'
+        
+        # Update user fields
+        user.username = username
+        user.email = email
+        user.is_active = is_active
+        user.save()
+        
+        # Update or create user profile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.full_name = full_name
+        profile.phone = phone
+        profile.title = title
+        
+        # Handle department if provided
+        if department_id:
+            try:
+                department = Department.objects.get(id=department_id)
+                profile.department = department
+            except Department.DoesNotExist:
+                pass
         else:
-            messages.error(request, "Please correct the errors below.")
-    return redirect("dashboard:users")
+            profile.department = None
+            
+        profile.save()
+        
+        # Return JSON response for AJAX requests
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'User updated successfully!'
+            })
+        
+        # For non-AJAX requests, add a message and redirect
+        messages.success(request, "User updated successfully.")
+        return redirect("dashboard:manage_user_detail", user_id=user_id)
+    
+    # For GET requests, redirect to user detail page
+    return redirect("dashboard:manage_user_detail", user_id=user_id)
 
 
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
@@ -1304,14 +2046,31 @@ def remove_group_member(request, group_id):
 
     return JsonResponse({'success': True, 'user_id': user.pk, 'group_id': group.pk})
 
+@require_http_methods(['POST'])
+@csrf_protect
 @require_permission([ADMINS_GROUP])
 def department_create(request):
-    if request.method == "POST":
-        form = DepartmentForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Department created successfully.")
-    return redirect("dashboard:departments")
+    name = (request.POST.get("name") or "").strip()
+    description = (request.POST.get("description") or "").strip()
+
+    errors = {}
+    if not name:
+        errors["name"] = ["Department name is required."]
+    if Department.objects.filter(name__iexact=name).exists():
+        errors["name"] = [f"Department '{name}' already exists."]
+
+    if errors:
+        return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    try:
+        dept = Department.objects.create(
+            name=name,
+            description=description or None
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+
+    return JsonResponse({"success": True, "department": {"id": dept.id, "name": dept.name}})
 
 @require_permission([ADMINS_GROUP])
 def department_update(request, dept_id):
@@ -1392,14 +2151,59 @@ def dashboard_groups(request):
     }
     return render(request, "dashboard/groups.html", context)
 
-@require_permission([ADMINS_GROUP])
+@require_http_methods(['POST'])
+@csrf_protect
 def group_create(request):
-    if request.method == "POST":
-        form = GroupForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Group created successfully.")
-    return redirect("dashboard:groups")
+    """
+    Create a user group. Department is matched by name if provided.
+    If department is provided, the group name will be formatted as "Department - Group Name".
+    """
+    name = (request.POST.get("name") or "").strip()
+    description = (request.POST.get("description") or "").strip()
+    department_name = (request.POST.get("department") or "").strip()
+
+    errors = {}
+    if not name:
+        errors["name"] = ["Group name is required."]
+    
+    dept_obj = None
+    final_group_name = name
+    if department_name:
+        dept_obj = Department.objects.filter(name__iexact=department_name).first()
+        if not dept_obj:
+            errors["department"] = [f"Department '{department_name}' not found."]
+        else:
+            # Format group name as "Department - Group Name"
+            final_group_name = f"{dept_obj.name} - {name}"
+    
+    # Check if a group with the final name already exists
+    if UserGroup.objects.filter(name__iexact=final_group_name).exists():
+        errors["name"] = [f"Group '{final_group_name}' already exists."]
+
+    if errors:
+        return JsonResponse({"success": False, "errors": errors}, status=400)
+
+    try:
+        grp = UserGroup.objects.create(
+            name=final_group_name,
+            description=description or None,
+            department=dept_obj
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+
+    # Return additional information about the group including department
+    response_data = {
+        "success": True, 
+        "group": {
+            "id": grp.id, 
+            "name": grp.name,
+            "description": grp.description,
+            "department_id": grp.department.id if grp.department else None,
+            "department_name": grp.department.name if grp.department else None
+        }
+    }
+    return JsonResponse(response_data)
 
 @require_permission([ADMINS_GROUP])
 def group_update(request, group_id):

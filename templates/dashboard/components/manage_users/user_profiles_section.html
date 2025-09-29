@@ -1,4 +1,4 @@
-{% load static %}
+{% load static dict_extras %}
 
 <section id="user_profiles" class="mt-8">
   <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -26,336 +26,274 @@
             </form>
           </div>
         </div>
-  <!-- Staff -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-sky-600/10">
-              <span class="block h-4 w-4 rounded bg-sky-600"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Staff</h3>
-              <p class="text-sm text-gray-600">Basic access level</p>
+        
+        <!-- Edit Permissions Modal -->
+        <div id="editPermissionsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+          <div class="w-full max-w-2xl rounded-lg bg-white p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-start justify-between">
+              <h3 class="modal-title text-lg font-semibold">Edit Permissions</h3>
+              <button onclick="closeEditPermissionsModal()" class="text-gray-500">Close</button>
+            </div>
+            <form id="editPermissionsForm" class="mt-4 space-y-4">
+              <input type="hidden" id="editGroupId" name="group_id">
+              <div class="mb-4">
+                <h4 class="text-md font-medium text-gray-900" id="editGroupName"></h4>
+                <p class="text-sm text-gray-600">Select the permissions for this group</p>
+              </div>
+              
+              <!-- Permission Categories -->
+              <div class="space-y-6">
+                <!-- Core Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Core Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_view_profile" name="permissions" value="view_profile" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_view_profile" class="ml-2 block text-sm text-gray-900">View own profile</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_update_profile" name="permissions" value="update_profile" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_update_profile" class="ml-2 block text-sm text-gray-900">Update own profile</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_view_requests" name="permissions" value="view_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_view_requests" class="ml-2 block text-sm text-gray-900">View assigned requests</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_update_requests" name="permissions" value="update_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_update_requests" class="ml-2 block text-sm text-gray-900">Update request status</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Admin Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Admin Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_manage_users" name="permissions" value="manage_users" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_manage_users" class="ml-2 block text-sm text-gray-900">Manage users</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_manage_groups" name="permissions" value="manage_groups" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_manage_groups" class="ml-2 block text-sm text-gray-900">Manage groups</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_system_config" name="permissions" value="system_config" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_system_config" class="ml-2 block text-sm text-gray-900">System configuration</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_view_reports" name="permissions" value="view_reports" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_view_reports" class="ml-2 block text-sm text-gray-900">View all reports</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_manage_departments" name="permissions" value="manage_departments" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_manage_departments" class="ml-2 block text-sm text-gray-900">Manage departments</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_full_access" name="permissions" value="full_access" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_full_access" class="ml-2 block text-sm text-gray-900">Full system access</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Staff Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Staff Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_view_team_reports" name="permissions" value="view_team_reports" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_view_team_reports" class="ml-2 block text-sm text-gray-900">View team reports</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_manage_team" name="permissions" value="manage_team" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_manage_team" class="ml-2 block text-sm text-gray-900">Manage team members</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_assign_requests" name="permissions" value="assign_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_assign_requests" class="ml-2 block text-sm text-gray-900">Assign requests</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="perm_view_dept_data" name="permissions" value="view_dept_data" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="perm_view_dept_data" class="ml-2 block text-sm text-gray-900">View department data</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex items-center justify-end gap-2 pt-4">
+                <button type="button" onclick="closeEditPermissionsModal()" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700">Save Permissions</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Bulk Edit Permissions Modal -->
+        <div id="bulkEditPermissionsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+          <div class="w-full max-w-2xl rounded-lg bg-white p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-start justify-between">
+              <h3 class="modal-title text-lg font-semibold">Bulk Edit Permissions</h3>
+              <button onclick="closeBulkEditPermissionsModal()" class="text-gray-500">Close</button>
+            </div>
+            <form id="bulkEditPermissionsForm" class="mt-4 space-y-4">
+              <div class="mb-4">
+                <p class="text-sm text-gray-600">Select permissions to apply to all selected groups</p>
+              </div>
+              
+              <!-- Select Groups -->
+              <div>
+                <h5 class="text-sm font-medium text-gray-900 mb-2">Select Groups</h5>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {% for group in groups %}
+                  <div class="flex items-center">
+                    <input type="checkbox" id="bulk_group_{{ group.id }}" name="groups" value="{{ group.id }}" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                    <label for="bulk_group_{{ group.id }}" class="ml-2 block text-sm text-gray-900">{{ group.name }}</label>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              
+              <!-- Permission Categories -->
+              <div class="space-y-6">
+                <!-- Core Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Core Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_view_profile" name="permissions" value="view_profile" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_view_profile" class="ml-2 block text-sm text-gray-900">View own profile</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_update_profile" name="permissions" value="update_profile" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_update_profile" class="ml-2 block text-sm text-gray-900">Update own profile</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_view_requests" name="permissions" value="view_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_view_requests" class="ml-2 block text-sm text-gray-900">View assigned requests</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_update_requests" name="permissions" value="update_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_update_requests" class="ml-2 block text-sm text-gray-900">Update request status</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Admin Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Admin Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_manage_users" name="permissions" value="manage_users" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_manage_users" class="ml-2 block text-sm text-gray-900">Manage users</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_manage_groups" name="permissions" value="manage_groups" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_manage_groups" class="ml-2 block text-sm text-gray-900">Manage groups</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_system_config" name="permissions" value="system_config" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_system_config" class="ml-2 block text-sm text-gray-900">System configuration</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_view_reports" name="permissions" value="view_reports" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_view_reports" class="ml-2 block text-sm text-gray-900">View all reports</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_manage_departments" name="permissions" value="manage_departments" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_manage_departments" class="ml-2 block text-sm text-gray-900">Manage departments</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_full_access" name="permissions" value="full_access" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_full_access" class="ml-2 block text-sm text-gray-900">Full system access</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Staff Permissions -->
+                <div>
+                  <h5 class="text-sm font-medium text-gray-900 mb-2">Staff Permissions</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_view_team_reports" name="permissions" value="view_team_reports" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_view_team_reports" class="ml-2 block text-sm text-gray-900">View team reports</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_manage_team" name="permissions" value="manage_team" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_manage_team" class="ml-2 block text-sm text-gray-900">Manage team members</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_assign_requests" name="permissions" value="assign_requests" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_assign_requests" class="ml-2 block text-sm text-gray-900">Assign requests</label>
+                    </div>
+                    <div class="flex items-center">
+                      <input type="checkbox" id="bulk_perm_view_dept_data" name="permissions" value="view_dept_data" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                      <label for="bulk_perm_view_dept_data" class="ml-2 block text-sm text-gray-900">View department data</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex items-center justify-end gap-2 pt-4">
+                <button type="button" onclick="closeBulkEditPermissionsModal()" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700">Apply to Selected Groups</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Dynamic Role Cards -->
+        {% for group in groups %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <div class="p-4 flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg {% if 'admin' in group.name|lower %}bg-red-500/10{% elif 'staff' in group.name|lower %}bg-teal-500/10{% else %}bg-sky-600/10{% endif %}">
+                <span class="block h-6 w-6 rounded {% if 'admin' in group.name|lower %}bg-red-500{% elif 'staff' in group.name|lower %}bg-teal-500{% else %}bg-sky-600{% endif %}"></span>
+              </span>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ group.name }}</h3>
+                <p class="text-sm text-gray-600">
+                  {% if group.name == "Admins" %}
+                    Full access to all system features and settings
+                  {% elif group.name == "Staff" %}
+                    Access to operational features and guest services
+                  {% else %}
+                    Basic access to guest-facing features only
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <!-- Only show action buttons if user has appropriate permissions -->
+              {% if 'manage_users' in user_permissions or 'manage_groups' in user_permissions or request.user.is_superuser %}
+              <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role" onclick="copyRole({{ group.id }})">
+                <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
+              </button>
+              <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role" onclick="openEditPermissionsModal({{ group.id }}, '{{ group.name }}')">
+                <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
+              </button>
+              {% endif %}
             </div>
           </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
-        </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>View Requests</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Update Status</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Send Messages</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Admin Panel</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Staff|default:12 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Manager -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-teal-500/10">
-              <span class="block h-4 w-4 rounded bg-teal-500"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Manager</h3>
-              <p class="text-sm text-gray-600">Supervisory access</p>
+          <div class="px-4 pb-4">
+            <ul class="space-y-3" id="permissions-list-{{ group.id }}">
+              <!-- Permissions will be loaded dynamically -->
+              <li class="flex items-center justify-between text-sm text-gray-700">
+                <span>Loading permissions...</span>
+              </li>
+            </ul>
+            <div class="mt-4 flex items-center justify-between">
+              <p class="text-sm text-gray-600">{{ group_user_counts|get_item:group.name|default:0 }} users assigned</p>
+              <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
             </div>
           </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
         </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>All Staff Permissions</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>View Reports</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Manage Team</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>System Config</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Manager|default:5 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
+        {% empty %}
+        <div class="col-span-full text-center py-8">
+          <p class="text-gray-500">No user groups found.</p>
         </div>
+        {% endfor %}
       </div>
-
-      <!-- Concierge -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-700/10">
-              <span class="block h-3.5 w-5 rounded bg-fuchsia-700"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Concierge</h3>
-              <p class="text-sm text-gray-600">Guest service specialist</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
-        </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Guest Requests</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Guest Messaging</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Service Coordination</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Billing Access</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Concierge|default:8 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Maintenance -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-400/10">
-              <span class="block h-4 w-4 rounded bg-yellow-400"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Maintenance</h3>
-              <p class="text-sm text-gray-600">Technical support</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
-        </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Maintenance Requests</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Equipment Status</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Work Orders</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Guest Areas</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Maintenance|default:6 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Housekeeping -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/10">
-              <span class="block h-4 w-4 rounded bg-green-500"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Housekeeping</h3>
-              <p class="text-sm text-gray-600">Room service & cleaning</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
-        </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Room Status</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Cleaning Requests</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Inventory Updates</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Guest Data</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Housekeeping|default:15 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Super Admin -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="p-4 flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-red-500/10">
-              <span class="block h-4 w-4 rounded bg-red-500"></span>
-            </span>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">Super Admin</h3>
-              <p class="text-sm text-gray-600">Full system access</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Copy role">
-              <img src="{% static 'images/manage_users/profiles/copy.svg' %}" alt="Copy" class="h-5 w-5">
-            </button>
-            <button class="p-2 rounded-lg hover:bg-gray-100" title="Edit role">
-              <img src="{% static 'images/manage_users/profiles/edit.svg' %}" alt="Edit" class="h-5 w-5">
-            </button>
-          </div>
-        </div>
-        <div class="px-4 pb-4">
-          <ul class="space-y-3">
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>All Permissions</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>System Configuration</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>User Management</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-            <li class="flex items-center justify-between text-sm text-gray-700">
-              <span>Billing &amp; Plans</span>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-              </span>
-            </li>
-          </ul>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm text-gray-600">{{ role_counts.Super_Admin|default:2 }} users assigned</p>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">Active</span>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Module Permissions Overview -->
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -365,14 +303,17 @@
           <p class="text-sm text-gray-600">Compare permissions across different role templates</p>
         </div>
         <div class="flex items-center gap-3">
-          <button class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <img src="{% static 'images/manage_users/profiles/export.svg' %}" alt="Export" class="h-4 w-4">
+          <!-- Only show action buttons if user has appropriate permissions -->
+          {% if 'manage_users' in user_permissions or 'manage_groups' in user_permissions or request.user.is_superuser %}
+          <button class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" onclick="exportPermissions()">
+            <img src="{% static 'images/manage_users/profiles/export.svg' %}" alt="Export" class="h-5 w-5">
             <span>Export</span>
           </button>
-          <button class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
-            <img src="{% static 'images/manage_users/profiles/bulk_edit.svg' %}" alt="Bulk edit" class="h-4 w-4">
+          <button class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700" onclick="openBulkEditPermissionsModal()">
+            <img src="{% static 'images/manage_users/profiles/bulk_edit.svg' %}" alt="Bulk edit" class="h-5 w-5">
             <span>Bulk Edit</span>
           </button>
+          {% endif %}
         </div>
       </div>
 
@@ -382,188 +323,90 @@
             <thead class="bg-gray-50">
               <tr>
                 <th scope="col" class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Module</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Staff</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Manager</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Concierge</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Maintenance</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Housekeeping</th>
-                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Super Admin</th>
+                {% for group in groups %}
+                <th scope="col" class="px-4 py-3 text-center text-sm font-semibold text-gray-900">{{ group.name }}</th>
+                {% endfor %}
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <!-- Guest Requests -->
               <tr>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">Guest Requests</td>
+                {% for group in groups %}
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full {% if group.name == 'Admins' or group.name == 'Staff' %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                    {% if group.name == 'Admins' or group.name == 'Staff' %}
                     <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                    {% else %}
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                    {% endif %}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
-                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
-                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
+                {% endfor %}
               </tr>
 
               <!-- Messaging System -->
               <tr>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">Messaging System</td>
+                {% for group in groups %}
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full {% if group.name == 'Admins' or group.name == 'Staff' %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                    {% if group.name == 'Admins' or group.name == 'Staff' %}
                     <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    {% else %}
                     <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                    {% endif %}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
+                {% endfor %}
               </tr>
 
               <!-- Reports & Analytics -->
               <tr>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">Reports &amp; Analytics</td>
+                {% for group in groups %}
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full {% if group.name == 'Admins' %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                    {% if group.name == 'Admins' %}
                     <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
-                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
+                    {% else %}
                     <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                    {% endif %}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
-                    <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
-                  </span>
-                </td>
+                {% endfor %}
               </tr>
 
               <!-- User Management -->
               <tr>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">User Management</td>
+                {% for group in groups %}
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400">
-                    <img src="{% static 'images/manage_users/profiles/eye.svg' %}" alt="View only" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full {% if group.name == 'Admins' %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                    {% if group.name == 'Admins' %}
                     <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                    {% else %}
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                    {% endif %}
                   </span>
                 </td>
+                {% endfor %}
               </tr>
 
               <!-- System Settings -->
               <tr>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">System Settings</td>
+                {% for group in groups %}
                 <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300">
-                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded-full {% if group.name == 'Admins' %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                    {% if group.name == 'Admins' %}
                     <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+                    {% else %}
+                    <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="No access" class="h-3 w-3">
+                    {% endif %}
                   </span>
                 </td>
+                {% endfor %}
               </tr>
             </tbody>
           </table>
@@ -585,7 +428,7 @@
           </div>
           <div class="flex items-center gap-2">
             <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-300">
-              <img src="{% static '/images/manage_users/profiles/cross.svg' %}" alt="" class="h-2.5 w-2.5">
+              <img src="{% static 'images/manage_users/profiles/cross.svg' %}" alt="" class="h-2.5 w-2.5">
             </span>
             <span>No Access</span>
           </div>
@@ -595,3 +438,196 @@
 
   </div>
 </section>
+
+<script>
+// Load permissions for each group
+document.addEventListener('DOMContentLoaded', function() {
+  {% for group in groups %}
+  fetch('{% url "dashboard:api_group_permissions" group.id %}')
+    .then(response => response.json())
+    .then(data => {
+      const permissionsList = document.getElementById('permissions-list-{{ group.id }}');
+      if (data.permissions && data.permissions.length > 0) {
+        permissionsList.innerHTML = '';
+        // Show only first 4 permissions
+        data.permissions.slice(0, 4).forEach(permission => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between text-sm text-gray-700';
+          li.innerHTML = `
+            <span>${permission}</span>
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+              <img src="{% static 'images/manage_users/profiles/tick.svg' %}" alt="Full access" class="h-3 w-3">
+            </span>
+          `;
+          permissionsList.appendChild(li);
+        });
+        
+        // Add "View all permissions" link if there are more than 4 permissions
+        if (data.permissions.length > 4) {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-center text-sm text-sky-600 mt-2';
+          li.innerHTML = `<button class="text-sky-600 hover:underline" onclick="openEditPermissionsModal({{ group.id }}, '{{ group.name }}')">View all permissions</button>`;
+          permissionsList.appendChild(li);
+        }
+      } else {
+        permissionsList.innerHTML = '<li class="flex items-center justify-between text-sm text-gray-700"><span>No permissions defined</span></li>';
+      }
+    })
+    .catch(error => {
+      console.error('Error loading permissions for group {{ group.id }}:', error);
+      const permissionsList = document.getElementById('permissions-list-{{ group.id }}');
+      permissionsList.innerHTML = '<li class="flex items-center justify-between text-sm text-gray-700"><span>Failed to load permissions</span></li>';
+    });
+  {% endfor %}
+  
+  // Set up form submission handlers
+  document.getElementById('editPermissionsForm').addEventListener('submit', handleEditPermissionsSubmit);
+  document.getElementById('bulkEditPermissionsForm').addEventListener('submit', handleBulkEditPermissionsSubmit);
+});
+
+// Modal functions
+function openEditPermissionsModal(groupId, groupName) {
+  // Set group ID and name in the form
+  document.getElementById('editGroupId').value = groupId;
+  document.getElementById('editGroupName').textContent = groupName;
+  
+  // Load current permissions for the group
+  loadGroupPermissions(groupId);
+  
+  // Show the modal
+  document.getElementById('editPermissionsModal').classList.remove('hidden');
+  document.getElementById('editPermissionsModal').classList.add('flex');
+}
+
+function closeEditPermissionsModal() {
+  document.getElementById('editPermissionsModal').classList.add('hidden');
+  document.getElementById('editPermissionsModal').classList.remove('flex');
+}
+
+function openBulkEditPermissionsModal() {
+  // Show the modal
+  document.getElementById('bulkEditPermissionsModal').classList.remove('hidden');
+  document.getElementById('bulkEditPermissionsModal').classList.add('flex');
+}
+
+function closeBulkEditPermissionsModal() {
+  document.getElementById('bulkEditPermissionsModal').classList.add('hidden');
+  document.getElementById('bulkEditPermissionsModal').classList.remove('flex');
+}
+
+// Icon functionality functions
+function copyRole(groupId) {
+  // In a real implementation, this would copy the role permissions
+  alert(`Role from group ${groupId} copied to clipboard. You can now paste it to create a new role.`);
+}
+
+function exportPermissions() {
+  // In a real implementation, this would export permissions data
+  alert('Permissions exported successfully!');
+}
+
+// Load group permissions
+function loadGroupPermissions(groupId) {
+  fetch(`/dashboard/api/groups/${groupId}/permissions/`)
+    .then(response => response.json())
+    .then(data => {
+      // Reset all checkboxes
+      const checkboxes = document.querySelectorAll('#editPermissionsForm input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      
+      // Check permissions that are currently set
+      if (data.permissions) {
+        data.permissions.forEach(permission => {
+          const checkbox = document.getElementById(`perm_${permission.replace(/\s+/g, '_').toLowerCase()}`);
+          if (checkbox) {
+            checkbox.checked = true;
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error loading group permissions:', error);
+    });
+}
+
+// Handle edit permissions form submission
+function handleEditPermissionsSubmit(event) {
+  event.preventDefault();
+  
+  const groupId = document.getElementById('editGroupId').value;
+  const formData = new FormData(event.target);
+  const permissions = [];
+  
+  // Collect selected permissions
+  formData.getAll('permissions').forEach(permission => {
+    permissions.push(permission);
+  });
+  
+  // Send update request
+  fetch(`/dashboard/api/groups/${groupId}/permissions/update/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify({ permissions: permissions })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal and refresh permissions display
+      closeEditPermissionsModal();
+      location.reload();
+    } else {
+      alert('Failed to update permissions: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error updating permissions:', error);
+    alert('Failed to update permissions');
+  });
+}
+
+// Handle bulk edit permissions form submission
+function handleBulkEditPermissionsSubmit(event) {
+  event.preventDefault();
+  
+  const formData = new FormData(event.target);
+  const groupIds = formData.getAll('groups');
+  const permissions = formData.getAll('permissions');
+  
+  if (groupIds.length === 0) {
+    alert('Please select at least one group');
+    return;
+  }
+  
+  // Send bulk update request
+  fetch('/dashboard/api/groups/bulk-permissions/update/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify({ 
+      group_ids: groupIds,
+      permissions: permissions 
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Close modal and refresh page
+      closeBulkEditPermissionsModal();
+      location.reload();
+    } else {
+      alert('Failed to update permissions: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error updating permissions:', error);
+    alert('Failed to update permissions');
+  });
+}
+</script>

@@ -1,18 +1,71 @@
-{% extends 'base.html' %}
+{% extends 'base_auth.html' %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-md mx-auto mt-12 bg-white rounded-lg shadow-lg p-8">
-  <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="w-full py-2 px-4 rounded bg-sky-600 hover:bg-sky-700 text-white font-medium">Sign In</button>
-  </form>
+{% block title %}Login - GuestConnect{% endblock %}
 
-  <p class="mt-4 text-center text-gray-600">
-    Don’t have an account? 
-    <a href="{% url 'signup' %}" class="text-sky-600 hover:underline">Sign Up</a>
-  </p>
+{% block content %}
+
+<div class="w-[1440px] h-[979px] bg-gray-50 border-gray-200 inline-flex justify-center items-center font-['Inter']">
+  <div class="w-96 h-[512px] relative bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] outline outline-1 outline-offset-[-1px] outline-gray-200">
+
+```
+<!-- Logo -->
+<div class="absolute left-[33px] top-[33px] flex items-center gap-3">
+  <div class="w-10 h-10 bg-sky-600 rounded-lg flex justify-center items-center">
+    <div class="w-6 h-4 bg-white"></div>
+  </div>
+  <div>
+    <div class="text-lg font-bold text-gray-900">GuestConnect</div>
+    <div class="text-xs text-gray-600">by Victoire</div>
+  </div>
+</div>
+
+<!-- Title -->
+<div class="absolute top-[105px] left-[33px] w-96 text-center">
+  <h2 class="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
+  <p class="text-sm text-gray-600 mt-1">Sign in to manage your property</p>
+</div>
+
+<!-- Login Form -->
+<form method="post" class="absolute top-[191px] left-[33px] w-96 h-72">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="text-sm text-red-600 text-center mb-4">
+      {% for error in form.non_field_errors %}
+        {{ error }}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Email -->
+  <div class="mb-6">
+    <label for="username" class="block text-sm font-medium text-gray-900">Email</label>
+    <input type="text" name="username" id="username" placeholder="Enter your email"
+      class="mt-2 block w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500" required>
+  </div>
+
+  <!-- Password -->
+  <div class="mb-6">
+    <label for="password" class="block text-sm font-medium text-gray-900">Password</label>
+    <input type="password" name="password" id="password" placeholder="Enter your password"
+      class="mt-2 block w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500" required>
+  </div>
+
+  <!-- Sign In Button -->
+  <div class="mb-4">
+    <button type="submit"
+      class="w-full py-2 px-4 bg-sky-600 text-white text-sm font-medium rounded-lg shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500">
+      Sign In
+    </button>
+  </div>
+
+  <!-- Forgot Password -->
+  <div class="text-center">
+    <a href="{% url 'password_reset' %}" class="text-sm text-sky-600 hover:underline">Forgot your password?</a>
+  </div>
+</form>
+```
+
+  </div>
 </div>
 {% endblock %}

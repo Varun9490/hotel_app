@@ -49,10 +49,7 @@
            class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'groups' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
           Groups
         </a>
-        <a href="{% url 'dashboard:manage_users_roles' %}"
-           class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'roles' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
-          Roles & Permissions
-        </a>
+        <!-- Roles & Permissions tab removed -->
         <a href="{% url 'dashboard:manage_users_profiles' %}"
            class="relative py-4 text-sm font-medium font-['Inter'] border-b-2 {% if active_tab == 'profiles' %}text-sky-600 border-sky-600{% else %}text-gray-600 border-transparent{% endif %}">
           User Profiles

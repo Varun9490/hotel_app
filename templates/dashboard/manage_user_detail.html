@@ -8,7 +8,9 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col gap-2 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex items-start gap-4">
-          <div class="flex h-10 w-7 items-center justify-center rounded-lg bg-gray-100"></div>
+          <a href="{% url 'dashboard:manage_users_all' %}" class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition">
+            <img src="{% static 'images/manage_users/back.svg' %}" alt="Back" class="h-5 w-5">
+          </a>
           <div class="min-w-0">
             <h1 class="text-2xl font-bold leading-8">User Detail</h1>
             <nav class="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-gray-600">
@@ -22,19 +24,31 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
+          <form id="toggleUserStatusForm" method="post" action="{% url 'dashboard:api_manage_users_toggle_enabled' user.pk %}">
+            {% csrf_token %}
+            <button
+              type="button"
+              onclick="toggleUserStatus()"
+              class="inline-flex h-9 items-center justify-center rounded-lg border {% if profile and profile.enabled %}border-red-500/30 text-red-500 outline outline-1 outline-offset-[-1px] outline-red-500 hover:bg-red-50{% else %}border-green-500/30 text-green-500 outline outline-1 outline-offset-[-1px] outline-green-500 hover:bg-green-50{% endif %} transition px-4 text-sm font-medium"
+            >
+              <img src="{% static 'images/manage_users/deactivate.svg' %}" alt="{% if profile and profile.enabled %}Deactivate{% else %}Activate{% endif %}" class="mr-2 h-5 w-5">
+              {% if profile and profile.enabled %}Deactivate{% else %}Activate{% endif %}
+            </button>
+          </form>
           <button
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg border border-red-500/30 px-4 text-sm font-medium text-red-500 outline outline-1 outline-offset-[-1px] outline-red-500 hover:bg-red-50 transition"
+            onclick="openResetPasswordModal()"
+            class="inline-flex h-9 items-center justify-center rounded-lg bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700 transition"
           >
-            <span class="mr-2 inline-block h-3.5 w-3.5 rounded bg-red-500"></span>
-            Deactivate
+            <img src="{% static 'images/manage_users/reset.svg' %}" alt="Reset" class="mr-2 h-5 w-5">
+            Reset Password
           </button>
           <button
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-lg bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700 transition"
+            onclick="openEditUserModal()"
+            class="inline-flex h-9 items-center justify-center rounded-lg border border-sky-600 px-4 text-sm font-medium text-sky-600 hover:bg-sky-50 transition"
           >
-            <span class="mr-2 inline-block h-3.5 w-3.5 rounded bg-white"></span>
-            Reset Password
+            Edit
           </button>
         </div>
       </div>
@@ -56,8 +70,8 @@
             />
             <h2 class="mt-4 text-xl font-semibold leading-7">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h2>
             <p class="mt-1 text-sm leading-5 text-gray-600">{{ user.email|default:'-' }}</p>
-            <span class="mt-3 inline-flex items-center rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
-              <span class="mr-2 inline-block h-2 w-2 rounded-full bg-green-500"></span>
+            <span class="mt-3 inline-flex items-center rounded-full {% if profile and profile.enabled %}bg-green-500/10 text-green-500{% else %}bg-red-500/10 text-red-500{% endif %} px-3 py-1 text-sm font-medium">
+              <span class="mr-2 inline-block h-2 w-2 rounded-full {% if profile and profile.enabled %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
               {% if profile and profile.enabled %}Active{% else %}Inactive{% endif %}
             </span>
           </div>
@@ -68,11 +82,11 @@
               <h3 class="text-sm font-semibold leading-5">Contact Information</h3>
               <div class="mt-3 space-y-3">
                 <div class="flex items-center gap-3">
-                  <span class="inline-block h-4 w-4 rounded bg-gray-600/80"></span>
+                  <img src="{% static 'images/manage_users/phone.svg' %}" alt="Phone" class="h-5 w-5">
                   <span class="text-sm leading-5 text-gray-600">{{ profile.phone|default:'-' }}</span>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="inline-block h-4 w-4 rounded bg-gray-600/60"></span>
+                  <img src="{% static 'images/manage_users/location.svg' %}" alt="Location" class="h-5 w-5">
                   <span class="text-sm leading-5 text-gray-600">{{ profile.timezone|default:'-' }}</span>
                 </div>
               </div>
@@ -81,20 +95,20 @@
             <!-- Account Details -->
             <div>
               <h3 class="text-sm font-semibold leading-5">Account Details</h3>
-              <dl class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                <div class="flex items-center justify-between sm:justify-start sm:gap-2">
-                  <dt class="text-gray-600">User ID:</dt>
-                  <dd class="font-medium text-gray-900">{{ user.pk }}</dd>
+              <div class="mt-3 space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 text-sm">User ID:</span>
+                  <span class="text-gray-900 text-sm font-medium">USR-{{ user.pk }}</span>
                 </div>
-                <div class="flex items-center justify-between sm:justify-start sm:gap-2">
-                  <dt class="text-gray-600">Created:</dt>
-                  <dd class="text-gray-900">{% if profile and profile.created_at %}{{ profile.created_at|date:"M d, Y" }}{% else %}{{ user.date_joined|date:"M d, Y" }}{% endif %}</dd>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 text-sm">Created:</span>
+                  <span class="text-gray-900 text-sm">{% if profile and profile.created_at %}{{ profile.created_at|date:"M d, Y" }}{% else %}{{ user.date_joined|date:"M d, Y" }}{% endif %}</span>
                 </div>
-                <div class="flex items-center justify-between sm:justify-start sm:gap-2">
-                  <dt class="text-gray-600">Last Login:</dt>
-                  <dd class="text-gray-900">{% if user.last_login %}{{ user.last_login|timesince }} ago{% else %}-{% endif %}</dd>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 text-sm">Last Login:</span>
+                  <span class="text-gray-900 text-sm">{% if user.last_login %}{{ user.last_login|timesince }} ago{% else %}-{% endif %}</span>
                 </div>
-              </dl>
+              </div>
             </div>
           </div>
         </section>
@@ -102,12 +116,10 @@
 
       <!-- Right Column -->
       <section class="space-y-6">
-        <!-- Tabs -->
+        <!-- Tabs (reduced) -->
         <nav class="border-b border-gray-200">
           <ul class="flex gap-8 text-sm">
             <li class="border-b-2 border-sky-600 py-3 font-medium text-sky-600">Profile & Roles</li>
-            <li class="border-b-2 border-transparent py-3 font-medium text-gray-600 hover:text-gray-800">Activity Log</li>
-            <li class="border-b-2 border-transparent py-3 font-medium text-gray-600 hover:text-gray-800">Devices</li>
           </ul>
         </nav>
 
@@ -117,136 +129,406 @@
           <div class="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
             <!-- Roles -->
             <div class="space-y-3">
+              {% for group in groups %}
               <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-neutral-50 p-3">
                 <div class="flex items-center gap-3">
-                  <span class="inline-block h-4 w-5 rounded bg-sky-600"></span>
-                  <span class="text-sm font-medium leading-5">Front Desk Manager</span>
+                  <img src="{% static 'images/manage_users/primary.svg' %}" alt="Role" class="h-5 w-5 {% if forloop.first %}text-sky-600{% else %}text-gray-400{% endif %}">
+                  <span class="text-sm font-medium leading-5">{{ group.name }}</span>
                 </div>
+                {% if forloop.first %}
                 <span class="inline-flex items-center rounded-full bg-sky-600/10 px-2.5 py-1 text-xs font-medium text-sky-600">Primary</span>
+                {% else %}
+                <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700">Secondary</span>
+                {% endif %}
               </div>
+              {% empty %}
               <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-neutral-50 p-3">
                 <div class="flex items-center gap-3">
-                  <span class="inline-block h-4 w-5 rounded bg-gray-400"></span>
-                  <span class="text-sm font-medium leading-5">Guest Services</span>
+                  <img src="{% static 'images/manage_users/primary.svg' %}" alt="Role" class="h-5 w-5 text-gray-400">
+                  <span class="text-sm font-medium leading-5">No roles assigned</span>
                 </div>
-                <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700">Secondary</span>
               </div>
+              {% endfor %}
             </div>
 
             <!-- Permissions -->
             <div>
               <h4 class="text-sm font-medium leading-5">Permissions</h4>
-              <ul class="mt-3 space-y-3 text-sm leading-5 text-gray-600">
-                <li class="flex items-center gap-2">
-                  <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
-                  Manage guest requests
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
-                  View guest profiles
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
-                  Send WhatsApp messages
-                </li>
-                <li class="flex items-center gap-2">
-                  <span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
-                  Admin panel access
-                </li>
-              </ul>
+              <div id="permissions-list" class="mt-3 space-y-3 text-sm leading-5 text-gray-600">
+                <!-- Permissions will be loaded dynamically -->
+                <div class="flex items-center justify-center py-4">
+                  <div class="h-4 w-4 animate-spin rounded-full border-2 border-solid border-sky-600 border-t-transparent"></div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- Department Assignment -->
+        <!-- Department Assignment (simplified) -->
         <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 class="text-lg font-semibold leading-7">Department Assignment</h3>
-          <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <h3 class="text-lg font-semibold leading-7">Department</h3>
+          <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-1">
             <div class="rounded-lg border border-sky-600/20 bg-sky-600/5 p-4">
-              <div class="mx-auto mb-2 h-6 w-4 rounded bg-sky-600"></div>
+              <img src="{% static 'images/manage_users/primary_department.svg' %}" alt="Department" class="mx-auto mb-2 h-6 w-6">
               <p class="text-center text-base font-medium leading-6">Primary Department</p>
               <p class="mt-1 text-center text-sm leading-5 text-gray-600">{% if profile and profile.department %}{{ profile.department.name }}{% else %}-{% endif %}</p>
             </div>
-            <div class="rounded-lg border border-gray-200 bg-neutral-50 p-4">
-              <div class="mx-auto mb-2 h-6 w-7 rounded bg-gray-400"></div>
-              <p class="text-center text-base font-medium leading-6">Team Size</p>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">{% if profile and profile.department %}{{ profile.department.user_set.count }} Members{% else %}-{% endif %}</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 bg-neutral-50 p-4">
-              <div class="mx-auto mb-2 h-6 w-6 rounded bg-gray-400"></div>
-              <p class="text-center text-base font-medium leading-6">Shift</p>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">-</p>
-            </div>
           </div>
         </section>
 
-        <!-- Recent Activity Summary -->
-        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 class="text-lg font-semibold leading-7">Recent Activity Summary</h3>
-          <div class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div class="rounded-lg border border-green-500/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-green-500">{{ requests_handled }}</div>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Requests Handled</p>
-              <p class="mt-1 text-center text-xs leading-4 text-gray-400">This week</p>
-            </div>
-            <div class="rounded-lg border border-teal-500/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-teal-500">{{ messages_sent }}</div>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Messages Sent</p>
-              <p class="mt-1 text-center text-xs leading-4 text-gray-400">This week</p>
-            </div>
-            <div class="rounded-lg border border-yellow-400/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-yellow-400">{{ avg_rating }}</div>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Avg Rating</p>
-              <p class="mt-1 text-center text-xs leading-4 text-gray-400">Last 30 days</p>
-            </div>
-            <div class="rounded-lg border border-fuchsia-700/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-fuchsia-700">{{ response_rate }}%</div>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Response Rate</p>
-              <p class="mt-1 text-center text-xs leading-4 text-gray-400">Last 30 days</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- Recent Activity -->
-        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 class="text-lg font-semibold leading-7">Recent Activity</h3>
-          <div class="mt-5 space-y-4">
-            <article class="flex items-start gap-3 rounded-lg border border-gray-200 bg-neutral-50 p-3">
-              <span class="inline-flex h-10 w-7 items-center justify-center rounded-lg bg-green-500/10">
-                <span class="inline-block h-2.5 w-3.5 rounded bg-green-500"></span>
-              </span>
-              <div class="min-w-0">
-                <h4 class="text-sm font-medium leading-5 text-gray-900">Resolved guest request #GR-2024-0892</h4>
-                <p class="mt-1 text-xs leading-4 text-gray-600">Extra towels delivered to Room 312</p>
-                <p class="mt-1 text-xs leading-4 text-gray-400">2 hours ago</p>
-              </div>
-            </article>
-
-            <article class="flex items-start gap-3 rounded-lg border border-gray-200 bg-neutral-50 p-3">
-              <span class="inline-flex h-10 w-9 items-center justify-center rounded-lg bg-sky-600/10">
-                <span class="inline-block h-4 w-5 rounded bg-sky-600"></span>
-              </span>
-              <div class="min-w-0">
-                <h4 class="text-sm font-medium leading-5 text-gray-900">Sent WhatsApp welcome message</h4>
-                <p class="mt-1 text-xs leading-4 text-gray-600">To guest in Room 428</p>
-                <p class="mt-1 text-xs leading-4 text-gray-400">4 hours ago</p>
-              </div>
-            </article>
-
-            <article class="flex items-start gap-3 rounded-lg border border-gray-200 bg-neutral-50 p-3">
-              <span class="inline-flex h-10 w-8 items-center justify-center rounded-lg bg-yellow-400/10">
-                <span class="inline-block h-4 w-4 rounded bg-yellow-400"></span>
-              </span>
-              <div class="min-w-0">
-                <h4 class="text-sm font-medium leading-5 text-gray-900">Updated guest request #GR-2024-0891</h4>
-                <p class="mt-1 text-xs leading-4 text-gray-600">Maintenance request escalated to supervisor</p>
-                <p class="mt-1 text-xs leading-4 text-gray-400">6 hours ago</p>
-              </div>
-            </article>
-          </div>
-        </section>
+        <!-- Removed Activity Log and Devices sections per request -->
       </section>
     </div>
   </main>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-md rounded-lg bg-white p-6" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between">
+      <h3 class="text-lg font-semibold">Reset Password</h3>
+      <button onclick="closeResetPasswordModal()" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
+    </div>
+    <form id="resetPasswordForm" class="mt-4 space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">New Password</label>
+        <input type="password" id="newPassword" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Confirm Password</label>
+        <input type="password" id="confirmPassword" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required />
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" onclick="closeResetPasswordModal()" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm">Cancel</button>
+        <button type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white">Reset Password</button>
+      </div>
+      <div id="resetPasswordError" class="text-sm text-red-600 hidden"></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Ensure showToast exists
+if (typeof showToast === 'undefined') {
+  function showToast(message, type='success') {
+    const existing = document.getElementById('toastNotification');
+    if (existing) {
+      document.getElementById('toastMessage').textContent = message;
+      existing.classList.remove('hidden'); existing.classList.add('flex');
+      setTimeout(()=>{ existing.classList.add('hidden'); existing.classList.remove('flex'); },3000);
+      return;
+    }
+    alert(message);
+  }
+}
+
+// Toggle user status (activate/deactivate)
+function toggleUserStatus() {
+  if (confirm('{% if profile and profile.enabled %}Are you sure you want to deactivate this user?{% else %}Are you sure you want to activate this user?{% endif %}')) {
+    document.getElementById('toggleUserStatusForm').submit();
+  }
+}
+
+// Reset password modal functions
+function openResetPasswordModal() {
+  document.getElementById('resetPasswordForm').reset();
+  document.getElementById('resetPasswordError').classList.add('hidden');
+  document.getElementById('resetPasswordModal').classList.remove('hidden');
+  document.getElementById('resetPasswordModal').classList.add('flex');
+}
+
+function closeResetPasswordModal() {
+  document.getElementById('resetPasswordModal').classList.add('hidden');
+  document.getElementById('resetPasswordModal').classList.remove('flex');
+}
+
+// Handle reset password form submission
+document.getElementById('resetPasswordForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  const errorEl = document.getElementById('resetPasswordError');
+  
+  if (newPassword !== confirmPassword) {
+    errorEl.textContent = 'Passwords do not match.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  if (newPassword.length < 8) {
+    errorEl.textContent = 'Password must be at least 8 characters long.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  errorEl.classList.add('hidden');
+  
+  // Call the API endpoint to reset the password
+  const formData = {
+    'new_password': newPassword,
+    'confirm_password': confirmPassword
+  };
+  
+  // Debugging: log the request
+  console.log('Sending password reset request for user ID:', '{{ user.pk }}');
+  console.log('Request data:', formData);
+  
+  fetch('{% url "dashboard:api_reset_user_password" user.pk %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+    },
+    body: JSON.stringify(formData)
+  }).then(response => {
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  }).then(data => {
+    console.log('Response data:', data);
+    if (data.success) {
+      closeResetPasswordModal();
+      showToast('Password has been reset successfully!', 'success');
+    } else {
+      throw new Error(data.error || 'Failed to reset password');
+    }
+  }).catch(error => {
+    console.error('Error resetting password:', error);
+    errorEl.textContent = error.message || 'Failed to reset password. Try again.';
+    errorEl.classList.remove('hidden');
+  });
+});
+
+// Edit User Modal
+function openEditUserModal() {
+  // populate fields from server-rendered values
+  document.getElementById('editUserFullName').value = '{{ profile.full_name|default:user.get_full_name|escapejs }}';
+  document.getElementById('editUserEmail').value = '{{ user.email|default:""|escapejs }}';
+  document.getElementById('editUserUsername').value = '{{ user.username|escapejs }}';
+  
+  // department select (if exists)
+  const deptSelect = document.getElementById('editUserDepartment');
+  if (deptSelect) {
+    // clear and add current
+    deptSelect.innerHTML = '<option value="">None</option>';
+    
+    // Add departments using data attributes
+    const deptOptions = document.getElementById('departmentOptions').innerHTML;
+    deptSelect.innerHTML += deptOptions;
+    
+    // Set the selected department
+    try { 
+      const selectedDept = document.getElementById('selectedDepartment').value;
+      deptSelect.value = selectedDept || '';
+    } catch(e) {
+      // Handle any errors silently
+    }
+  }
+  
+  document.getElementById('editUserPhone').value = '{{ profile.phone|default:""|escapejs }}';
+  document.getElementById('editUserTitle').value = '{{ profile.title|default:""|escapejs }}';
+  document.getElementById('editUserIsActive').checked = {{ user.is_active|yesno:"true,false" }};
+  document.getElementById('editUserError').classList.add('hidden');
+  const modal = document.getElementById('editUserModal');
+  if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+}
+
+function closeEditUserModal() { 
+  const modal = document.getElementById('editUserModal'); 
+  if (modal) { 
+    modal.classList.add('hidden'); 
+    modal.classList.remove('flex'); 
+  } 
+}
+
+function submitEditUser(e) {
+  e.preventDefault();
+  const btn = document.getElementById('editUserSubmit');
+  const full_name = document.getElementById('editUserFullName').value.trim();
+  const email = document.getElementById('editUserEmail').value.trim();
+  const username = document.getElementById('editUserUsername').value.trim();
+  const phone = document.getElementById('editUserPhone').value.trim();
+  const title = document.getElementById('editUserTitle').value.trim();
+  const department = document.getElementById('editUserDepartment')?.value || '';
+  const is_active = document.getElementById('editUserIsActive').checked ? '1' : '0';
+  const errorEl = document.getElementById('editUserError');
+  if (!username || !email) { 
+    errorEl.textContent = 'Username and email are required.'; 
+    errorEl.classList.remove('hidden'); 
+    return; 
+  }
+  btn.disabled = true; 
+  errorEl.classList.add('hidden');
+
+  // Create form data
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('email', email);
+  formData.append('full_name', full_name);
+  formData.append('phone', phone);
+  formData.append('title', title);
+  if (department) formData.append('department', department);
+  formData.append('is_active', is_active);
+  formData.append('csrfmiddlewaretoken', document.querySelector('input[name="csrfmiddlewaretoken"]').value);
+
+  fetch('{% url "dashboard:user_update" user.pk %}', {
+    method: 'POST',
+    body: formData
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  }).then(data => {
+    if (data.success) {
+      btn.disabled = false; 
+      closeEditUserModal(); 
+      showToast('User updated successfully!');
+      // Reload the page to show updated information
+      setTimeout(() => { window.location.reload(); }, 700);
+    } else {
+      throw new Error(data.message || 'Failed to update user');
+    }
+  }).catch(error => {
+    errorEl.textContent = 'Failed to update user. Try again.'; 
+    errorEl.classList.remove('hidden'); 
+    btn.disabled = false;
+  });
+}
+
+// Load permissions for the user's groups
+document.addEventListener('DOMContentLoaded', function() {
+  const groupIds = [{% for group in groups %}{{ group.id }},{% endfor %}];
+  
+  if (groupIds.length > 0) {
+    // For demo purposes, we'll show some sample permissions
+    const permissionsList = document.getElementById('permissions-list');
+    permissionsList.innerHTML = '';
+    
+    // Sample permissions based on group names
+    const samplePermissions = {
+      'Admins': [
+        'Manage users and groups',
+        'System configuration',
+        'View all reports',
+        'Manage departments',
+        'Full system access'
+      ],
+      'Staff': [
+        'Manage guest requests',
+        'View guest profiles',
+        'Send WhatsApp messages',
+        'Manage team members'
+      ],
+      'Users': [
+        'View own profile',
+        'Update own profile',
+        'View assigned requests'
+      ]
+    };
+    
+    // Get permissions for the user's groups
+    let permissions = [];
+    {% for group in groups %}
+      if (samplePermissions['{{ group.name }}']) {
+        permissions = permissions.concat(samplePermissions['{{ group.name }}']);
+      }
+    {% endfor %}
+    
+    // If no specific permissions, show default ones
+    if (permissions.length === 0) {
+      permissions = [
+        'View own profile',
+        'Update own profile',
+        'View assigned requests',
+        'Update request status'
+      ];
+    }
+    
+    // Display permissions
+    permissions.forEach(permission => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-2';
+      div.innerHTML = `
+        <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+        ${permission}
+      `;
+      permissionsList.appendChild(div);
+    });
+  } else {
+    // No groups assigned
+    const permissionsList = document.getElementById('permissions-list');
+    permissionsList.innerHTML = '<div class="text-gray-500">No permissions assigned</div>';
+  }
+});
+</script>
+
+<!-- Hidden data elements for departments -->
+<div id="departmentOptions" style="display: none;">
+  {% for d in departments %}
+  <option value="{{ d.name|escapejs }}">{{ d.name|escapejs }}</option>
+  {% endfor %}
+</div>
+
+<input type="hidden" id="selectedDepartment" value="{% if profile and profile.department %}{{ profile.department.name|escapejs }}{% endif %}">
+<input type="hidden" id="userIsActive" value="{% if user.is_active %}true{% else %}false{% endif %}">
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-2xl rounded-lg bg-white p-6" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between">
+      <h3 class="text-lg font-semibold">Edit User</h3>
+      <button onclick="closeEditUserModal()" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
+    </div>
+    <form id="editUserForm" class="mt-4 grid grid-cols-1 gap-4" onsubmit="submitEditUser(event)">
+      {% csrf_token %}
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Full Name</label>
+          <input id="editUserFullName" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Username</label>
+          <input id="editUserUsername" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input id="editUserEmail" type="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Phone</label>
+          <input id="editUserPhone" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Title</label>
+          <input id="editUserTitle" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Department</label>
+          <select id="editUserDepartment" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></select>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <input id="editUserIsActive" type="checkbox" class="h-4 w-4" />
+        <label class="text-sm">Active</label>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" onclick="closeEditUserModal()" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm">Cancel</button>
+        <button id="editUserSubmit" type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white">Save</button>
+      </div>
+      <div id="editUserError" class="text-sm text-red-600 hidden"></div>
+    </form>
+  </div>
 </div>
 {% endblock %}

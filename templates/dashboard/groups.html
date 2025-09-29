@@ -175,7 +175,7 @@
 </div>
 {% endblock manage_content %}
 
-{% block extra_js %}
+{% block extra_js %}{{ block.super }}
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // Static base path for icons

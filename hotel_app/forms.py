@@ -309,14 +309,20 @@ class VoucherScanForm(forms.Form):
 
 
 class UserForm(forms.ModelForm):
-    full_name = forms.CharField(max_length=160, required=True)
+    full_name = forms.CharField(max_length=160, required=False)
     phone = forms.CharField(max_length=15, required=False)
     title = forms.CharField(max_length=120, required=False)
     department = forms.ModelChoiceField(queryset=Department.objects.all(), required=False)
+    role = forms.CharField(max_length=100, required=False)  # Change to CharField to avoid choice validation
 
     class Meta:
         model = User
         fields = ['username', 'email', 'is_active']
+        # Add widgets for better styling
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -327,21 +333,48 @@ class UserForm(forms.ModelForm):
                 self.fields['phone'].initial = profile.phone
                 self.fields['title'].initial = profile.title
                 self.fields['department'].initial = profile.department
+                # Set initial role based on user's groups
+                user_groups = self.instance.groups.values_list('name', flat=True)
+                if user_groups:
+                    self.fields['role'].initial = user_groups[0]  # Take the first group as the role
             except UserProfile.DoesNotExist:
                 pass
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("A user with this email already exists.")
+        return email
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username and User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("A user with this username already exists.")
+        return username
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        if not self.instance.pk: # Set a default password for new users
-            user.set_password('password123') # You should have a more secure way to handle this
+        if not self.instance.pk:  # Set a default password for new users
+            user.set_password('password123')  # You should have a more secure way to handle this
         if commit:
             user.save()
             profile, created = UserProfile.objects.get_or_create(user=user)
-            profile.full_name = self.cleaned_data['full_name']
-            profile.phone = self.cleaned_data['phone']
-            profile.title = self.cleaned_data['title']
-            profile.department = self.cleaned_data['department']
+            profile.full_name = self.cleaned_data.get('full_name', '')
+            profile.phone = self.cleaned_data.get('phone', '')
+            profile.title = self.cleaned_data.get('title', '')
+            profile.department = self.cleaned_data.get('department', None)
             profile.save()
+            
+            # Handle role assignment
+            role = self.cleaned_data.get('role')
+            if role:
+                from django.contrib.auth.models import Group
+                try:
+                    group = Group.objects.get(name=role)
+                    user.groups.set([group])  # Assign the user to the selected group
+                except Group.DoesNotExist:
+                    # If the group doesn't exist, don't assign any role
+                    user.groups.clear()
         return user
 
 class DepartmentForm(forms.ModelForm):

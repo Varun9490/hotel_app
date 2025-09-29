@@ -71,10 +71,12 @@ urlpatterns = [
     path('manage-users/users/<int:user_id>/', dashboard_views.manage_user_detail, name='manage_user_detail'),
     # API endpoint for Manage Users polling
     path('api/manage-users/users/', dashboard_views.manage_users_api_users, name='api_manage_users_users'),
+    path('api/manage-users/users/<int:user_id>/', dashboard_views.manage_users_api_users, name='api_manage_users_users_detail'),
+    path('api/manage-users/users/<int:user_id>/reset-password/', dashboard_views.api_reset_user_password, name='api_reset_user_password'),
     path('api/manage-users/users/<int:user_id>/toggle-enabled/', dashboard_views.manage_users_toggle_enabled, name='api_manage_users_toggle_enabled'),
     path('api/manage-users/users/bulk-action/', dashboard_views.manage_users_api_bulk_action, name='api_manage_users_bulk_action'),
     # Filters endpoint used by the Manage Users frontend to populate selects
-    path('api/manage-users/filters/', dashboard_views.manage_users_api_filters, name='api_manage_users_filters'),
+    path('api/manage-users/filters/', dashboard_views.api_manage_users_filters, name='api_manage_users_filters'),
     path('manage-users/groups/', dashboard_views.manage_users_groups, name='manage_users_groups'),
     # Group membership management
     path('manage-users/groups/<int:group_id>/add-member/', dashboard_views.add_group_member, name='add_group_member'),
@@ -84,8 +86,11 @@ urlpatterns = [
     path('api/departments/<int:dept_id>/notify/', dashboard_views.api_notify_department, name='api_department_notify'),
     path('api/departments/<int:dept_id>/members/', dashboard_views.api_department_members, name='api_department_members'),
     path('manage-users/departments/<int:dept_id>/assign-lead/', dashboard_views.assign_department_lead, name='assign_department_lead'),
+    path('api/departments/create/', dashboard_views.department_create, name='department_create'),
     path('api/groups/<int:group_id>/members/', dashboard_views.api_group_members, name='api_group_members'),
-    path('manage-users/roles/', dashboard_views.manage_users_roles, name='manage_users_roles'),
+    path('api/groups/<int:group_id>/permissions/', dashboard_views.api_group_permissions, name='api_group_permissions'),
+    path('api/groups/<int:group_id>/permissions/update/', dashboard_views.api_group_permissions_update, name='api_group_permissions_update'),
+    path('api/groups/bulk-permissions/update/', dashboard_views.api_bulk_permissions_update, name='api_bulk_permissions_update'),
     path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
     path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),
     path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),

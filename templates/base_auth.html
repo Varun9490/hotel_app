@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}GuestConnect{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  {% load static %}
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-900 font-['Inter']">
+  {% block content %}{% endblock %}
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

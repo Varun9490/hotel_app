@@ -4,10 +4,10 @@
 <div class="mx-auto w-full max-w-[1184px]">
   <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
       <h2 class="text-lg font-semibold text-gray-900">All Departments</h2>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <select id="statusFilter" class="h-9 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-sky-500">
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -16,34 +16,30 @@
         </select>
 
         <button type="button" onclick="exportVisible()" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 hover:bg-gray-50">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M16 6l-4-4-4 4M12 2v14" />
-          </svg>
-          Export
+          <img src="{% static 'images/manage_users/export.svg' %}" alt="Export" class="h-4 w-4" />
+          <span class="whitespace-nowrap">Export</span>
         </button>
         
         <!-- Add Department Button -->
         <button type="button" onclick="openAddDepartmentModal()" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 4v16m8-8H4" />
-          </svg>
-          Add Department
+          <img src="{% static 'images/manage_users/plus.svg' %}" alt="Add" class="h-4 w-4" />
+          <span class="whitespace-nowrap">Add Department</span>
         </button>
       </div>
     </div>
 
     <!-- Table -->
     <div class="overflow-x-auto">
-      <table id="departmentsTable" class="min-w-full table-fixed divide-y divide-gray-200">
+      <table id="departmentsTable" class="min-w-full divide-y divide-gray-200">
         <thead class="bg-neutral-50">
           <tr>
-            <th scope="col" class="w-[28rem] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Name</th>
-            <th scope="col" class="w-[20rem] px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Department Head</th>
-            <th scope="col" class="w-28 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Users</th>
-            <th scope="col" class="w-40 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Open Tickets</th>
-            <th scope="col" class="w-56 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">SLA Performance</th>
-            <th scope="col" class="w-32 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Status</th>
-            <th scope="col" class="w-40 px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">Actions</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Name</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Department Head</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Users</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Open Tickets</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">SLA Performance</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Status</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500 whitespace-nowrap">Actions</th>
           </tr>
         </thead>
 
@@ -51,9 +47,9 @@
           {% for dept in departments %}
           <tr class="hover:bg-gray-50" data-dept-id="{{ dept.featured_group.id }}">
             <!-- Name -->
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-4">
-                <div class="h-10 w-10 {{ dept.featured_group.icon_bg|default:'bg-gray-100' }} rounded-lg ring-1 ring-inset ring-gray-200 flex items-center justify-center">
+            <td class="px-6 py-4 max-w-xs">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="h-10 w-10 {{ dept.featured_group.icon_bg|default:'bg-gray-100' }} rounded-lg ring-1 ring-inset ring-gray-200 flex items-center justify-center flex-shrink-0">
                   {% with dept.featured_group.name|slugify as slug %}
                     {% if dept.featured_group.image %}
                       <img src="{% static dept.featured_group.image %}" class="h-6 w-6" alt="{{ dept.featured_group.name }} icon" />
@@ -102,31 +98,31 @@
             </td>
 
             <!-- Department Head -->
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 max-w-xs">
               {% if dept.lead %}
-              <div class="flex items-center gap-3">
-                <img class="h-8 w-8 rounded-full ring-1 ring-gray-200" src="{{ dept.lead.avatar_url|default:'https://placehold.co/32x32' }}" alt="Lead avatar" />
+              <div class="flex items-center gap-3 min-w-0">
+                <img class="h-8 w-8 rounded-full ring-1 ring-gray-200 flex-shrink-0" src="{{ dept.lead.avatar_url|default:'https://placehold.co/32x32' }}" alt="Lead avatar" />
                 <div class="min-w-0">
                   <div class="truncate text-sm font-medium text-gray-900">{{ dept.lead.full_name }}</div>
                   <div class="truncate text-sm text-gray-500">{{ dept.lead.email }}</div>
                 </div>
               </div>
               {% else %}
-              <div class="text-sm text-gray-500">
-                <span class="font-medium text-gray-900">No lead assigned</span><br />
-                Assign a department lead
+              <div class="text-sm text-gray-500 min-w-0">
+                <span class="font-medium text-gray-900 truncate block">No lead assigned</span>
+                <span class="truncate block">Assign a department lead</span>
               </div>
               {% endif %}
             </td>
 
             <!-- Users -->
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm font-medium text-gray-900">{{ dept.featured_group.members_count }}</div>
               <div class="text-xs text-gray-500">Active staff</div>
             </td>
 
             <!-- Open Tickets -->
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium text-gray-900">{{ dept.open_tickets|default:0 }}</span>
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ dept.sla_tag_bg|default:'bg-gray-100' }} {{ dept.sla_color|default:'text-gray-700' }}">
@@ -136,36 +132,33 @@
             </td>
 
             <!-- SLA Performance -->
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="h-2 w-32 rounded-full bg-gray-200">
+            <td class="px-6 py-4 max-w-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="h-2 w-32 rounded-full bg-gray-200 flex-shrink-0">
                   <div class="h-2 rounded-full {{ dept.performance_color|default:'bg-green-500' }}" style="width: {{ dept.performance_pct|default:'0%' }};"></div>
                 </div>
-                <div class="text-sm font-medium {{ dept.performance_color|default:'text-green-600' }}">{{ dept.performance_pct|default:'0%' }}</div>
+                <div class="text-sm font-medium {{ dept.performance_color|default:'text-green-600' }} whitespace-nowrap">{{ dept.performance_pct|default:'0%' }}</div>
               </div>
             </td>
 
             <!-- Status -->
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 whitespace-nowrap">
               <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ dept.status_bg|default:'bg-green-500/10' }} {{ dept.status_color|default:'text-green-600' }}">
                 {{ dept.status_label|default:'Active' }}
               </span>
             </td>
 
             <!-- Actions -->
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right whitespace-nowrap">
               <div class="relative inline-block text-left">
-                <button type="button" id="actionsBtn-{{ dept.featured_group.id }}" onclick="toggleActionsMenu({{ dept.featured_group.id }})" class="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50">
-                  Actions
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                  </svg>
+                <button type="button" id="actionsBtn-{{ dept.featured_group.id }}" onclick="toggleActionsMenu({{ dept.featured_group.id }})" class="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-2 text-xs font-medium text-gray-800 hover:bg-gray-50">
+                  <img src="{% static 'images/manage_users/action.svg' %}" alt="Actions" class="h-4 w-4" />
                 </button>
 
                 <!-- Dropdown -->
                 <div id="actionsMenu-{{ dept.featured_group.id }}" class="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-md border border-gray-200 bg-white shadow-lg hidden">
                   <div class="py-1">
-                    <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onclick="closeActionsMenu(); openMembersModal({{ dept.featured_group.id }})">View Members</button>
+                    <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onclick="closeActionsMenu(); openMembersModal({{ dept.featured_group.id }}, 1)">View Members</button>
                     <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onclick="closeActionsMenu(); openAssignLeadModal({{ dept.featured_group.id }})">Assign Lead</button>
                   </div>
                 </div>
@@ -255,6 +248,7 @@
       <button onclick="closeModal('addDepartmentModal')" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
     </div>
     <form id="addDepartmentForm" class="mt-4 space-y-4" onsubmit="submitAddDepartment(event)">
+      {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Department Name</label>
         <input type="text" id="departmentName" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. Housekeeping" required />
@@ -401,6 +395,78 @@ function closeActionsMenu() {
   }
 }
 
+// Modal helpers (ensure compatibility with base template)
+function showModal(id, open) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (open) { el.classList.remove('hidden'); el.classList.add('flex'); } else { el.classList.add('hidden'); el.classList.remove('flex'); }
+}
+function closeModal(id){ showModal(id, false); }
+
+// Open Add Department Modal
+function openAddDepartmentModal(){
+  document.getElementById('departmentName').value = '';
+  document.getElementById('departmentDescription').value = '';
+  document.getElementById('addDepartmentError').classList.add('hidden');
+  showModal('addDepartmentModal', true);
+}
+
+// Submit Add Department via fetch
+function submitAddDepartment(e){
+  e.preventDefault();
+  const btn = document.getElementById('addDepartmentSubmit');
+  const name = document.getElementById('departmentName').value.trim();
+  const desc = document.getElementById('departmentDescription').value.trim();
+  const errorEl = document.getElementById('addDepartmentError');
+  if(!name){ errorEl.textContent = 'Department name is required.'; errorEl.classList.remove('hidden'); return; }
+  btn.disabled = true; errorEl.classList.add('hidden');
+
+  const form = new URLSearchParams();
+  form.set('name', name);
+  form.set('description', desc);
+
+  fetch('{% url "dashboard:department_create" %}', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/x-www-form-urlencoded', 
+      'X-CSRFToken': getCookie('csrftoken'),
+      'Accept': 'application/json'
+    },
+    body: form.toString()
+  })
+  .then(async response => {
+    const contentType = response.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json')
+      ? await response.json().catch(() => ({}))
+      : { detail: await response.text().catch(() => '') };
+
+    if (!response.ok || payload.success === false) {
+      console.error('Department creation failed', { status: response.status, payload });
+      const msg = payload.errors ? Object.values(payload.errors).flat().join(', ') :
+                payload.detail || 'Failed to create department.';
+      throw new Error(msg);
+    }
+
+    return payload;
+  })
+  .then(() => {
+    console.info('Department created successfully:', name);
+    btn.disabled = false;
+    closeModal('addDepartmentModal');
+    showToast('Department created successfully!', 'success');
+    setTimeout(() => {
+      window.location = '{% url "dashboard:departments" %}';
+    }, 700);
+  })
+  .catch(err => {
+    console.error('Error creating department:', err);
+    errorEl.textContent = err.message || 'Failed to create department. Try again.';
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+  });
+}
+
+
 // Close menus on outside click or Escape
 document.addEventListener('click', (e) => {
   if (!openMenuId) return;
@@ -421,23 +487,28 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --------------- Members modal ---------------
-function openMembersModal(deptId) {
+// --------------- Members modal with pagination ---------------
+function openMembersModal(deptId, page = 1) {
   showModal('membersModal', true);
   const modal = document.getElementById('membersModal');
   modal.querySelector('.modal-title').textContent = 'Members — Department ' + deptId;
   const body = modal.querySelector('.modal-body');
   body.innerHTML = '<div class="text-gray-500">Loading...</div>';
 
-  fetch('{% url "dashboard:api_department_members" 0 %}'.replace('/0/', '/' + deptId + '/'))
+  // Fetch members with pagination
+  fetch('{% url "dashboard:api_department_members" 0 %}'.replace('/0/', '/' + deptId + '/') + '?page=' + page)
     .then(r => r.json())
     .then(data => {
       if (!data.members || data.members.length === 0) {
         body.innerHTML = '<p class="text-sm text-gray-500">No members found.</p>';
         return;
       }
+      
+      // Create members list
       const list = document.createElement('div');
       list.className = 'divide-y divide-gray-100';
+      
+      // Add members
       data.members.forEach(m => {
         const row = document.createElement('div');
         row.className = 'flex items-center justify-between gap-3 py-3';
@@ -451,6 +522,42 @@ function openMembersModal(deptId) {
           </div>`;
         list.appendChild(row);
       });
+      
+      // Add pagination if needed
+      if (data.total_pages > 1) {
+        const pagination = document.createElement('div');
+        pagination.className = 'flex items-center justify-between mt-4 pt-4 border-t border-gray-200';
+        
+        const pageInfo = document.createElement('div');
+        pageInfo.className = 'text-sm text-gray-500';
+        pageInfo.textContent = `Page ${data.page} of ${data.total_pages}`;
+        
+        const buttons = document.createElement('div');
+        buttons.className = 'flex gap-2';
+        
+        // Previous button
+        if (data.page > 1) {
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'px-3 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50';
+          prevBtn.textContent = 'Previous';
+          prevBtn.onclick = () => openMembersModal(deptId, data.page - 1);
+          buttons.appendChild(prevBtn);
+        }
+        
+        // Next button
+        if (data.page < data.total_pages) {
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'px-3 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50';
+          nextBtn.textContent = 'Next';
+          nextBtn.onclick = () => openMembersModal(deptId, data.page + 1);
+          buttons.appendChild(nextBtn);
+        }
+        
+        pagination.appendChild(pageInfo);
+        pagination.appendChild(buttons);
+        list.appendChild(pagination);
+      }
+      
       body.innerHTML = '';
       body.appendChild(list);
     })
@@ -526,30 +633,7 @@ function openAddDepartmentModal() {
   showModal('addDepartmentModal', true);
 }
 
-function submitAddDepartment(e) {
-  e.preventDefault();
-  const btn = document.getElementById('addDepartmentSubmit');
-  const name = document.getElementById('departmentName').value.trim();
-  const description = document.getElementById('departmentDescription').value.trim();
-  const errorEl = document.getElementById('addDepartmentError');
-  
-  if (!name) {
-    errorEl.textContent = 'Department name is required.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
-  
-  btn.disabled = true;
-  errorEl.classList.add('hidden');
-  
-  // In a real implementation, this would make an API call to create the department
-  // For now, we'll just show a success message
-  setTimeout(() => {
-    btn.disabled = false;
-    closeModal('addDepartmentModal');
-    showToast('Department added successfully!');
-  }, 1000);
-}
+// This function was intentionally left blank to be overridden by the previous implementation
 
 // Modal helpers and backdrop listeners are provided by the base template (manage_users_base.html)
 

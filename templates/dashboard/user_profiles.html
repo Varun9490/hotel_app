@@ -1,4 +1,5 @@
 {% extends "dashboard/manage_users_base.html" %}
+{% load dict_extras %}
 {% block manage_content %}
-  {% include 'dashboard/components/manage_users/user_profiles_section.html' with users_count=total_users|default:"15" active_count=active_groups|default:"5" %}
+  {% include 'dashboard/components/manage_users/user_profiles_section.html' with users_count=total_users|default:"15" active_count=active_groups|default:"5" user_permissions=user_permissions %}
 {% endblock manage_content %}

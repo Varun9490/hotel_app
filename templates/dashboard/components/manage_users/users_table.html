@@ -119,6 +119,33 @@
 </div>
 
 <script>
+// Add CSS for the action buttons
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .edit-user-btn:hover img,
+    .delete-user-btn:hover img {
+      filter: brightness(0.8);
+    }
+    .delete-user-btn:hover {
+      background-color: #fef2f2 !important;
+    }
+    .delete-user-btn:hover img {
+      filter: brightness(0.7);
+    }
+    #selected-count-display {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 function toggleArrow(id){
   const el = document.getElementById(id);
   if(!el) return;
@@ -168,6 +195,17 @@ function toggleArrow(id){
       btn.style.opacity = active ? '1' : '0.5';
       btn.style.pointerEvents = active ? 'auto' : 'none';
     });
+    
+    // Update selected count display
+    updateSelectedCount();
+  }
+
+  // Function to update the selected count display
+  function updateSelectedCount() {
+    const selectedCountDisplay = document.getElementById('selected-count-display');
+    if (selectedCountDisplay) {
+      selectedCountDisplay.textContent = selectedIds.size;
+    }
   }
 
   function renderPagination(){
@@ -252,8 +290,12 @@ function toggleArrow(id){
 
           <div class="text-right">
             <div class="inline-flex items-center gap-2 justify-end">
-              <button class="edit-user-btn px-2 py-1 rounded bg-gray-100 text-sm" data-user-id="${u.id}" title="Edit User">Edit</button>
-              <button class="delete-user-btn px-2 py-1 rounded bg-red-50 text-sm text-red-600" data-user-id="${u.id}" title="Delete Account">Delete</button>
+              <button class="edit-user-btn p-2 rounded-lg hover:bg-gray-100" data-user-id="${u.id}" title="Edit User">
+                <img src="/static/images/manage_users/profiles/edit.svg" alt="Edit" class="h-5 w-5">
+              </button>
+              <button class="delete-user-btn p-2 rounded-lg hover:bg-red-50" data-user-id="${u.id}" title="Delete Account">
+                <img src="/static/images/manage_users/profiles/delete.svg" alt="Delete" class="h-5 w-5">
+              </button>
             </div>
           </div>
         </div>
@@ -312,7 +354,9 @@ function toggleArrow(id){
     totalPages = data.total_pages || 1;
     totalResults = data.total || 0;
 
-    if(usersTotalCountEl){ usersTotalCountEl.textContent = `Users (${totalResults})`; }
+    if(usersTotalCountEl){ 
+      usersTotalCountEl.innerHTML = `Users (${totalResults}) <span id="selected-count-display">0</span> selected`;
+    }
 
     if(usersShowingEl){
       const start = totalResults===0 ? 0 : ((currentPage-1)*pageSize)+1;
@@ -339,6 +383,9 @@ function toggleArrow(id){
 
     const visibleCbs = Array.from(document.querySelectorAll('.select-user'));
     if(selectAllCb) selectAllCb.checked = (visibleCbs.length>0 && visibleCbs.every(x=>x.checked));
+
+    // Update selected count after loading
+    updateSelectedCount();
 
     renderPagination();
     adjustTableHeight();
