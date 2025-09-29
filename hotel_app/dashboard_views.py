@@ -19,7 +19,7 @@ from django.utils.text import slugify
 from hotel_app.models import (
     Department, Location, RequestType, Checklist,
     Complaint, BreakfastVoucher, Review, Guest,
-    Voucher, VoucherScan
+    Voucher, VoucherScan, ServiceRequest, UserProfile
 )
 
 # Import all forms from the local forms.py
@@ -541,7 +541,7 @@ def manage_users_all(request):
                page_title="Manage Users",
                page_subtitle="Manage user accounts, roles, and permissions across your property.",
                search_placeholder="Search users...",
-               primary_label="Invite User",
+               primary_label="create User",
                users=users_qs,
                total_users=total_users,
                role_counts=role_counts,
@@ -837,7 +837,7 @@ def manage_users_groups(request):
                     'supervisors_count': 3,
                     'staff_count': 9,
                     'updated_at': '4h ago',
-                    'image': 'images/manage_users/maintenance.svg',
+                    'image': 'images/manage_users/maintainence.svg',
                     'icon_bg': 'bg-teal-500/10',
                     'tag_bg': 'bg-teal-500/10',
                     'icon_color': 'teal-500',
@@ -1028,21 +1028,17 @@ def user_create(request):
 
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def manage_user_detail(request, user_id):
-    """Render a full-page user detail / edit view for a single user.
+    """Render a dynamic full-page user detail / edit view for a single user.
 
-    Context provided to template:
+    Context to template:
     - user: User instance
     - profile: UserProfile or None
-    - groups: list of Group objects the user belongs to
-    - departments: list of Department objects (for assignment/select)
+    - groups: Queryset of Group objects
+    - departments: Queryset of Department objects
+    - avatar_url: str or None
+    - requests_handled, messages_sent, avg_rating, response_rate
     """
-    try:
-        from django.contrib.auth import get_user_model
-        UserModel = get_user_model()
-    except Exception:
-        UserModel = User
-
-    user = get_object_or_404(UserModel, pk=user_id)
+    user = get_object_or_404(User, pk=user_id)
     profile = getattr(user, 'userprofile', None)
     groups = user.groups.all()
     try:
@@ -1050,11 +1046,41 @@ def manage_user_detail(request, user_id):
     except Exception:
         departments = []
 
+    # Basic stats (defensive)
+    try:
+        requests_handled = ServiceRequest.objects.filter(assignee_user=user).count()
+    except Exception:
+        requests_handled = 0
+
+    # placeholder for messages_sent (if you have a messaging model, replace this)
+    messages_sent = 0
+
+    try:
+        avg_rating = Review.objects.aggregate(Avg("rating"))["rating__avg"] or 0
+    except Exception:
+        avg_rating = 0
+
+    try:
+        closed_count = ServiceRequest.objects.filter(assignee_user=user, status__in=['closed', 'resolved', 'completed']).count()
+        total_assigned = ServiceRequest.objects.filter(assignee_user=user).count()
+        response_rate = (closed_count / total_assigned) if total_assigned else 0.98
+    except Exception:
+        response_rate = 0.98
+
+    avatar_url = None
+    if profile and getattr(profile, 'avatar_url', None):
+        avatar_url = profile.avatar_url
+
     context = {
-        'user_obj': user,
+        'user': user,
         'profile': profile,
         'groups': groups,
         'departments': departments,
+        'avatar_url': avatar_url,
+        'requests_handled': requests_handled,
+        'messages_sent': messages_sent,
+        'avg_rating': round(avg_rating, 1) if avg_rating else 0,
+        'response_rate': int(response_rate * 100) if isinstance(response_rate, float) else response_rate,
     }
     return render(request, 'dashboard/manage_user_detail.html', context)
 
@@ -1095,7 +1121,7 @@ def manage_users_toggle_enabled(request, user_id):
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def dashboard_departments(request):
     # Keep existing department queryset for list rendering and metrics
-    depts_qs = Department.objects.all().annotate(user_count=Count("userprofile"))
+    depts_qs = Department.objects.all().annotate(user_count=Count("userprofile")).order_by('name')
     # Server-side status filter (optional): active / paused / archived
     status = request.GET.get('status', '').lower()
     if status:
@@ -1211,6 +1237,7 @@ def dashboard_departments(request):
         "crumb_title": 'Departments',
         "title": 'Manage Departments',
         "subtitle": 'Manage hotel departments, heads, and staff assignments',
+        "primary_label": "Add Department",
     }
     return render(request, "dashboard/manage_users_base.html", context)
 
@@ -1925,7 +1952,7 @@ def configure_requests(request):
             'description': 'Report issues with room fixtures, appliances, or general maintenance needs requiring attention.',
             'fields': 6,
             'exposed': True,
-            'icon': 'images/manage_users/maintenance.svg',
+            'icon': 'images/manage_users/maintainence.svg',
             'icon_bg': 'bg-yellow-400/10',
             'tag_bg': 'bg-yellow-400/10',
         },

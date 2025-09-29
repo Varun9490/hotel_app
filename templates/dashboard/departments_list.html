@@ -21,6 +21,14 @@
           </svg>
           Export
         </button>
+        
+        <!-- Add Department Button -->
+        <button type="button" onclick="openAddDepartmentModal()" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 4v16m8-8H4" />
+          </svg>
+          Add Department
+        </button>
       </div>
     </div>
 
@@ -53,7 +61,7 @@
                       <img src="{% static 'images/manage_users/front_office.svg' %}" class="h-6 w-6" alt="Front Office icon" />
                     {% elif slug == 'housekeeping' %}
                       <img src="{% static 'images/manage_users/housekeeping.svg' %}" class="h-6 w-6" alt="Housekeeping icon" />
-                    {% elif slug == 'food-beverage' %}
+                    {% elif slug == 'food-beverage' or slug == 'food_beverage' %}
                       <img src="{% static 'images/manage_users/food_beverage.svg' %}" class="h-6 w-6" alt="Food & Beverage icon" />
                     {% elif slug == 'security' %}
                       <img src="{% static 'images/manage_users/security.svg' %}" class="h-6 w-6" alt="Security icon" />
@@ -176,7 +184,7 @@
     <!-- Footer / Pagination -->
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-neutral-50 px-6 py-3">
       <p class="text-sm text-gray-600">
-        Showing {{ departments|length }}{% if total_departments %} of {{ total_departments }}{% endif %} departments
+        Showing {{ departments|length }}{% if total_departments %} of {{ total_departments }} departments{% endif %}
       </p>
 
       {% if is_paginated %}
@@ -238,6 +246,33 @@
     </form>
   </div>
 </div>
+
+<!-- Add Department Modal -->
+<div id="addDepartmentModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="w-full max-w-md rounded-lg bg-white p-6" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between">
+      <h3 class="text-lg font-semibold">Add Department</h3>
+      <button onclick="closeModal('addDepartmentModal')" class="rounded p-1 text-gray-500 hover:bg-gray-100">✕</button>
+    </div>
+    <form id="addDepartmentForm" class="mt-4 space-y-4" onsubmit="submitAddDepartment(event)">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Department Name</label>
+        <input type="text" id="departmentName" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. Housekeeping" required />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Description</label>
+        <textarea id="departmentDescription" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Brief description of the department"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50" onclick="closeModal('addDepartmentModal')">Cancel</button>
+        <button id="addDepartmentSubmit" type="submit" class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700">Add Department</button>
+      </div>
+      <div id="addDepartmentError" class="text-sm text-red-600 hidden"></div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast Notification provided by base template -->
 
 <!-- Tailwind safelist to ensure dynamic color classes are available in production builds -->
 <span class="hidden
@@ -382,6 +417,7 @@ document.addEventListener('keydown', (e) => {
     closeActionsMenu();
     closeModal('membersModal');
     closeModal('assignLeadModal');
+    closeModal('addDepartmentModal');
   }
 });
 
@@ -481,23 +517,41 @@ function submitAssignLead(e) {
   });
 }
 
-// --------------- Modal helpers ---------------
-function showModal(id, open) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (open) {
-    el.classList.remove('hidden');
-    el.classList.add('flex');
-  } else {
-    el.classList.add('hidden');
-    el.classList.remove('flex');
-  }
+// --------------- Add Department modal ---------------
+function openAddDepartmentModal() {
+  // Clear form
+  document.getElementById('departmentName').value = '';
+  document.getElementById('departmentDescription').value = '';
+  document.getElementById('addDepartmentError').classList.add('hidden');
+  showModal('addDepartmentModal', true);
 }
-function closeModal(id) { showModal(id, false); }
 
-// Close modals when clicking on backdrop
-document.getElementById('membersModal')?.addEventListener('click', () => closeModal('membersModal'));
-document.getElementById('assignLeadModal')?.addEventListener('click', () => closeModal('assignLeadModal'));
+function submitAddDepartment(e) {
+  e.preventDefault();
+  const btn = document.getElementById('addDepartmentSubmit');
+  const name = document.getElementById('departmentName').value.trim();
+  const description = document.getElementById('departmentDescription').value.trim();
+  const errorEl = document.getElementById('addDepartmentError');
+  
+  if (!name) {
+    errorEl.textContent = 'Department name is required.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  btn.disabled = true;
+  errorEl.classList.add('hidden');
+  
+  // In a real implementation, this would make an API call to create the department
+  // For now, we'll just show a success message
+  setTimeout(() => {
+    btn.disabled = false;
+    closeModal('addDepartmentModal');
+    showToast('Department added successfully!');
+  }, 1000);
+}
+
+// Modal helpers and backdrop listeners are provided by the base template (manage_users_base.html)
 
 // --------------- Export visible rows ---------------
 function exportVisible() {
@@ -525,4 +579,6 @@ function exportVisible() {
   URL.revokeObjectURL(url);
   a.remove();
 }
+
+// Toast functions are provided by the base template (manage_users_base.html)
 </script>

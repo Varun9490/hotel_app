@@ -16,7 +16,7 @@
               <span class="text-gray-400">/</span>
               <span>Users</span>
               <span class="text-gray-400">/</span>
-              <span class="text-gray-900">Sarah Johnson</span>
+              <span class="text-gray-900">{{ profile.full_name|default:user.get_full_name|default:user.username }}</span>
             </nav>
           </div>
         </div>
@@ -50,15 +50,15 @@
         <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div class="flex flex-col items-center text-center">
             <img
-              src="https://placehold.co/96x96"
+              src="{% if avatar_url %}{{ avatar_url }}{% else %}{% static 'images/default_avatar.png' %}{% endif %}"
               alt="Profile"
               class="h-24 w-24 rounded-full"
             />
-            <h2 class="mt-4 text-xl font-semibold leading-7">Sarah Johnson</h2>
-            <p class="mt-1 text-sm leading-5 text-gray-600">sarah.johnson@grandhotel.com</p>
+            <h2 class="mt-4 text-xl font-semibold leading-7">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h2>
+            <p class="mt-1 text-sm leading-5 text-gray-600">{{ user.email|default:'-' }}</p>
             <span class="mt-3 inline-flex items-center rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
               <span class="mr-2 inline-block h-2 w-2 rounded-full bg-green-500"></span>
-              Active
+              {% if profile and profile.enabled %}Active{% else %}Inactive{% endif %}
             </span>
           </div>
 
@@ -69,11 +69,11 @@
               <div class="mt-3 space-y-3">
                 <div class="flex items-center gap-3">
                   <span class="inline-block h-4 w-4 rounded bg-gray-600/80"></span>
-                  <span class="text-sm leading-5 text-gray-600">+1 (555) 123-4567</span>
+                  <span class="text-sm leading-5 text-gray-600">{{ profile.phone|default:'-' }}</span>
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="inline-block h-4 w-4 rounded bg-gray-600/60"></span>
-                  <span class="text-sm leading-5 text-gray-600">New York, NY</span>
+                  <span class="text-sm leading-5 text-gray-600">{{ profile.timezone|default:'-' }}</span>
                 </div>
               </div>
             </div>
@@ -84,15 +84,15 @@
               <dl class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                 <div class="flex items-center justify-between sm:justify-start sm:gap-2">
                   <dt class="text-gray-600">User ID:</dt>
-                  <dd class="font-medium text-gray-900">USR-2024-001</dd>
+                  <dd class="font-medium text-gray-900">{{ user.pk }}</dd>
                 </div>
                 <div class="flex items-center justify-between sm:justify-start sm:gap-2">
                   <dt class="text-gray-600">Created:</dt>
-                  <dd class="text-gray-900">Jan 15, 2024</dd>
+                  <dd class="text-gray-900">{% if profile and profile.created_at %}{{ profile.created_at|date:"M d, Y" }}{% else %}{{ user.date_joined|date:"M d, Y" }}{% endif %}</dd>
                 </div>
                 <div class="flex items-center justify-between sm:justify-start sm:gap-2">
                   <dt class="text-gray-600">Last Login:</dt>
-                  <dd class="text-gray-900">2 hours ago</dd>
+                  <dd class="text-gray-900">{% if user.last_login %}{{ user.last_login|timesince }} ago{% else %}-{% endif %}</dd>
                 </div>
               </dl>
             </div>
@@ -165,17 +165,17 @@
             <div class="rounded-lg border border-sky-600/20 bg-sky-600/5 p-4">
               <div class="mx-auto mb-2 h-6 w-4 rounded bg-sky-600"></div>
               <p class="text-center text-base font-medium leading-6">Primary Department</p>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Front Desk</p>
+              <p class="mt-1 text-center text-sm leading-5 text-gray-600">{% if profile and profile.department %}{{ profile.department.name }}{% else %}-{% endif %}</p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-neutral-50 p-4">
               <div class="mx-auto mb-2 h-6 w-7 rounded bg-gray-400"></div>
               <p class="text-center text-base font-medium leading-6">Team Size</p>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">12 Members</p>
+              <p class="mt-1 text-center text-sm leading-5 text-gray-600">{% if profile and profile.department %}{{ profile.department.user_set.count }} Members{% else %}-{% endif %}</p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-neutral-50 p-4">
               <div class="mx-auto mb-2 h-6 w-6 rounded bg-gray-400"></div>
               <p class="text-center text-base font-medium leading-6">Shift</p>
-              <p class="mt-1 text-center text-sm leading-5 text-gray-600">Morning (6AM-2PM)</p>
+              <p class="mt-1 text-center text-sm leading-5 text-gray-600">-</p>
             </div>
           </div>
         </section>
@@ -184,23 +184,23 @@
         <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 class="text-lg font-semibold leading-7">Recent Activity Summary</h3>
           <div class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div class="rounded-lg border border-gray-200 bg-green-500/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-green-500">47</div>
+            <div class="rounded-lg border border-green-500/5 p-4">
+              <div class="text-center text-2xl font-bold leading-8 text-green-500">{{ requests_handled }}</div>
               <p class="mt-1 text-center text-sm leading-5 text-gray-600">Requests Handled</p>
               <p class="mt-1 text-center text-xs leading-4 text-gray-400">This week</p>
             </div>
-            <div class="rounded-lg border border-gray-200 bg-teal-500/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-teal-500">156</div>
+            <div class="rounded-lg border border-teal-500/5 p-4">
+              <div class="text-center text-2xl font-bold leading-8 text-teal-500">{{ messages_sent }}</div>
               <p class="mt-1 text-center text-sm leading-5 text-gray-600">Messages Sent</p>
               <p class="mt-1 text-center text-xs leading-4 text-gray-400">This week</p>
             </div>
-            <div class="rounded-lg border border-gray-200 bg-yellow-400/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-yellow-400">4.8</div>
+            <div class="rounded-lg border border-yellow-400/5 p-4">
+              <div class="text-center text-2xl font-bold leading-8 text-yellow-400">{{ avg_rating }}</div>
               <p class="mt-1 text-center text-sm leading-5 text-gray-600">Avg Rating</p>
               <p class="mt-1 text-center text-xs leading-4 text-gray-400">Last 30 days</p>
             </div>
-            <div class="rounded-lg border border-gray-200 bg-fuchsia-700/5 p-4">
-              <div class="text-center text-2xl font-bold leading-8 text-fuchsia-700">98%</div>
+            <div class="rounded-lg border border-fuchsia-700/5 p-4">
+              <div class="text-center text-2xl font-bold leading-8 text-fuchsia-700">{{ response_rate }}%</div>
               <p class="mt-1 text-center text-sm leading-5 text-gray-600">Response Rate</p>
               <p class="mt-1 text-center text-xs leading-4 text-gray-400">Last 30 days</p>
             </div>
