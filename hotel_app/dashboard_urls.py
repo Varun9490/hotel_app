@@ -62,9 +62,6 @@ urlpatterns = [
     # Voucher QR Code Management
     path('vouchers/<int:voucher_id>/regenerate-qr/', dashboard_views.regenerate_voucher_qr, name='regenerate_voucher_qr'),
     path('vouchers/<int:voucher_id>/share-whatsapp/', dashboard_views.share_voucher_whatsapp, name='share_voucher_whatsapp'),
-    
-    # Tailwind CSS Test Page
-    path('tailwind-test/', dashboard_views.tailwind_test, name='tailwind_test'),
     path('manage-users/', dashboard_views.manage_users, name='manage_users'),
     # Manage Users screens (new per-screen routes)
     path('manage-users/all/', dashboard_views.manage_users_all, name='manage_users_all'),

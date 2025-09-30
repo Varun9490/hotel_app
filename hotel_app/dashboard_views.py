@@ -1143,9 +1143,11 @@ def api_reset_user_password(request, user_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP])
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def configure_requests(request):
-    """Render the Configure Requests page."""
+    """Render the Predefined / Configure Requests page.
+    Uses a mostly-static template for now; dynamic values can be added to context later.
+    """
     # Sample data to render cards. In production replace with real queryset.
     requests_list = [
         {
@@ -1159,47 +1161,39 @@ def configure_requests(request):
             'tag_bg': 'bg-green-500/10',
         },
         {
-            'title': 'Room Service',
-            'department': 'Food & Beverage',
-            'description': 'Order room service from our menu. We deliver your order directly to your room.',
-            'fields': 3,
+            'title': 'Room Maintenance',
+            'department': 'Maintenance',
+            'description': 'Report issues with room fixtures, appliances, or general maintenance needs requiring attention.',
+            'fields': 6,
             'exposed': True,
-            'icon': 'images/manage_users/food_beverage.svg',
+            'icon': 'images/manage_users/maintainence.svg',
             'icon_bg': 'bg-yellow-400/10',
             'tag_bg': 'bg-yellow-400/10',
         },
         {
-            'title': 'Maintenance Request',
-            'department': 'Maintenance',
-            'description': 'Report any maintenance issues such as broken furniture, malfunctioning appliances, or other problems.',
-            'fields': 2,
+            'title': 'Concierge Services',
+            'department': 'Concierge',
+            'description': 'Request assistance with reservations, recommendations, transportation, and local information.',
+            'fields': 5,
             'exposed': True,
-            'icon': 'images/manage_users/maintainence.svg',
-            'icon_bg': 'bg-teal-500/10',
-            'tag_bg': 'bg-teal-500/10',
-        },
-        {
-            'title': 'Security Concern',
-            'department': 'Security',
-            'description': 'Report any security concerns or suspicious activities to our security team.',
-            'fields': 1,
-            'exposed': True,
-            'icon': 'images/manage_users/security.svg',
-            'icon_bg': 'bg-red-500/10',
-            'tag_bg': 'bg-red-500/10',
+            'icon': 'images/manage_users/concierge.svg',
+            'icon_bg': 'bg-fuchsia-700/10',
+            'tag_bg': 'bg-fuchsia-700/10',
         },
     ]
 
-    ctx = dict(
-        active_tab="requests",
-        breadcrumb_title="Configure Requests",
-        page_title="Configure Requests",
-        page_subtitle="Manage and customize the requests available to guests and staff.",
-        search_placeholder="Search requests...",
-        primary_label="Create Request",
-        requests_list=requests_list,
-    )
-    return render(request, 'dashboard/configure_requests.html', ctx)
+    counts = {
+        'all': 24,
+        'portal': 18,
+        'internal': 6,
+    }
+
+    context = {
+        'requests': requests_list,
+        'counts': counts,
+        'active_tab': 'all',
+    }
+    return render(request, 'dashboard/predefined_requests.html', context)
 
 
 @login_required
@@ -1603,6 +1597,10 @@ def manage_users_profiles(request):
         user_permissions=user_permissions  # Pass user permissions to template
     )
     return render(request, 'dashboard/user_profiles.html', ctx)
+
+
+@login_required
+
 @require_http_methods(['POST'])
 @csrf_protect
 def user_create(request):
@@ -2735,52 +2733,4 @@ def tailwind_test(request):
     return render(request, "dashboard/tailwind_test.html")
 
 
-@login_required
-def configure_requests(request):
-    """Render the Configure Requests page."""
-    # Sample data to render cards. In production replace with real queryset.
-    requests_list = [
-        {
-            'title': 'Extra Housekeeping',
-            'department': 'Housekeeping',
-            'description': 'Request additional cleaning services for your room including towel refresh, bed making, and bathroom cleaning.',
-            'fields': 4,
-            'exposed': True,
-            'icon': 'images/manage_users/house_keeping.svg',
-            'icon_bg': 'bg-green-500/10',
-            'tag_bg': 'bg-green-500/10',
-        },
-        {
-            'title': 'Room Maintenance',
-            'department': 'Maintenance',
-            'description': 'Report issues with room fixtures, appliances, or general maintenance needs requiring attention.',
-            'fields': 6,
-            'exposed': True,
-            'icon': 'images/manage_users/maintainence.svg',
-            'icon_bg': 'bg-yellow-400/10',
-            'tag_bg': 'bg-yellow-400/10',
-        },
-        {
-            'title': 'Concierge Services',
-            'department': 'Concierge',
-            'description': 'Request assistance with reservations, recommendations, transportation, and local information.',
-            'fields': 5,
-            'exposed': True,
-            'icon': 'images/manage_users/concierge.svg',
-            'icon_bg': 'bg-fuchsia-700/10',
-            'tag_bg': 'bg-fuchsia-700/10',
-        },
-    ]
 
-    counts = {
-        'all': 24,
-        'portal': 18,
-        'internal': 6,
-    }
-
-    context = {
-        'requests': requests_list,
-        'counts': counts,
-        'active_tab': 'all',
-    }
-    return render(request, 'dashboard/configure_requests.html', context)
