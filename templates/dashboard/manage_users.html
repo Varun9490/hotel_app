@@ -207,7 +207,7 @@
                         {# Dynamic rows: `id` is targeted by javascript #}
                         <div id="manage-users-rows">
                             {% for user in users %}
-                            <div class="border-b border-gray-200"><div class="flex items-center gap-4 px-6 py-3"><div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div><div class="flex items-center gap-3 flex-1"><img class="w-10 h-10 rounded-full" src="{{ user.userprofile.avatar_url|default:'https://placehold.co/40x40' }}" alt="{{ user.get_full_name|default:user.username }}" /><div><div class="text-sm font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</div><div class="text-sm text-neutral-500">USR{{ user.pk }}</div></div></div><div class="w-64 flex-shrink-0 text-sm text-gray-900">{{ user.email }}</div><div class="w-28 flex-shrink-0"><div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex"><span class="text-xs font-medium text-fuchsia-700">{% if user.groups.all %}{{ user.groups.all.0.name }}{% else %}User{% endif %}</span></div></div><div class="w-44 flex-shrink-0 text-xs">{% if user.userprofile.department %}<div class="px-2 py-0.5 bg-neutral-100 rounded inline-flex"><span class="text-neutral-800">{{ user.userprofile.department.name }}</span></div>{% endif %}</div><div class="w-24 flex-shrink-0 text-xs">{% if user.is_active %}<span class="text-green-500">Active</span>{% else %}<span class="text-neutral-500">Inactive</span>{% endif %}</div><div class="w-28 flex-shrink-0 text-sm text-neutral-500">{{ user.last_login|default:""|timesince }}{% if user.last_login %} ago{% endif %}</div><div class="w-28 flex-shrink-0 text-right"><div class="w-5 h-10 inline-block"><div class="w-1 h-5 left-[8px] top-[10px] relative"><div class="w-1 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center"><div class="w-1 h-4 relative overflow-hidden"><div class="w-1 h-3.5 left-[0.25px] top-[1.25px] absolute bg-gray-400"></div></div></div></div></div></div></div></div>
+                            <div class="border-b border-gray-200"><div class="flex items-center gap-4 px-6 py-3"><div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div><div class="flex items-center gap-3 flex-1"><img class="w-10 h-10 rounded-full object-cover" src="{{ user.userprofile.avatar_url|default:'https://placehold.co/40x40' }}" alt="{{ user.get_full_name|default:user.username }}" /><div><div class="text-sm font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</div><div class="text-sm text-neutral-500">USR{{ user.pk }}</div></div></div><div class="w-64 flex-shrink-0 text-sm text-gray-900">{{ user.email }}</div><div class="w-28 flex-shrink-0"><div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex"><span class="text-xs font-medium text-fuchsia-700">{% if user.groups.all %}{{ user.groups.all.0.name }}{% else %}User{% endif %}</span></div></div><div class="w-44 flex-shrink-0 text-xs">{% if user.userprofile.department %}<div class="px-2 py-0.5 bg-neutral-100 rounded inline-flex"><span class="text-neutral-800">{{ user.userprofile.department.name }}</span></div>{% endif %}</div><div class="w-24 flex-shrink-0 text-xs">{% if user.is_active %}<span class="text-green-500">Active</span>{% else %}<span class="text-neutral-500">Inactive</span>{% endif %}</div><div class="w-28 flex-shrink-0 text-sm text-neutral-500">{{ user.last_login|default:""|timesince }}{% if user.last_login %} ago{% endif %}</div><div class="w-28 flex-shrink-0 text-right"><div class="w-5 h-10 inline-block"><div class="w-1 h-5 left-[8px] top-[10px] relative"><div class="w-1 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center"><div class="w-1 h-4 relative overflow-hidden"><div class="w-1 h-3.5 left-[0.25px] top-[1.25px] absolute bg-gray-400"></div></div></div></div></div></div>
                             {% endfor %}
                         </div>
                     </div>
@@ -344,56 +344,64 @@
             out += `
             <div class="border-b border-gray-200">
                 <div class="flex items-center gap-4 px-6 py-3">
-                    <div class="w-4 flex-shrink-0"><div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div></div>
+                    <div class="w-4 flex-shrink-0">
+                        <div class="w-3 h-3 bg-white rounded-[1px] border-[0.50px] border-black"></div>
+                    </div>
                     <div class="flex items-center gap-3 flex-1">
-                        <img class="w-10 h-10 rounded-full" src="${u.avatar_url||'https://placehold.co/40x40'}" alt="${u.full_name}">
+                        <img class="w-10 h-10 rounded-full object-cover" src="${u.avatar_url || 'https://placehold.co/40x40'}" alt="${u.full_name}" />
                         <div>
                             <div class="text-sm font-medium text-gray-900">${u.full_name}</div>
                             <div class="text-sm text-neutral-500">USR${u.id}</div>
                         </div>
                     </div>
-                    <div class="w-64 flex-shrink-0 text-sm">${u.email||''}</div>
-                    <div class="w-28 flex-shrink-0"><div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex"><span class="text-xs font-medium text-fuchsia-700">${(u.roles&&u.roles[0])||'User'}</span></div></div>
-                    <div class="w-44 flex-shrink-0 text-xs">${u.department||''}</div>
-                    <div class="w-24 flex-shrink-0 text-xs">${u.is_active?'<span class="text-green-500">Active</span>':'<span class="text-neutral-500">Inactive</span>'}</div>
-                    <div class="w-28 flex-shrink-0 text-xs">${u.last_active_human||''}</div>
-                    <div class="w-28 flex-shrink-0 text-right"><button data-user-id="${u.id}" class="toggle-enabled px-2 py-1 rounded bg-gray-100 text-sm">${u.enabled? 'Disable' : 'Enable'}</button></div>
+                    <div class="w-64 flex-shrink-0 text-sm text-gray-900">${u.email}</div>
+                    <div class="w-28 flex-shrink-0">
+                        <div class="px-2.5 py-0.5 bg-fuchsia-700/10 rounded-full inline-flex">
+                            <span class="text-xs font-medium text-fuchsia-700">${u.roles.length > 0 ? u.roles[0] : 'User'}</span>
+                        </div>
+                    </div>
+                    <div class="w-44 flex-shrink-0 text-xs">
+                        ${u.department ? `<div class="px-2 py-0.5 bg-neutral-100 rounded inline-flex"><span class="text-neutral-800">${u.department}</span></div>` : ''}
+                    </div>
+                    <div class="w-24 flex-shrink-0 text-xs">
+                        ${u.is_active ? '<span class="text-green-500">Active</span>' : '<span class="text-neutral-500">Inactive</span>'}
+                    </div>
+                    <div class="w-28 flex-shrink-0 text-sm text-neutral-500">${u.last_active_human || ''}</div>
+                    <div class="w-28 flex-shrink-0 text-right">
+                        <div class="w-5 h-10 inline-block">
+                            <div class="w-1 h-5 left-[8px] top-[10px] relative">
+                                <div class="w-1 h-4 left-0 top-[2px] absolute inline-flex justify-center items-center">
+                                    <div class="w-1 h-4 relative overflow-hidden">
+                                        <div class="w-1 h-3.5 left-[0.25px] top-[1.25px] absolute bg-gray-400"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>`;
         });
         rowsEl.innerHTML = out;
-        
-        // Render pagination controls
         renderPagination();
-        
-        // Attach toggle handlers
-        document.querySelectorAll('.toggle-enabled').forEach(btn=>{
-            btn.addEventListener('click', async function(){
-                const id = this.dataset.userId;
-                const url = toggleUrlTemplate.replace('{id}', id);
-                const csrftoken = getCsrf();
-                try {
-                    const r = await fetch(url, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrftoken}});
-                    if(!r.ok) throw new Error('Failed');
-                    const j = await r.json();
-                    this.textContent = j.enabled ? 'Disable' : 'Enable';
-                } catch(e) {
-                    console.error('Toggle failed', e);
-                }
-            });
+    }
+
+    // Initial load
+    load();
+
+    // Poller for live updates (optional)
+    // setInterval(() => load(currentPage, perPage, otherQueryParams), 30000);
+
+    // Pagination select handler
+    if(perPageSelectEl){
+        perPageSelectEl.addEventListener('change', function(){
+            perPage = parseInt(this.value);
+            load(1, perPage, otherQueryParams);
         });
     }
 
-    // Event listener for per-page selector
-    if(perPageSelectEl) perPageSelectEl.addEventListener('change', () => {
-        const newPerPageValue = parseInt(perPageSelectEl.value);
-        load(1, newPerPageValue, otherQueryParams); // Go to first page on change
-    });
+    // Search/filter handlers would go here
+    // ...
 
-    // Initial load
-    load(currentPage, perPage);
-    // Poll every 10s, refreshing the current view
-    setInterval(() => load(currentPage, perPage, otherQueryParams), 10000);
 })();
 </script>
 {% endblock %}

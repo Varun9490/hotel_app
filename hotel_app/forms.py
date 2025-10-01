@@ -1,272 +1,25 @@
+import os
 from django import forms
 from django.contrib.auth.models import User, Group
-from hotel_app.models import UserProfile, Department, Location, RequestType, Checklist, Complaint, BreakfastVoucher, Review, Guest, Voucher
-from django.utils import timezone
-from datetime import timedelta
-
-
-
-class GuestForm(forms.ModelForm):
-    """Enhanced guest registration form with datetime support for check-in/out"""
-    # Additional fields for voucher generation
-    create_breakfast_voucher = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Create Breakfast Voucher",
-        help_text="Automatically create breakfast voucher if breakfast is included"
-    )
-    voucher_quantity = forms.IntegerField(
-        min_value=1,
-        max_value=10,
-        initial=1,
-        required=False,
-        label="Voucher Quantity",
-        help_text="Number of breakfast vouchers to create"
-    )
-    send_whatsapp = forms.BooleanField(
-        required=False,
-        initial=False,
-        label="Send via WhatsApp",
-        help_text="Send voucher to guest via WhatsApp"
-    )
-    generate_guest_qr = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Generate Guest Details QR Code",
-        help_text="Create QR code with all guest information for easy access"
-    )
-    qr_code_size = forms.ChoiceField(
-        choices=[
-            ('large', 'Large (Recommended)'),
-            ('xlarge', 'Extra Large (Easy Scanning)'),
-            ('xxlarge', 'XXL (Difficult Cameras)'),
-            ('medium', 'Medium (Compact)')
-        ],
-        initial='xlarge',
-        required=False,
-        label="QR Code Size",
-        help_text="Larger sizes are easier to scan with phone cameras"
-    )
-    
-    class Meta:
-        model = Guest
-        fields = [
-            "full_name", "phone", "email", "room_number", 
-            "checkin_datetime", "checkout_datetime", "breakfast_included",
-            "guest_id", "package_type"
-        ]
-        widgets = {
-            'checkin_datetime': forms.DateTimeInput(
-                attrs={
-                    'type': 'datetime-local',
-                    'class': 'form-control',
-                    'placeholder': 'Select check-in date and time'
-                },
-                format='%Y-%m-%dT%H:%M'
-            ),
-            'checkout_datetime': forms.DateTimeInput(
-                attrs={
-                    'type': 'datetime-local', 
-                    'class': 'form-control',
-                    'placeholder': 'Select check-out date and time'
-                },
-                format='%Y-%m-%dT%H:%M'
-            ),
-            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter guest full name'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'guest@example.com'}),
-            'room_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 101, 205A'}),
-            'guest_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Auto-generated if left blank'}),
-            'package_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Deluxe, Standard, Suite'}),
-        }
-        
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Set default check-in to today at 2 PM, checkout to tomorrow at 11 AM
-        if not self.instance.pk:
-            from datetime import datetime, time
-            today = timezone.now().date()
-            tomorrow = today + timedelta(days=1)
-            
-            # Default check-in: today at 2:00 PM
-            default_checkin = timezone.make_aware(
-                datetime.combine(today, time(14, 0))  # 2:00 PM
-            )
-            # Default check-out: tomorrow at 11:00 AM  
-            default_checkout = timezone.make_aware(
-                datetime.combine(tomorrow, time(11, 0))  # 11:00 AM
-            )
-            
-            self.fields['checkin_datetime'].initial = default_checkin
-            self.fields['checkout_datetime'].initial = default_checkout
-        
-        # Show voucher fields only if breakfast is included
-        if self.data.get('breakfast_included') or (self.instance.pk and self.instance.breakfast_included):
-            self.fields['create_breakfast_voucher'].widget.attrs['checked'] = True
-            
-        # Add helpful labels and help text
-        self.fields['checkin_datetime'].help_text = "Select the date and time when guest checks in (e.g., 2:00 PM)"
-        self.fields['checkout_datetime'].help_text = "Select the date and time when guest checks out (e.g., 11:00 AM)"
-        
-    def clean(self):
-        cleaned_data = super().clean()
-        checkin_datetime = cleaned_data.get('checkin_datetime')
-        checkout_datetime = cleaned_data.get('checkout_datetime')
-        
-        if checkin_datetime and checkout_datetime:
-            if checkout_datetime <= checkin_datetime:
-                raise forms.ValidationError("Check-out datetime must be after check-in datetime.")
-            
-            # Warn if stay is too long
-            if (checkout_datetime.date() - checkin_datetime.date()).days > 30:
-                raise forms.ValidationError("Stay duration cannot exceed 30 days.")
-            
-            # Warn if check-in is too far in the past
-            if checkin_datetime.date() < (timezone.now().date() - timedelta(days=7)):
-                raise forms.ValidationError("Check-in date cannot be more than 7 days in the past.")
-        
-        # Validate phone number format (more lenient)
-        phone = cleaned_data.get('phone')
-        if phone:
-            # Remove common formatting characters
-            phone_digits = phone.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
-            if phone_digits and not phone_digits.isdigit():
-                raise forms.ValidationError("Phone number should contain only digits and common formatting characters (+, -, spaces, parentheses).")
-            
-            # Check minimum length (more lenient)
-            if len(phone_digits) < 7:
-                raise forms.ValidationError("Phone number must be at least 7 digits long.")
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        guest = super().save(commit=commit)
-        
-        if commit:
-            # Sync legacy date fields with datetime fields
-            if guest.checkin_datetime:
-                guest.checkin_date = guest.checkin_datetime.date()
-            if guest.checkout_datetime:
-                guest.checkout_date = guest.checkout_datetime.date()
-            
-            # Save again to update the synced fields
-            guest.save(update_fields=['checkin_date', 'checkout_date'])
-            
-            # Create breakfast voucher if requested
-            if (self.cleaned_data.get('create_breakfast_voucher') and 
-                (guest.breakfast_included or self.cleaned_data.get('breakfast_included'))):
-                
-                from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
-                
-                # Create voucher with enhanced date handling
-                voucher_data = {
-                    'voucher_type': 'breakfast',
-                    'guest': guest,
-                    'guest_name': guest.full_name or 'Guest',
-                    'room_number': guest.room_number,
-                    'quantity': self.cleaned_data.get('voucher_quantity', 1),
-                    'status': 'active'
-                }
-                
-                # Use datetime fields if available, fallback to date fields
-                if guest.checkin_datetime and guest.checkout_datetime:
-                    voucher_data.update({
-                        'check_in_date': guest.checkin_datetime.date(),
-                        'check_out_date': guest.checkout_datetime.date(),
-                    })
-                elif guest.checkin_date and guest.checkout_date:
-                    voucher_data.update({
-                        'check_in_date': guest.checkin_date,
-                        'check_out_date': guest.checkout_date,
-                        'valid_from': guest.checkin_date,
-                        'valid_to': guest.checkout_date,
-                    })
-                
-                voucher = Voucher.objects.create(**voucher_data)
-                
-                # Generate QR code
-                try:
-                    voucher.qr_data = generate_voucher_qr_data(voucher)
-                    voucher.qr_image = generate_voucher_qr_base64(voucher)
-                    voucher.save()
-                except Exception as e:
-                    # Log error but don't fail guest creation
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f'Failed to generate QR code for voucher {voucher.voucher_code}: {str(e)}')
-                
-                # TODO: Send WhatsApp if requested
-                if self.cleaned_data.get('send_whatsapp'):
-                    # This would integrate with WhatsApp Business API
-                    voucher.sent_whatsapp = True
-                    voucher.whatsapp_sent_at = timezone.now()
-                    voucher.save(update_fields=['sent_whatsapp', 'whatsapp_sent_at'])
-            
-            # Generate guest details QR code if requested
-            if self.cleaned_data.get('generate_guest_qr', True):
-                try:
-                    # Get the selected QR code size
-                    qr_size = self.cleaned_data.get('qr_code_size', 'xlarge')
-                    from .utils import generate_guest_details_qr_base64, generate_guest_details_qr_data
-                    
-                    # Generate QR data and base64 image with specified size
-                    guest.details_qr_data = generate_guest_details_qr_data(guest)
-                    guest.details_qr_code = generate_guest_details_qr_base64(guest, size=qr_size)
-                    guest.save(update_fields=['details_qr_data', 'details_qr_code'])
-                except Exception as e:
-                    # Log error but don't fail guest creation
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f'Failed to generate guest details QR code for {guest.guest_id}: {str(e)}')
-        
-        return guest
+from .models import Department, UserProfile, Voucher, BreakfastVoucher, Guest, Location, RequestType, Checklist, Complaint, Review
+from django.conf import settings
 
 
 class VoucherForm(forms.ModelForm):
-    """Form for creating/editing vouchers"""
-    generate_qr = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Generate QR Code",
-        help_text="Automatically generate QR code for this voucher"
-    )
-    
+    generate_qr = forms.BooleanField(required=False, label="Generate QR Code")
+
     class Meta:
         model = Voucher
-        fields = [
-            'voucher_type', 'guest', 'guest_name', 'room_number',
-            'valid_from', 'valid_to', 'quantity', 'location',
-            'special_instructions', 'status'
-        ]
-        widgets = {
-            'valid_from': forms.DateInput(attrs={'type': 'date'}),
-            'valid_to': forms.DateInput(attrs={'type': 'date'}),
-            'special_instructions': forms.Textarea(attrs={'rows': 3}),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Set default dates
-        if not self.instance.pk:
-            today = timezone.now().date()
-            self.fields['valid_from'].initial = today
-            self.fields['valid_to'].initial = today + timedelta(days=7)
-        
-        # If guest is selected, auto-fill guest name and room
-        if self.instance.guest:
-            self.fields['guest_name'].initial = self.instance.guest.full_name
-            self.fields['room_number'].initial = self.instance.guest.room_number
-    
+        fields = ['guest', 'guest_name', 'room_number', 'location', 'quantity', 'check_in_date', 'check_out_date', 'status']
+
     def clean(self):
         cleaned_data = super().clean()
-        valid_from = cleaned_data.get('valid_from')
-        valid_to = cleaned_data.get('valid_to')
-        
-        if valid_from and valid_to:
-            if valid_to <= valid_from:
-                raise forms.ValidationError("Valid to date must be after valid from date.")
+        check_in_date = cleaned_data.get('check_in_date')
+        check_out_date = cleaned_data.get('check_out_date')
+
+        if check_in_date and check_out_date:
+            if check_out_date <= check_in_date:
+                raise forms.ValidationError("Check-out date must be after check-in date.")
         
         return cleaned_data
     
@@ -307,6 +60,25 @@ class VoucherScanForm(forms.Form):
     )
 
 
+class GuestForm(forms.ModelForm):
+    class Meta:
+        model = Guest
+        fields = ['full_name', 'phone', 'email', 'room_number', 'checkin_date', 'checkout_date', 'breakfast_included', 'package_type']
+        widgets = {
+            'checkin_date': forms.DateInput(attrs={'type': 'date'}),
+            'checkout_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        checkin_date = cleaned_data.get('checkin_date')
+        checkout_date = cleaned_data.get('checkout_date')
+
+        if checkin_date and checkout_date and checkout_date <= checkin_date:
+            raise forms.ValidationError('Checkout date must be after check-in date.')
+
+        return cleaned_data
+
 
 class UserForm(forms.ModelForm):
     full_name = forms.CharField(max_length=160, required=False)
@@ -314,6 +86,7 @@ class UserForm(forms.ModelForm):
     title = forms.CharField(max_length=120, required=False)
     department = forms.ModelChoiceField(queryset=Department.objects.all(), required=False)
     role = forms.CharField(max_length=100, required=False)  # Change to CharField to avoid choice validation
+    profile_picture = forms.ImageField(required=False, label="Profile Picture")
 
     class Meta:
         model = User
@@ -342,15 +115,31 @@ class UserForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
+        # Only check for existing email if it's different from the current user's email
         if email and User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("A user with this email already exists.")
         return email
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
+        # Only check for existing username if it's different from the current user's username
         if username and User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("A user with this username already exists.")
         return username
+
+    def clean_profile_picture(self):
+        profile_picture = self.cleaned_data.get('profile_picture')
+        if profile_picture:
+            # Check file size (limit to 5MB)
+            if profile_picture.size > 5 * 1024 * 1024:
+                raise forms.ValidationError("Image file too large ( > 5MB )")
+            
+            # Check file extension
+            ext = os.path.splitext(profile_picture.name)[1].lower()
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+            if ext not in valid_extensions:
+                raise forms.ValidationError("Unsupported file extension. Please upload a JPG, JPEG, PNG, or GIF image.")
+        return profile_picture
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -363,12 +152,35 @@ class UserForm(forms.ModelForm):
             profile.phone = self.cleaned_data.get('phone', '')
             profile.title = self.cleaned_data.get('title', '')
             profile.department = self.cleaned_data.get('department', None)
+            
+            # Handle profile picture upload
+            profile_picture = self.cleaned_data.get('profile_picture')
+            if profile_picture:
+                # Create user directory if it doesn't exist
+                user_dir = os.path.join(settings.MEDIA_ROOT, 'users', str(user.pk))
+                os.makedirs(user_dir, exist_ok=True)
+                
+                # Save the file
+                filename = f"profile_picture{os.path.splitext(profile_picture.name)[1]}"
+                file_path = os.path.join(user_dir, filename)
+                
+                # Save the file to disk
+                with open(file_path, 'wb+') as destination:
+                    for chunk in profile_picture.chunks():
+                        destination.write(chunk)
+                
+                # Update avatar_url in profile (use URL-style join to avoid backslashes on Windows)
+                # Ensure MEDIA_URL is used as a URL prefix (e.g. '/media/'), then append user path
+                media_url = settings.MEDIA_URL or '/media/'
+                if not media_url.endswith('/'):
+                    media_url = media_url + '/'
+                profile.avatar_url = f"{media_url}users/{user.pk}/{filename}"
+            
             profile.save()
             
             # Handle role assignment
             role = self.cleaned_data.get('role')
             if role:
-                from django.contrib.auth.models import Group
                 try:
                     group = Group.objects.get(name=role)
                     user.groups.set([group])  # Assign the user to the selected group

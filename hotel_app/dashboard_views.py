@@ -16,6 +16,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth import get_user_model
+import os
 
 # Import all models from hotel_app
 from hotel_app.models import (
@@ -1692,6 +1693,32 @@ def user_create(request):
                 if attached_group:
                     UserGroupMembership.objects.get_or_create(user=user, group=attached_group)
 
+            # Handle profile picture upload if provided (from FormData)
+            profile_picture = request.FILES.get('profile_picture') if hasattr(request, 'FILES') else None
+            if profile_picture:
+                try:
+                    # Create user directory if it doesn't exist
+                    user_dir = os.path.join(settings.MEDIA_ROOT, 'users', str(user.pk))
+                    os.makedirs(user_dir, exist_ok=True)
+
+                    filename = f"profile_picture{os.path.splitext(profile_picture.name)[1]}"
+                    file_path = os.path.join(user_dir, filename)
+
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in profile_picture.chunks():
+                            destination.write(chunk)
+
+                    media_url = settings.MEDIA_URL or '/media/'
+                    if not media_url.endswith('/'):
+                        media_url = media_url + '/'
+                    profile.avatar_url = f"{media_url}users/{user.pk}/{filename}"
+                    profile.save(update_fields=['avatar_url'])
+                except Exception:
+                    # Non-fatal: continue but log if available
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.exception('Failed to save uploaded profile picture for user %s', user.pk)
+
     except Exception as e:
         # Surface clear error back to client
         return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
@@ -1714,11 +1741,11 @@ def user_create(request):
     })
 
 
-@require_permission([ADMINS_GROUP])
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def user_update(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == "POST":
-        # Get the data from the POST request
+        # Support both normal form posts and AJAX/Fetch FormData (which may include files)
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         full_name = request.POST.get('full_name', '').strip()
@@ -1726,19 +1753,21 @@ def user_update(request, user_id):
         title = request.POST.get('title', '').strip()
         department_id = request.POST.get('department', '').strip()
         is_active = request.POST.get('is_active', '0') == '1'
-        
+
         # Update user fields
-        user.username = username
-        user.email = email
+        if username:
+            user.username = username
+        if email:
+            user.email = email
         user.is_active = is_active
         user.save()
-        
+
         # Update or create user profile
         profile, created = UserProfile.objects.get_or_create(user=user)
         profile.full_name = full_name
         profile.phone = phone
         profile.title = title
-        
+
         # Handle department if provided
         if department_id:
             try:
@@ -1748,11 +1777,34 @@ def user_update(request, user_id):
                 pass
         else:
             profile.department = None
-            
+
+        # Handle profile picture upload
+        profile_picture = request.FILES.get('profile_picture') if hasattr(request, 'FILES') else None
+        if profile_picture:
+            try:
+                user_dir = os.path.join(settings.MEDIA_ROOT, 'users', str(user.pk))
+                os.makedirs(user_dir, exist_ok=True)
+
+                filename = f"profile_picture{os.path.splitext(profile_picture.name)[1]}"
+                file_path = os.path.join(user_dir, filename)
+
+                with open(file_path, 'wb+') as destination:
+                    for chunk in profile_picture.chunks():
+                        destination.write(chunk)
+
+                media_url = settings.MEDIA_URL or '/media/'
+                if not media_url.endswith('/'):
+                    media_url = media_url + '/'
+                profile.avatar_url = f"{media_url}users/{user.pk}/{filename}"
+            except Exception:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.exception('Failed to save uploaded profile picture for user %s', user.pk)
+
         profile.save()
-        
+
         # Return JSON response for AJAX requests
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.META.get('CONTENT_TYPE', '').startswith('multipart/form-data'):
             return JsonResponse({
                 'success': True,
                 'message': 'User updated successfully!'
@@ -1822,17 +1874,19 @@ def manage_user_detail(request, user_id):
         'avg_rating': round(avg_rating, 1) if avg_rating else 0,
         'response_rate': int(response_rate * 100) if isinstance(response_rate, float) else response_rate,
     }
+    # Build a simple mapping of group name -> permission names to render in template
+    try:
+        group_permissions = {}
+        for g in groups:
+            perms = g.permissions.all()
+            group_permissions[g.name] = [p.name for p in perms]
+        # Attach JSON string for template consumption
+        context['group_permissions_json'] = json.dumps(group_permissions)
+    except Exception:
+        context['group_permissions_json'] = json.dumps({})
+
     return render(request, 'dashboard/manage_user_detail.html', context)
 
-@require_permission([ADMINS_GROUP])
-def user_update(request, user_id):
-    user = get_object_or_404(User, pk=user_id)
-    if request.method == "POST":
-        form = UserForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "User updated successfully.")
-    return redirect("dashboard:users")
 
 @require_permission([ADMINS_GROUP])
 def user_delete(request, user_id):
@@ -2731,6 +2785,3 @@ def get_guest_whatsapp_message(request, guest_id):
 def tailwind_test(request):
     """View for testing Tailwind CSS functionality."""
     return render(request, "dashboard/tailwind_test.html")
-
-
-

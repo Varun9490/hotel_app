@@ -94,6 +94,21 @@
           <span class="font-medium">Configure Requests</span>
         </a>
         <a
+          href="{% url 'dashboard:locations' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:locations' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}">
+          <img
+            src="{% if request.resolver_match.view_name == 'dashboard:locations' %}
+               {% static 'images/sidebar/locations_highlighted.svg' %}
+             {% else %}
+               {% static 'images/sidebar/locations.svg' %}
+             {% endif %}"
+            alt="Locations Icon"
+            class="w-5 h-5"
+          />
+
+          <span class="font-medium">Locations </span>
+        </a>
+        <a
           href="{% url 'dashboard:messaging_setup' %}"
           class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:messaging_setup' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
         >
@@ -161,12 +176,15 @@
     <div
       class="w-56 h-10 left-[16px] top-[17px] absolute bg-black/0 border-gray-200 inline-flex justify-start items-center gap-3"
     >
-      <!-- Avatar -->
+      <!-- Avatar: prefer user's uploaded avatar (userprofile.avatar_url), fallback to generated avatar -->
+      {% with full_name=request.user.get_full_name|default:request.user.username %}
       <img
-        class="w-10 h-10 relative rounded-full border-gray-200"
-        src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|default:request.user.username }}&background=random"
-        alt="avatar"
+        class="w-10 h-10 relative rounded-full border-gray-200 object-cover"
+        src="{% if request.user and request.user.userprofile and request.user.userprofile.avatar_url %}{{ request.user.userprofile.avatar_url }}{% else %}https://ui-avatars.com/api/?name={{ full_name|urlencode }}&background=random{% endif %}"
+        alt="{{ full_name }}"
+        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name='+encodeURIComponent('{{ full_name }}')+'&background=random'"
       />
+      {% endwith %}
 
       <!-- User Info -->
       <div class="w-36 h-9 relative bg-black/0 border-gray-200">

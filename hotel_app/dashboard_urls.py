@@ -1,8 +1,8 @@
 from django.urls import path
 from . import dashboard_views
-from . import views  # Import views for guest registration and voucher features
+from . import views  
 
-app_name = 'dashboard'   # ✅ Required for namespacing
+app_name = 'dashboard'   
 
 urlpatterns = [
     path('', dashboard_views.dashboard_view, name='main'),

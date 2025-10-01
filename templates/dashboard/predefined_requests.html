@@ -42,9 +42,6 @@
             <button class="nav-tab-btn px-4 py-3 border-b-2 border-transparent text-gray-600 hover:text-gray-900 text-sm font-medium font-['Inter'] transition-colors" data-tab="guest">
                 Guest Portal (18)
             </button>
-            <button class="nav-tab-btn px-4 py-3 border-b-2 border-transparent text-gray-600 hover:text-gray-900 text-sm font-medium font-['Inter'] transition-colors" data-tab="internal">
-                Internal Only (6)
-            </button>
             <button class="nav-tab-btn px-4 py-3 border-b-2 border-transparent text-gray-600 hover:text-gray-900 text-sm font-medium font-['Inter'] transition-colors" data-tab="families">
                 Request Families
             </button>
@@ -141,35 +138,6 @@
                     </div>
                 </div>
 
-                <div class="request-card bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-80" data-category="internal" data-name="Room Service">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="flex items-start gap-3">
-                            <div class="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <div class="w-4 h-4 bg-teal-500 rounded"></div>
-                            </div>
-                            <div class="flex flex-col">
-                                <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">Room Service</h3>
-                                <span class="px-2 py-1 bg-teal-500/10 rounded-full text-teal-500 text-xs font-medium font-['Inter'] mt-1 inline-block">Food & Beverage</span>
-                            </div>
-                        </div>
-                        <button class="toggle-btn w-11 h-6 bg-gray-200 rounded-full flex items-center justify-start px-0.5 transition-all" data-active="false">
-                            <div class="w-5 h-5 bg-white rounded-full shadow-sm transition-transform"></div>
-                        </button>
-                    </div>
-                    <p class="text-gray-600 text-sm font-normal font-['Inter'] mb-6 flex-grow">
-                        Order food and beverages to be delivered directly to your room with our full menu selection.
-                    </p>
-                    <div class="space-y-2 mb-6">
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Department:</span><span class="text-gray-900 text-sm font-medium font-['Inter']">Food & Beverage</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Default Fields:</span><span class="text-gray-900 text-sm font-medium font-['Inter']">3 fields</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Guest Portal:</span><span class="px-2 py-1 bg-gray-200 rounded-full text-gray-600 text-xs font-medium font-['Inter']">Hidden</span></div>
-                    </div>
-                    <div class="flex gap-2 mt-auto">
-                        <button class="edit-btn flex-1 h-9 bg-white hover:bg-sky-50 rounded-lg border border-sky-600 text-sky-600 text-sm font-medium font-['Inter'] transition-colors">Edit</button>
-                        <button class="action-btn w-10 h-9 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"><img src="{% static 'images/manage_users/action.svg' %}" alt="actions" class="w-3 h-3.5"></button>
-                    </div>
-                </div>
-                
                 <div class="request-card bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-80" data-category="guest" data-name="IT Support">
                     <div class="flex justify-between items-start mb-6">
                         <div class="flex items-start gap-3">
@@ -198,36 +166,6 @@
                         <button class="action-btn w-10 h-9 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"><img src="{% static 'images/manage_users/action.svg' %}" alt="actions" class="w-3 h-3.5"></button>
                     </div>
                 </div>
-
-                <div class="request-card bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-80" data-category="internal" data-name="Special Requests">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="flex items-start gap-3">
-                            <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <div class="w-4 h-4 bg-red-500 rounded"></div>
-                            </div>
-                            <div class="flex flex-col">
-                                <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">Special Requests</h3>
-                                <span class="px-2 py-1 bg-red-500/10 rounded-full text-red-500 text-xs font-medium font-['Inter'] mt-1 inline-block">General</span>
-                            </div>
-                        </div>
-                        <button class="toggle-btn w-11 h-6 bg-gray-200 rounded-full flex items-center justify-start px-0.5 transition-all" data-active="false">
-                            <div class="w-5 h-5 bg-white rounded-full shadow-sm transition-transform"></div>
-                        </button>
-                    </div>
-                    <p class="text-gray-600 text-sm font-normal font-['Inter'] mb-6 flex-grow">
-                        Submit unique or custom requests that don't fit into standard categories. Our team will review and respond accordingly.
-                    </p>
-                    <div class="space-y-2 mb-6">
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Department:</span><span class="text-gray-900 text-sm font-medium font-['Inter']">General</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Default Fields:</span><span class="text-gray-900 text-sm font-medium font-['Inter']">2 fields</span></div>
-                        <div class="flex justify-between items-center"><span class="text-gray-600 text-sm font-normal font-['Inter']">Guest Portal:</span><span class="px-2 py-1 bg-gray-200 rounded-full text-gray-600 text-xs font-medium font-['Inter']">Hidden</span></div>
-                    </div>
-                    <div class="flex gap-2 mt-auto">
-                        <button class="edit-btn flex-1 h-9 bg-white hover:bg-sky-50 rounded-lg border border-sky-600 text-sky-600 text-sm font-medium font-['Inter'] transition-colors">Edit</button>
-                        <button class="action-btn w-10 h-9 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"><img src="{% static 'images/manage_users/action.svg' %}" alt="actions" class="w-3 h-3.5"></button>
-                    </div>
-                </div>
-
             </div>
             <div class="flex justify-center">
                 <button id="loadMoreBtn" class="w-48 h-11 bg-white hover:bg-sky-50 rounded-lg border border-sky-600 text-sky-600 text-sm font-medium font-['Inter'] transition-colors">Load More Requests</button>
