@@ -1,0 +1,272 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% load dashboard2_extras %}
+
+{% block content %}
+<div class="w-full max-w-[1184px] mx-auto bg-gray-50 font-['Inter']">
+
+    <header class="w-full bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <a href="#" class="text-gray-600 hover:text-gray-800" aria-label="Back to tickets">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Ticket #{{ ticket.id|default:"T-2024-001" }}</h1>
+                <div class="flex items-center flex-wrap gap-3 mt-1">
+                    <span class="px-3 py-1 text-xs font-medium text-white bg-red-500 rounded-full">{{ ticket_priority_label|default:"High Priority" }}</span>
+                    <span class="px-3 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">{{ ticket_status_label|default:"Pending" }}</span>
+                    <p class="text-sm text-gray-500">Created {{ created_time|default:"2 hours ago" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full" aria-label="Notifications">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span class="absolute top-1 right-1 flex h-4 w-4">
+                    <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-xs items-center justify-center">3</span>
+                </span>
+            </button>
+            <button id="assignTicketBtn" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg flex items-center gap-2 hover:bg-sky-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                <span>Assign</span>
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-white bg-gray-400 rounded-lg flex items-center gap-2 hover:bg-gray-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5"></path></svg>
+                <span>Reassign</span>
+            </button>
+            <img class="w-9 h-9 rounded-full" src="https://placehold.co/36x36" alt="User Avatar" />
+        </div>
+    </header>
+
+    <main class="p-6 flex flex-col lg:flex-row gap-6">
+        
+        <div class="flex-grow flex flex-col gap-6 lg:w-2/3">
+
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-start gap-4">
+                    <img class="w-10 h-10 rounded-full" src="https://placehold.co/40x40" alt="Requester Avatar" />
+                    <div class="w-full">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-base font-semibold text-gray-900">{{ requester_name|default:"Sarah Johnson" }}</p>
+                                <p class="text-sm text-gray-500">Guest • Room {{ room_number|default:"312" }} • VIP Member</p>
+                            </div>
+                            <p class="text-sm text-gray-500 flex-shrink-0">2 hours ago</p>
+                        </div>
+                        <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h3 class="text-base font-semibold text-gray-900">{{ request_type_name|default:"Air conditioning" }} not working</h3>
+                            <p class="mt-2 text-base text-gray-700 leading-relaxed">
+                                The AC in my room has stopped working completely. It's quite warm and uncomfortable. I've tried adjusting the thermostat but nothing happens. Could someone please look into this urgently? I'm staying until Friday and this is affecting my sleep.
+                            </p>
+                            <div class="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <span>Temperature: 78°F • Desired: 68°F</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Attachments</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <a href="#" class="border border-gray-200 rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><svg class="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+                        <div>
+                            <p class="text-base font-medium text-gray-900 truncate">thermostat_display.jpg</p>
+                            <p class="text-sm text-gray-500">245 KB</p>
+                        </div>
+                    </a>
+                    <a href="#" class="border border-gray-200 rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0"><svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></div>
+                        <div>
+                            <p class="text-base font-medium text-gray-900 truncate">ac_unit_video.mp4</p>
+                            <p class="text-sm text-gray-500">12.3 MB</p>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Internal Comments</h3>
+                <div class="space-y-6">
+                    <div class="flex items-start gap-3">
+                        <img class="w-8 h-8 rounded-full" src="https://placehold.co/32x32" alt="Commenter Avatar" />
+                        <div class="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div class="flex justify-between items-center"><p class="text-base font-medium text-gray-900">Mike Chen - Maintenance</p><p class="text-sm text-gray-500">1 hour ago</p></div>
+                            <p class="mt-1 text-base text-gray-700">Checked the AC unit remotely. Looks like the compressor might be faulty. Will need to dispatch a technician to Room 312 for physical inspection and potential replacement.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <img class="w-8 h-8 rounded-full" src="https://placehold.co/32x32" alt="Commenter Avatar" />
+                        <div class="flex-1 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                            <div class="flex justify-between items-center"><p class="text-base font-medium text-gray-900">Lisa Park - Guest Relations</p><p class="text-sm text-gray-500">30 minutes ago</p></div>
+                            <p class="mt-1 text-base text-gray-700">Guest is VIP member. Let's prioritize this and consider offering a room upgrade or portable AC unit as interim solution. I'll prepare a service recovery gesture.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 border-t border-gray-200 pt-4">
+                    <textarea class="w-full p-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" rows="3" placeholder="Add internal comment..."></textarea>
+                    <button class="mt-2 px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Add Comment</button>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Activity Log</h3>
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3"><div class="w-2.5 h-2.5 bg-fuchsia-700 rounded-full mt-1.5 flex-shrink-0"></div><p class="text-sm"><span class="font-medium">Internal comment added</span> by Lisa Park - <span class="text-gray-500">30 minutes ago</span></p></li>
+                    <li class="flex items-start gap-3"><div class="w-2.5 h-2.5 bg-teal-500 rounded-full mt-1.5 flex-shrink-0"></div><p class="text-sm"><span class="font-medium">Internal comment added</span> by Mike Chen - <span class="text-gray-500">1 hour ago</span></p></li>
+                    <li class="flex items-start gap-3"><div class="w-2.5 h-2.5 bg-yellow-400 rounded-full mt-1.5 flex-shrink-0"></div><p class="text-sm"><span class="font-medium">Priority set to High</span> by John Smith - <span class="text-gray-500">1 hour ago</span></p></li>
+                    <li class="flex items-start gap-3"><div class="w-2.5 h-2.5 bg-sky-600 rounded-full mt-1.5 flex-shrink-0"></div><p class="text-sm"><span class="font-medium">Assigned to John Smith</span> by System - <span class="text-gray-500">2 hours ago</span></p></li>
+                    <li class="flex items-start gap-3"><div class="w-2.5 h-2.5 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></div><p class="text-sm"><span class="font-medium">Ticket created</span> by Sarah Johnson - <span class="text-gray-500">2 hours ago</span></p></li>
+                </ul>
+            </section>
+        </div>
+
+        <aside class="flex flex-col gap-6 lg:w-1/3">
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="space-y-3"><button class="w-full py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600">Mark as Resolved</button><button class="w-full py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Start Working</button><button class="w-full py-2 text-sm font-medium text-white bg-yellow-400 rounded-lg hover:bg-yellow-500">Put on Hold</button><button class="w-full py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Contact Guest</button></div>
+            </section>
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Maintenance Checklist</h3>
+                <div class="space-y-3"><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Diagnose AC unit issue</label><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Contact maintenance team</label><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Offer interim solution</label><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Schedule repair/replacement</label><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Follow up with guest</label><label class="flex items-center gap-3 text-sm text-gray-700"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">Verify resolution</label></div>
+            </section>
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Ticket & Room Details</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-600">Room Number:</span> <span class="font-medium text-gray-900">{{ room_number|default:"312" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Floor:</span> <span class="font-medium text-gray-900">{{ floor|default:"3rd Floor" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Room Type:</span> <span class="font-medium text-gray-900">{{ room_type|default:"Deluxe King" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Department:</span> <span class="font-medium text-gray-900">{{ department_name|default:"Maintenance" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Assigned To:</span> <span class="font-medium text-gray-900">{{ assignee_name|default:"John Smith" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Source:</span> <span class="font-medium text-gray-900">Guest Portal</span></div>
+                </div>
+            </section>
+        </aside>
+    </main>
+    
+    <div id="assignTicketDialog" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
+        <div class="w-[520px] bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden transform transition-all duration-300 scale-95 opacity-0">
+            <div class="w-full h-20 p-6 border-b border-gray-200 flex justify-between items-center">
+                <div class="text-xl font-bold text-gray-900">Assign Ticket</div>
+                <button id="closeDialogBtn" class="w-6 h-6 flex justify-center items-center">
+                    <img src="{% static 'images/tickets/cross.svg' %}" alt="Close" class="w-5 h-5">
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="{% static 'images/tickets/department.svg' %}" alt="Department" class="w-4 h-4">
+                        <label class="text-sm font-semibold text-gray-900">Department</label>
+                    </div>
+                    <div class="relative mb-3">
+                        <select class="w-full h-9 bg-white rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option>Select Department</option>
+                            <option>Maintenance</option>
+                            <option>Housekeeping</option>
+                            <option>Concierge</option>
+                            <option>Guest Services</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="autoAssign" class="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+                        <label for="autoAssign" class="text-sm text-gray-700">Auto-assign to department rules</label>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="{% static 'images/tickets/user.svg' %}" alt="User" class="w-4 h-4">
+                        <label class="text-sm font-semibold text-gray-900">Staff Member</label>
+                    </div>
+                    <div class="relative mb-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search staff..." class="w-full h-9 bg-white rounded-lg border border-gray-300 px-10 py-2 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <img src="{% static 'images/tickets/user.svg' %}" alt="User" class="absolute left-3 top-2.5 w-4 h-4">
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <select class="w-full h-9 bg-white rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option>Select Staff Member</option>
+                            <option>John Smith</option>
+                            <option>Jane Doe</option>
+                            <option>Mike Johnson</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="text-sm font-semibold text-gray-900 block mb-2">Priority Level</label>
+                    <div class="flex gap-2">
+                        <button class="px-4 py-1.5 bg-red-500 text-white text-xs font-medium rounded-full border-2 border-red-500">High</button>
+                        <button class="px-4 py-1.5 bg-white text-yellow-500 text-xs font-medium rounded-full border-2 border-yellow-500">Medium</button>
+                        <button class="px-4 py-1.5 bg-white text-blue-500 text-xs font-medium rounded-full border-2 border-blue-500">Normal</button>
+                        <button class="px-4 py-1.5 bg-white text-green-500 text-xs font-medium rounded-full border-2 border-green-500">Low</button>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="text-sm font-semibold text-gray-900 block mb-2">Assignment Notes (Optional)</label>
+                    <textarea class="w-full h-24 bg-white rounded-lg border border-gray-300 p-3 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Add assignment notes (optional)..."></textarea>
+                </div>
+            </div>
+            
+            <div class="w-full h-20 p-6 border-t border-gray-200 flex justify-start gap-3">
+                <button id="cancelAssignBtn" class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button class="px-8 py-2.5 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Assign Ticket</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const assignTicketBtn = document.getElementById('assignTicketBtn');
+    const assignTicketDialog = document.getElementById('assignTicketDialog');
+    const closeDialogBtn = document.getElementById('closeDialogBtn');
+    const cancelAssignBtn = document.getElementById('cancelAssignBtn');
+    
+    // Show dialog when assign button is clicked
+    assignTicketBtn.addEventListener('click', function() {
+        assignTicketDialog.classList.remove('hidden');
+        // Trigger animation
+        setTimeout(() => {
+            const dialogContent = assignTicketDialog.querySelector('div.w-\\[520px\\]');
+            dialogContent.classList.remove('scale-95', 'opacity-0');
+            dialogContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    });
+    
+    // Hide dialog when close button is clicked
+    closeDialogBtn.addEventListener('click', function() {
+        closeDialog();
+    });
+    
+    // Hide dialog when cancel button is clicked
+    cancelAssignBtn.addEventListener('click', function() {
+        closeDialog();
+    });
+    
+    // Hide dialog when clicking outside the dialog content
+    assignTicketDialog.addEventListener('click', function(e) {
+        if (e.target === assignTicketDialog) {
+            closeDialog();
+        }
+    });
+    
+    // Close dialog function
+    function closeDialog() {
+        const dialogContent = assignTicketDialog.querySelector('.w-\\[520px\\]');
+        dialogContent.classList.remove('scale-100', 'opacity-100');
+        dialogContent.classList.add('scale-95', 'opacity-0');
+        
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+            assignTicketDialog.classList.add('hidden');
+        }, 300);
+    }
+});
+</script>
+{% endblock %}

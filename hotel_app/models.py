@@ -208,18 +208,111 @@ class ServiceRequest(models.Model):
         ('normal', 'Normal'),
         ('high', 'High'),
     ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('assigned', 'Assigned'),
+        ('accepted', 'Accepted'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('closed', 'Closed'),
+        ('escalated', 'Escalated'),
+        ('rejected', 'Rejected'),
+    ]
     request_type = models.ForeignKey(RequestType, on_delete=models.SET_NULL, null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     requester_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests_made')
     assignee_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests_assigned')
     priority = models.CharField(max_length=20, blank=True, null=True, choices=PRIORITY_CHOICES)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    accepted_at = models.DateTimeField(blank=True, null=True)
+    started_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
     closed_at = models.DateTimeField(blank=True, null=True)
+    due_at = models.DateTimeField(blank=True, null=True)
+    sla_hours = models.PositiveIntegerField(default=24, help_text='SLA time in hours to resolve')
+    sla_breached = models.BooleanField(default=False)
     notes = models.TextField(blank=True, null=True)
+    resolution_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f'Request #{self.pk}'
+
+    def compute_due_at(self):
+        """Compute due_at from created_at and sla_hours."""
+        if self.created_at and self.sla_hours:
+            return self.created_at + timezone.timedelta(hours=self.sla_hours)
+        return None
+
+    def save(self, *args, **kwargs):
+        # Ensure due_at is set when creating or when sla_hours changes
+        if not self.due_at:
+            self.due_at = self.compute_due_at()
+
+        # Update sla_breached flag if completed_at exists
+        if self.completed_at and self.due_at:
+            self.sla_breached = self.completed_at > self.due_at
+
+        super().save(*args, **kwargs)
+
+    def assign_to_user(self, user):
+        """Assign the ticket to a user."""
+        self.assignee_user = user
+        self.status = 'assigned'
+        self.save()
+
+    def accept_task(self):
+        """Accept the assigned task."""
+        if self.status == 'assigned':
+            self.status = 'accepted'
+            self.accepted_at = timezone.now()
+            self.save()
+
+    def start_work(self):
+        """Start working on the task."""
+        if self.status in ['accepted', 'assigned']:
+            self.status = 'in_progress'
+            self.started_at = timezone.now()
+            self.save()
+
+    def complete_task(self, resolution_notes=None):
+        """Mark the task as completed."""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        if resolution_notes:
+            self.resolution_notes = resolution_notes
+        self.save()
+
+    def close_task(self):
+        """Close the task."""
+        self.status = 'closed'
+        self.closed_at = timezone.now()
+        self.save()
+
+    def escalate_task(self):
+        """Escalate the task."""
+        self.status = 'escalated'
+        self.save()
+
+    def reject_task(self):
+        """Reject the task."""
+        self.status = 'rejected'
+        self.save()
+
+    def can_transition_to(self, new_status):
+        """Check if the ticket can transition to the new status."""
+        valid_transitions = {
+            'pending': ['assigned'],
+            'assigned': ['accepted', 'rejected'],
+            'accepted': ['in_progress'],
+            'in_progress': ['completed'],
+            'completed': ['closed'],
+            'closed': [],
+            'escalated': ['assigned'],
+            'rejected': ['assigned'],
+        }
+        return new_status in valid_transitions.get(self.status, [])
 
 
 class ServiceRequestStep(models.Model):

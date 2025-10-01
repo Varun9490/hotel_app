@@ -1,0 +1,545 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% load dashboard2_extras %}
+
+{% block content %}
+<div class="w-full max-w-[1184px] mx-auto bg-transparent">
+
+    <div class="w-full h-20 bg-white border-b border-gray-200 flex items-center px-6">
+        <div class="w-full flex justify-between items-center">
+            <div>
+                <h1 class="text-gray-900 text-2xl font-bold font-['Inter']">Tickets Management</h1>
+                <p class="text-gray-600 text-sm font-normal font-['Inter']">Monitor and manage all service requests across departments</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <img src="{% static 'images/tickets/search.svg' %}" alt="Search Icon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
+                    <input type="text" placeholder="Search tickets..." class="w-80 h-10 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                </div>
+                <button class="p-2 rounded-lg hover:bg-gray-100">
+                    <img src="{% static 'images/tickets/notification.svg' %}" alt="Notifications" class="w-6 h-6" />
+                </button>
+                <button class="p-2 rounded-lg hover:bg-gray-100">
+                    <img src="{% static 'images/tickets/help.svg' %}" alt="Help" class="w-6 h-6" />
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-6">
+        
+        <div class="w-full mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Department Statistics</h2>
+                <button id="expandDepartmentsBtn" class="text-sky-600 text-sm font-medium flex items-center gap-1 hover:text-sky-800 transition-colors">
+                    <span>View All</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+            </div>
+            
+            <div id="sliderWrapper" class="relative">
+                <div class="overflow-hidden">
+                    <div id="departmentSlider" class="flex transition-transform duration-500 ease-in-out">
+                        {% for dept in departments %}
+                        <div class="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 p-3">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
+                                    <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                                </div>
+                                <div class="mt-4 space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <p class="text-gray-600 text-sm font-normal font-['Inter']">Active Tickets</p>
+                                        <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets }}</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <p class="text-gray-600 text-sm font-normal font-['Inter']">SLA Compliance</p>
+                                            <p class="text-lg font-bold font-['Inter']" style="color: {{ dept.sla_color|default:'#22c55e' }};">{{ dept.sla_compliance }}%</p>
+                                        </div>
+                                        <div class="w-full h-2 bg-gray-200 rounded-full">
+                                            <div class="h-2 rounded-full" style="width: {{ dept.sla_compliance }}%; background-color: {{ dept.sla_color|default:'#22c55e' }};"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button id="prevSlide" class="absolute top-1/2 left-0 transform -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button id="nextSlide" class="absolute top-1/2 right-0 transform -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <div id="sliderDots" class="flex justify-center mt-4 space-x-2">
+                    {% for dept in departments %}
+                    <button class="department-dot w-2.5 h-2.5 rounded-full bg-gray-300 transition-colors duration-300 focus:outline-none"></button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div id="expandedDepartments" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for dept in departments %}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
+                        <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                    </div>
+                    <div class="mt-4 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <p class="text-gray-600 text-sm font-normal font-['Inter']">Active Tickets</p>
+                            <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets }}</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="text-gray-600 text-sm font-normal font-['Inter']">SLA Compliance</p>
+                                <p class="text-lg font-bold font-['Inter']" style="color: {{ dept.sla_color|default:'#22c55e' }};">{{ dept.sla_compliance }}%</p>
+                            </div>
+                            <div class="w-full h-2 bg-gray-200 rounded-full">
+                                 <div class="h-2 rounded-full" style="width: {{ dept.sla_compliance }}%; background-color: {{ dept.sla_color|default:'#22c55e' }};"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Tickets Overview</h2>
+                <button id="openCreateTicketModal" class="h-10 w-40 bg-sky-600 rounded-lg text-white flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors">
+                    <img src="{% static 'images/tickets/plus.svg' %}" alt="Create Ticket Icon"/>
+                    <span>Create Ticket</span>
+                </button>
+            </div>
+            <div class="mt-6 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 text-sm font-medium">Department:</label>
+                        <button class="w-40 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
+                            <span>All Departments</span>
+                            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 text-sm font-medium">Priority:</label>
+                        <button class="w-36 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
+                           <span>All Priorities</span>
+                           <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 text-sm font-medium">Status:</label>
+                        <button class="w-36 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
+                           <span>All Statuses</span>
+                           <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                <button class="h-10 w-40 rounded-lg border border-sky-600 text-sky-600 flex items-center justify-center gap-2 hover:bg-sky-50 transition-colors">
+                    <img src="{% static 'images/tickets/export.svg' %}" alt="Export Icon"/>
+                    <span>Export</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="p-4 text-left"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"></th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ticket ID</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">SLA %</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for ticket in tickets %}
+                        <tr>
+                            <td class="p-4"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ ticket.id }}</td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-{{ ticket.priority_color }}-100 text-{{ ticket.priority_color }}-800">{{ ticket.priority }}</span>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ticket.subject }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <img class="w-6 h-6 rounded-full" src="{{ ticket.owner_avatar }}" alt="Avatar">
+                                    <div class="ml-3 text-sm text-gray-900">{{ ticket.owner }}</div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-16 h-2 bg-gray-200 rounded-full">
+                                        <div class="h-2 rounded-full" style="width: {{ ticket.sla_percentage }}%; background-color: {{ ticket.sla_color|default:'#6b7280' }};"></div>
+                                    </div>
+                                    <span class="text-sm font-medium" style="color: {{ ticket.sla_color|default:'#6b7280' }};">{{ ticket.sla_percentage }}%</span>
+                                </div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-800">{{ ticket.status }}</span>
+                            </td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap text-sm flex items-center gap-2">
+                                <button class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/eye.svg' %}" alt="View ticket" class="w-3.5 h-3.5"></button>
+                                <a href="{% url 'dashboard:ticket_detail' ticket.id %}" class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/edit.svg' %}" alt="Edit ticket" class="w-3.5 h-3.5"></a>
+                                <button class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/more.svg' %}" alt="More options" class="w-3.5 h-3.5"></button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    Showing 1-{{ tickets|length }} of {{ total_tickets }} tickets
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
+                    <button class="w-8 h-8 text-sm rounded-lg bg-sky-600 text-white">1</button>
+                    <button class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">2</button>
+                    <button class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">3</button>
+                    <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="createTicketModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col max-h-[95vh]">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Create New Ticket</h2>
+                <button id="closeCreateTicketModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="guestName" class="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <img src="{% static 'images/tickets/guest.svg' %}" alt="Guest Icon" class="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input type="text" id="guestName" placeholder="Enter guest name" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="roomNumber" class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+                        <div class="relative">
+                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <img src="{% static 'images/tickets/room.svg' %}" alt="Room Icon" class="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input type="text" id="roomNumber" placeholder="Enter room number" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="department" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <img src="{% static 'images/tickets/department.svg' %}" alt="Department Icon" class="h-5 w-5 text-gray-400" />
+                        </div>
+                        <select id="department" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none">
+                            <option value="">Select department</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.name }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                           <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ticket Category</label>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Cleaning</button>
+                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Maintenance</button>
+                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Service Issue</button>
+                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Amenity Request</button>
+                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Complaint</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Priority Level</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Critical">
+                            <span class="w-4 h-4 rounded-full bg-red-500"></span>
+                            <span class="text-sm font-medium text-gray-700">Critical</span>
+                        </button>
+                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="High">
+                            <span class="w-4 h-4 rounded-full bg-yellow-400"></span>
+                            <span class="text-sm font-medium text-gray-700">High</span>
+                        </button>
+                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Medium">
+                            <span class="w-4 h-4 rounded-full bg-sky-500"></span>
+                            <span class="text-sm font-medium text-gray-700">Medium</span>
+                        </button>
+                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Low">
+                            <span class="w-4 h-4 rounded-full bg-green-500"></span>
+                            <span class="text-sm font-medium text-gray-700">Low</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="description" rows="4" placeholder="Describe the issue or request..." class="w-full p-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"></textarea>
+                </div>
+                
+                <div>
+                    <label for="attachments" class="block text-sm font-medium text-gray-700 mb-1">Attachments (Optional)</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <img src="{% static 'images/tickets/file.svg' %}" class="mx-auto h-12 w-12 text-gray-400" alt="File upload icon">
+                            <div class="flex text-sm text-gray-600">
+                                <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-sky-600 hover:text-sky-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-sky-500">
+                                    <span>Upload photos or voice note</span>
+                                    <input id="file-upload" name="file-upload" type="file" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center gap-4 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                <button id="cancelCreateTicket" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button id="submitCreateTicket" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Create Ticket</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- MODAL SCRIPT ---
+    const openModalBtn = document.getElementById('openCreateTicketModal');
+    const closeModalBtn = document.getElementById('closeCreateTicketModal');
+    const cancelBtn = document.getElementById('cancelCreateTicket');
+    const modal = document.getElementById('createTicketModal');
+
+    const openModal = () => modal.classList.remove('hidden');
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        // Resetting form elements inside the modal
+        const modalForm = modal.querySelector('form');
+        if (modalForm) {
+            modalForm.reset();
+        }
+        document.querySelectorAll('.category-btn, .priority-btn').forEach(btn => {
+            btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-600', 'ring-2', 'ring-offset-2', 'ring-sky-500');
+        });
+        selectedCategory = '';
+        selectedPriority = '';
+    };
+
+    if(openModalBtn) openModalBtn.addEventListener('click', openModal);
+    if(closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if(modal) modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // --- DEPARTMENT STATS TOGGLE ---
+    const expandDepartmentsBtn = document.getElementById('expandDepartmentsBtn');
+    const expandedDepartments = document.getElementById('expandedDepartments');
+    const sliderWrapper = document.getElementById('sliderWrapper');
+
+    if (expandDepartmentsBtn) {
+        expandDepartmentsBtn.addEventListener('click', () => {
+            const isExpanded = !expandedDepartments.classList.contains('hidden');
+            if (isExpanded) {
+                expandedDepartments.classList.add('hidden');
+                sliderWrapper.classList.remove('hidden');
+                expandDepartmentsBtn.innerHTML = `<span>View All</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+            } else {
+                expandedDepartments.classList.remove('hidden');
+                sliderWrapper.classList.add('hidden');
+                expandDepartmentsBtn.innerHTML = `<span>Show Less</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`;
+            }
+        });
+    }
+
+    // --- DEPARTMENT SLIDER SCRIPT ---
+    const slider = document.getElementById('departmentSlider');
+    const prevBtn = document.getElementById('prevSlide');
+    const nextBtn = document.getElementById('nextSlide');
+    const dots = document.querySelectorAll('.department-dot');
+    
+    if (slider && dots.length > 0) {
+        let currentIndex = 0;
+        let itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
+        const totalItems = dots.length;
+        let autoPlayInterval;
+
+        const updateSlider = () => {
+            // Recalculate items per screen on each update to be safe
+            itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
+            const maxIndex = totalItems - itemsPerScreen;
+            if (currentIndex > maxIndex) {
+                currentIndex = maxIndex;
+            }
+
+            const offset = currentIndex * (100 / itemsPerScreen);
+            slider.style.transform = `translateX(-${offset}%)`;
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('bg-sky-600', index === currentIndex);
+                dot.classList.toggle('bg-gray-300', index !== currentIndex);
+            });
+            
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex >= maxIndex;
+        };
+        
+        const moveNext = () => {
+            if (currentIndex < totalItems - itemsPerScreen) {
+                currentIndex++;
+            } else {
+                currentIndex = 0; // Loop back to start
+            }
+            updateSlider();
+        };
+
+        const startAutoPlay = () => {
+            stopAutoPlay();
+            autoPlayInterval = setInterval(moveNext, 5000);
+        };
+        
+        const stopAutoPlay = () => clearInterval(autoPlayInterval);
+
+        nextBtn.addEventListener('click', () => {
+            moveNext();
+            stopAutoPlay();
+            startAutoPlay();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateSlider();
+                stopAutoPlay();
+                startAutoPlay();
+            }
+        });
+
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentIndex = index;
+                updateSlider();
+                stopAutoPlay();
+                startAutoPlay();
+            });
+        });
+        
+        window.addEventListener('resize', updateSlider);
+
+        updateSlider(); // Initial setup
+        startAutoPlay();
+    }
+    
+    // --- TICKET CREATION SCRIPT ---
+    let selectedCategory = '';
+    let selectedPriority = '';
+
+    document.querySelectorAll('.category-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-600'));
+            button.classList.add('bg-sky-600', 'text-white', 'border-sky-600');
+            selectedCategory = button.textContent.trim();
+        });
+    });
+
+    document.querySelectorAll('.priority-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500'));
+            button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500');
+            selectedPriority = button.dataset.priority;
+        });
+    });
+    
+    const submitTicketBtn = document.getElementById('submitCreateTicket');
+    if (submitTicketBtn) {
+        submitTicketBtn.addEventListener('click', () => {
+            const ticketData = {
+                guest_name: document.getElementById('guestName').value.trim(),
+                room_number: document.getElementById('roomNumber').value.trim(),
+                department: document.getElementById('department').value,
+                category: selectedCategory,
+                priority: selectedPriority,
+                description: document.getElementById('description').value.trim()
+            };
+
+            if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) {
+                alert('Please fill in all required fields: Guest Name, Room Number, Department, Category, and Priority.');
+                return;
+            }
+
+            fetch('{% url "dashboard:api_create_ticket" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(ticketData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Ticket created successfully!');
+                    location.reload();
+                } else {
+                    alert('Error creating ticket: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        });
+    }
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock extra_js %}

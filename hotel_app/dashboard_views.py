@@ -54,7 +54,6 @@ from .forms import (
 from .utils import user_in_group
 from hotel_app.whatsapp_service import WhatsAppService
 
-
 # ---- Constants ----
 ADMINS_GROUP = 'Admins'
 STAFF_GROUP = 'Staff'
@@ -1272,107 +1271,392 @@ def api_reset_user_password(request, user_id):
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def tickets(request):
-    """Render the Tickets Management page.
-    """
-    # Sample data for department cards
-    departments = [
-        {
-            'name': 'Housekeeping',
-            'active_tickets': 15,
-            'sla_compliance': 94,
-            'color': 'sky-600',
-            'icon_color': 'sky-600',
-        },
-        {
-            'name': 'Maintenance',
-            'active_tickets': 12,
-            'sla_compliance': 78,
-            'color': 'yellow-400',
-            'icon_color': 'sky-600',
-        },
-        {
-            'name': 'Guest Services',
-            'active_tickets': 8,
-            'sla_compliance': 98,
-            'color': 'green-500',
-            'icon_color': 'sky-600',
-        },
-    ]
+    """Render the Tickets Management page."""
+    from hotel_app.models import ServiceRequest, RequestType, Department, User
+    from django.db.models import Count, Q
+    from datetime import timedelta
+    from django.utils import timezone
     
-    # Sample data for tickets table
-    tickets_data = [
-        {
-            'id': 2847,
-            'priority': 'Critical',
-            'priority_color': 'red-500',
-            'subject': 'Room AC not working - Room 304',
-            'owner': 'Mike Johnson',
+    # Get departments with active ticket counts
+    departments_data = []
+    departments = Department.objects.all()
+    
+    for dept in departments:
+        # Count active tickets for this department
+        active_tickets_count = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name
+        ).exclude(
+            status__in=['completed', 'closed']
+        ).count()
+        
+        # Calculate SLA compliance (simplified calculation)
+        total_tickets = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name
+        ).count()
+        
+        completed_tickets = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name,
+            status='completed'
+        ).count()
+        
+        sla_compliance = 0
+        if total_tickets > 0:
+            sla_compliance = int((completed_tickets / total_tickets) * 100)
+        
+        # Determine colors based on department
+        color_mapping = {
+            'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
+            'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
+            'Guest Services': {'color': 'green-500', 'icon_color': 'sky-600'},
+        }
+        
+        dept_colors = color_mapping.get(dept.name, {'color': 'blue-500', 'icon_color': 'sky-600'})
+        
+        departments_data.append({
+            'name': dept.name,
+            'active_tickets': active_tickets_count,
+            'sla_compliance': sla_compliance,
+            'color': dept_colors['color'],
+            'icon_color': dept_colors['icon_color'],
+        })
+    
+    # Get service requests for the table
+    service_requests = ServiceRequest.objects.select_related(
+        'request_type', 'location', 'requester_user', 'assignee_user'
+    ).all()[:10]  # Limit to 10 for performance
+    
+    tickets_data = []
+    for sr in service_requests:
+        # Map priority to display values
+        priority_mapping = {
+            'high': {'label': 'Critical', 'color': 'red-500'},
+            'normal': {'label': 'Medium', 'color': 'sky-600'},
+            'low': {'label': 'Low', 'color': 'gray-100'},
+        }
+        
+        priority_data = priority_mapping.get(sr.priority, {'label': 'Medium', 'color': 'sky-600'})
+        
+        # Map status to display values
+        status_mapping = {
+            'pending': {'label': 'Pending', 'color': 'yellow-400'},
+            'assigned': {'label': 'Assigned', 'color': 'yellow-400'},
+            'accepted': {'label': 'Accepted', 'color': 'blue-500'},
+            'in_progress': {'label': 'In Progress', 'color': 'sky-600'},
+            'completed': {'label': 'Resolved', 'color': 'green-500'},
+            'closed': {'label': 'Closed', 'color': 'green-500'},
+            'escalated': {'label': 'Escalated', 'color': 'red-500'},
+            'rejected': {'label': 'Rejected', 'color': 'red-500'},
+        }
+        
+        status_data = status_mapping.get(sr.status, {'label': 'Pending', 'color': 'yellow-400'})
+        
+        # Calculate SLA percentage
+        sla_percentage = 0
+        sla_color = 'green-500'
+        if sr.created_at and sr.due_at:
+            # Calculate time taken so far or total time if completed
+            if sr.completed_at:
+                time_taken = sr.completed_at - sr.created_at
+            else:
+                time_taken = timezone.now() - sr.created_at
+            
+            # Calculate SLA percentage (time taken / total allowed time)
+            total_allowed_time = sr.due_at - sr.created_at
+            if total_allowed_time.total_seconds() > 0:
+                sla_percentage = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
+            
+            # Determine color based on SLA
+            if sla_percentage > 90:
+                sla_color = 'red-500'
+            elif sla_percentage > 70:
+                sla_color = 'yellow-400'
+            else:
+                sla_color = 'green-500'
+        
+        # Get requester name
+        requester_name = 'Unknown'
+        if sr.requester_user:
+            requester_name = sr.requester_user.get_full_name() or sr.requester_user.username
+        
+        # Get assignee name
+        assignee_name = 'Unassigned'
+        if sr.assignee_user:
+            assignee_name = sr.assignee_user.get_full_name() or sr.assignee_user.username
+        
+        # Create subject line
+        subject = f'{sr.request_type.name if sr.request_type else "Unknown Request"}'
+        if sr.location:
+            subject += f' - {sr.location}'
+        
+        # Check if current user is the assignee
+        is_assignee = (sr.assignee_user == request.user)
+        
+        tickets_data.append({
+            'id': sr.id,
+            'priority': priority_data['label'],
+            'priority_color': priority_data['color'],
+            'subject': subject,
+            'owner': assignee_name,
             'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': 85,
-            'sla_color': 'red-500',
-            'status': 'In Progress',
-            'status_color': 'sky-600',
-        },
-        {
-            'id': 2846,
-            'priority': 'High',
-            'priority_color': 'yellow-400',
-            'subject': 'Extra towels needed - Room 218',
-            'owner': 'Lisa Chen',
-            'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': 45,
-            'sla_color': 'yellow-400',
-            'status': 'Pending',
-            'status_color': 'yellow-400',
-        },
-        {
-            'id': 2845,
-            'priority': 'Medium',
-            'priority_color': 'sky-600',
-            'subject': 'Restaurant reservation request',
-            'owner': 'David Rodriguez',
-            'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': 25,
-            'sla_color': 'sky-600',
-            'status': 'In Progress',
-            'status_color': 'sky-600',
-        },
-        {
-            'id': 2844,
-            'priority': 'Low',
-            'priority_color': 'gray-100',
-            'subject': 'WiFi password request - Room 156',
-            'owner': 'Emma Wilson',
-            'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': 100,
-            'sla_color': 'green-500',
-            'status': 'Resolved',
-            'status_color': 'green-500',
-        },
-        {
-            'id': 2843,
-            'priority': 'Critical',
-            'priority_color': 'red-500',
-            'subject': 'Elevator out of service - Floor 3',
-            'owner': 'James Smith',
-            'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': 95,
-            'sla_color': 'red-500',
-            'status': 'In Progress',
-            'status_color': 'sky-600',
-        },
-    ]
+            'sla_percentage': sla_percentage,
+            'sla_color': sla_color,
+            'status': status_data['label'],
+            'status_color': status_data['color'],
+            'is_assignee': is_assignee,
+        })
+    
+    # Get total ticket count
+    total_tickets = ServiceRequest.objects.count()
+    
+    # If there are no service requests, create some sample data
+    if total_tickets == 0:
+        create_sample_service_requests()
+        # Refresh the data
+        service_requests = ServiceRequest.objects.select_related(
+            'request_type', 'location', 'requester_user', 'assignee_user'
+        ).all()[:10]
+        
+        tickets_data = []
+        for sr in service_requests:
+            # Map priority to display values
+            priority_mapping = {
+                'high': {'label': 'Critical', 'color': 'red-500'},
+                'normal': {'label': 'Medium', 'color': 'sky-600'},
+                'low': {'label': 'Low', 'color': 'gray-100'},
+            }
+            
+            priority_data = priority_mapping.get(sr.priority, {'label': 'Medium', 'color': 'sky-600'})
+            
+            # Map status to display values
+            status_mapping = {
+                'pending': {'label': 'Pending', 'color': 'yellow-400'},
+                'assigned': {'label': 'Assigned', 'color': 'yellow-400'},
+                'accepted': {'label': 'Accepted', 'color': 'blue-500'},
+                'in_progress': {'label': 'In Progress', 'color': 'sky-600'},
+                'completed': {'label': 'Resolved', 'color': 'green-500'},
+                'closed': {'label': 'Closed', 'color': 'green-500'},
+                'escalated': {'label': 'Escalated', 'color': 'red-500'},
+                'rejected': {'label': 'Rejected', 'color': 'red-500'},
+            }
+            
+            status_data = status_mapping.get(sr.status, {'label': 'Pending', 'color': 'yellow-400'})
+            
+            # Calculate SLA percentage
+            sla_percentage = 0
+            sla_color = 'green-500'
+            if sr.created_at and sr.due_at:
+                # Calculate time taken so far or total time if completed
+                if sr.completed_at:
+                    time_taken = sr.completed_at - sr.created_at
+                else:
+                    time_taken = timezone.now() - sr.created_at
+                
+                # Calculate SLA percentage (time taken / total allowed time)
+                total_allowed_time = sr.due_at - sr.created_at
+                if total_allowed_time.total_seconds() > 0:
+                    sla_percentage = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
+                
+                # Determine color based on SLA
+                if sla_percentage > 90:
+                    sla_color = 'red-500'
+                elif sla_percentage > 70:
+                    sla_color = 'yellow-400'
+                else:
+                    sla_color = 'green-500'
+            
+            # Get requester name
+            requester_name = 'Unknown'
+            if sr.requester_user:
+                requester_name = sr.requester_user.get_full_name() or sr.requester_user.username
+            
+            # Get assignee name
+            assignee_name = 'Unassigned'
+            if sr.assignee_user:
+                assignee_name = sr.assignee_user.get_full_name() or sr.assignee_user.username
+            
+            # Create subject line
+            subject = f'{sr.request_type.name if sr.request_type else "Unknown Request"}'
+            if sr.location:
+                subject += f' - {sr.location}'
+            
+            # Check if current user is the assignee
+            is_assignee = (sr.assignee_user == request.user)
+            
+            tickets_data.append({
+                'id': sr.id,
+                'priority': priority_data['label'],
+                'priority_color': priority_data['color'],
+                'subject': subject,
+                'owner': assignee_name,
+                'owner_avatar': 'https://placehold.co/24x24',
+                'sla_percentage': sla_percentage,
+                'sla_color': sla_color,
+                'status': status_data['label'],
+                'status_color': status_data['color'],
+                'is_assignee': is_assignee,
+            })
+        
+        total_tickets = ServiceRequest.objects.count()
+        # Refresh departments data after creating sample requests
+        departments_data = []
+        departments = Department.objects.all()
+        
+        for dept in departments:
+            # Count active tickets for this department
+            active_tickets_count = ServiceRequest.objects.filter(
+                request_type__name__icontains=dept.name
+            ).exclude(
+                status__in=['completed', 'closed']
+            ).count()
+            
+            # Calculate SLA compliance (simplified calculation)
+            total_tickets_dept = ServiceRequest.objects.filter(
+                request_type__name__icontains=dept.name
+            ).count()
+            
+            completed_tickets = ServiceRequest.objects.filter(
+                request_type__name__icontains=dept.name,
+                status='completed'
+            ).count()
+            
+            sla_compliance = 0
+            if total_tickets_dept > 0:
+                sla_compliance = int((completed_tickets / total_tickets_dept) * 100)
+            
+            # Determine colors based on department
+            color_mapping = {
+                'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
+                'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
+                'Guest Services': {'color': 'green-500', 'icon_color': 'sky-600'},
+            }
+            
+            dept_colors = color_mapping.get(dept.name, {'color': 'blue-500', 'icon_color': 'sky-600'})
+            
+            departments_data.append({
+                'name': dept.name,
+                'active_tickets': active_tickets_count,
+                'sla_compliance': sla_compliance,
+                'color': dept_colors['color'],
+                'icon_color': dept_colors['icon_color'],
+            })
     
     context = {
-        'departments': departments,
+        'departments': departments_data,
         'tickets': tickets_data,
-        'total_tickets': 47,
+        'total_tickets': total_tickets,
     }
     return render(request, 'dashboard/tickets.html', context)
 
 
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
+def ticket_detail(request, ticket_id):
+    """Render the Ticket Detail page."""
+    from hotel_app.models import ServiceRequest, User
+    from django.utils import timezone
+    
+    # Get the service request
+    service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+    
+    # Map priority to display values
+    priority_mapping = {
+        'high': {'label': 'High', 'color': 'red-500'},
+        'normal': {'label': 'Normal', 'color': 'sky-600'},
+        'low': {'label': 'Low', 'color': 'gray-100'},
+    }
+    
+    priority_data = priority_mapping.get(service_request.priority, {'label': 'Normal', 'color': 'sky-600'})
+    
+    # Map status to display values
+    status_mapping = {
+        'pending': {'label': 'Pending', 'color': 'yellow-400'},
+        'assigned': {'label': 'Assigned', 'color': 'yellow-400'},
+        'accepted': {'label': 'Accepted', 'color': 'blue-500'},
+        'in_progress': {'label': 'In Progress', 'color': 'sky-600'},
+        'completed': {'label': 'Completed', 'color': 'green-500'},
+        'closed': {'label': 'Closed', 'color': 'green-500'},
+        'escalated': {'label': 'Escalated', 'color': 'red-500'},
+        'rejected': {'label': 'Rejected', 'color': 'red-500'},
+    }
+    
+    status_data = status_mapping.get(service_request.status, {'label': 'Pending', 'color': 'yellow-400'})
+    
+    # Get requester name
+    requester_name = 'Unknown'
+    if service_request.requester_user:
+        requester_name = service_request.requester_user.get_full_name() or service_request.requester_user.username
+    
+    # Get assignee name
+    assignee_name = 'Unassigned'
+    if service_request.assignee_user:
+        assignee_name = service_request.assignee_user.get_full_name() or service_request.assignee_user.username
+    
+    # Check if current user is the assignee
+    is_assignee = (service_request.assignee_user == request.user)
+    
+    # Get available users for assignment
+    available_users = User.objects.filter(is_active=True).exclude(id=request.user.id)
+    
+    # Get request type name
+    request_type_name = 'Unknown Request'
+    if service_request.request_type:
+        request_type_name = service_request.request_type.name
+    
+    # Get location info
+    location_name = 'Unknown Location'
+    room_number = 'N/A'
+    floor = 'N/A'
+    building = 'N/A'
+    room_type = 'N/A'
+    
+    if service_request.location:
+        location_name = service_request.location.name
+        room_number = getattr(service_request.location, 'room_no', 'N/A') or 'N/A'
+        if service_request.location.floor:
+            floor = f"{service_request.location.floor.floor_number} Floor"
+            if service_request.location.floor.building:
+                building = service_request.location.floor.building.name
+        if service_request.location.type:
+            room_type = service_request.location.type.name
+    
+    # Get department info
+    department_name = 'Unknown Department'
+    # Since RequestType doesn't have a department field, we'll use work_family as a fallback
+    # or set it to Unknown if neither is available
+    if service_request.request_type:
+        if hasattr(service_request.request_type, 'work_family') and service_request.request_type.work_family:
+            department_name = service_request.request_type.work_family.name
+        elif hasattr(service_request.request_type, 'request_family') and service_request.request_type.request_family:
+            department_name = service_request.request_type.request_family.name
+    
+    # Format created time
+    created_time = service_request.created_at.strftime("%b %d, %H:%M") if service_request.created_at else "Unknown"
+    
+    context = {
+        'ticket': service_request,
+        'ticket_priority_label': priority_data['label'],
+        'ticket_priority_color': priority_data['color'],
+        'ticket_status_label': status_data['label'],
+        'ticket_status_color': status_data['color'],
+        'requester_name': requester_name,
+        'assignee_name': assignee_name,
+        'is_assignee': is_assignee,
+        'available_users': available_users,
+        'request_type_name': request_type_name,
+        'location_name': location_name,
+        'room_number': room_number,
+        'floor': floor,
+        'building': building,
+        'room_type': room_type,
+        'department_name': department_name,
+        'created_time': created_time,
+    }
+    
+    return render(request, 'dashboard/ticket_detail.html', context)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
 def configure_requests(request):
     """Render the Predefined / Configure Requests page.
     Uses a mostly-static template for now; dynamic values can be added to context later.
@@ -1423,6 +1707,15 @@ def configure_requests(request):
         'active_tab': 'all',
     }
     return render(request, 'dashboard/predefined_requests.html', context)
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+
+# Fix the imports - use the local require_permission function and ADMINS_GROUP constant
+# from hotel_app.decorators import require_permission
+# from hotel_app.groups import ADMINS_GROUP
 
 
 @login_required
@@ -1437,20 +1730,22 @@ def configure_requests_api(request):
         try:
             from hotel_app.models import RequestType
             requests = RequestType.objects.all().order_by('name')
-            requests_list = [
-                {
+            requests_list = []
+            for r in requests:
+                # Since RequestType doesn't have a department field, we'll use work_family or request_family as fallback
+                department_name = 'Unknown Department'
+                if hasattr(r, 'work_family') and r.work_family:
+                    department_name = r.work_family.name
+                elif hasattr(r, 'request_family') and r.request_family:
+                    department_name = r.request_family.name
+                    
+                requests_list.append({
                     'id': r.id,
                     'title': r.name,
-                    'department': r.department.name,
+                    'department': department_name,
                     'description': r.description,
-                    'fields': r.fields,
-                    'exposed': r.exposed,
-                    'icon': r.icon,
-                    'icon_bg': r.icon_bg,
-                    'tag_bg': r.tag_bg,
-                }
-                for r in requests
-            ]
+                    'active': r.active,
+                })
             return JsonResponse({'requests': requests_list})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
@@ -1460,28 +1755,18 @@ def configure_requests_api(request):
         try:
             data = json.loads(request.body.decode('utf-8'))
             title = data.get('title')
-            department_id = data.get('department_id')
+            # Note: department_id is not used since RequestType doesn't have a department field
             description = data.get('description')
-            fields = data.get('fields')
-            exposed = data.get('exposed')
-            icon = data.get('icon')
-            icon_bg = data.get('icon_bg')
-            tag_bg = data.get('tag_bg')
+            active = data.get('active', True)
 
-            if not title or not department_id:
-                return JsonResponse({'error': 'Title and department are required'}, status=400)
+            if not title:
+                return JsonResponse({'error': 'Title is required'}, status=400)
 
-            from hotel_app.models import RequestType, Department
-            department = get_object_or_404(Department, pk=department_id)
+            from hotel_app.models import RequestType
             request_type = RequestType.objects.create(
                 name=title,
-                department=department,
                 description=description,
-                fields=fields,
-                exposed=exposed,
-                icon=icon,
-                icon_bg=icon_bg,
-                tag_bg=tag_bg,
+                active=active,
             )
             return JsonResponse({'id': request_type.id, 'message': 'Request created successfully'})
         except Exception as e:
@@ -1493,28 +1778,18 @@ def configure_requests_api(request):
             data = json.loads(request.body.decode('utf-8'))
             request_id = data.get('id')
             title = data.get('title')
-            department_id = data.get('department_id')
+            # Note: department_id is not used since RequestType doesn't have a department field
             description = data.get('description')
-            fields = data.get('fields')
-            exposed = data.get('exposed')
-            icon = data.get('icon')
-            icon_bg = data.get('icon_bg')
-            tag_bg = data.get('tag_bg')
+            active = data.get('active', True)
 
-            if not request_id or not title or not department_id:
-                return JsonResponse({'error': 'ID, title, and department are required'}, status=400)
+            if not request_id or not title:
+                return JsonResponse({'error': 'ID and title are required'}, status=400)
 
-            from hotel_app.models import RequestType, Department
-            department = get_object_or_404(Department, pk=department_id)
+            from hotel_app.models import RequestType
             request_type = get_object_or_404(RequestType, pk=request_id)
             request_type.name = title
-            request_type.department = department
             request_type.description = description
-            request_type.fields = fields
-            request_type.exposed = exposed
-            request_type.icon = icon
-            request_type.icon_bg = icon_bg
-            request_type.tag_bg = tag_bg
+            request_type.active = active
             request_type.save()
             return JsonResponse({'id': request_type.id, 'message': 'Request updated successfully'})
         except Exception as e:
@@ -1538,6 +1813,137 @@ def configure_requests_api(request):
 
     else:
         return JsonResponse({'error': 'Unsupported method'}, status=405)
+
+
+def create_sample_service_requests():
+    """Create sample service requests for testing purposes."""
+    from hotel_app.models import ServiceRequest, RequestType, Department, Location, User
+    from django.utils import timezone
+    from datetime import timedelta
+    import random
+    
+    # Create sample departments if they don't exist
+    departments_data = [
+        {'name': 'Housekeeping', 'description': 'Housekeeping services'},
+        {'name': 'Maintenance', 'description': 'Maintenance services'},
+        {'name': 'Guest Services', 'description': 'Guest services'},
+    ]
+    
+    departments = []
+    for dept_data in departments_data:
+        dept, created = Department.objects.get_or_create(
+            name=dept_data['name'],
+            defaults={'description': dept_data['description']}
+        )
+        departments.append(dept)
+    
+    # Create sample request types if they don't exist
+    request_types_data = [
+        {'name': 'Room Cleaning'},
+        {'name': 'AC Repair'},
+        {'name': 'TV Issue'},
+        {'name': 'Extra Towels'},
+        {'name': 'Restaurant Reservation'},
+    ]
+    
+    request_types = []
+    for rt_data in request_types_data:
+        rt, created = RequestType.objects.get_or_create(
+            name=rt_data['name'],
+            defaults={}
+        )
+        request_types.append(rt)
+    
+    # Create sample locations if they don't exist
+    locations_data = [
+        {'name': 'Room 101', 'room_no': '101'},
+        {'name': 'Room 205', 'room_no': '205'},
+        {'name': 'Room 304', 'room_no': '304'},
+        {'name': 'Room 412', 'room_no': '412'},
+        {'name': 'Lobby', 'room_no': 'Lobby'},
+    ]
+    
+    locations = []
+    for loc_data in locations_data:
+        loc, created = Location.objects.get_or_create(
+            name=loc_data['name'],
+            defaults={'room_no': loc_data['room_no']}
+        )
+        locations.append(loc)
+    
+    # Get some users (use existing ones or create new ones)
+    users = list(User.objects.all())
+    if len(users) < 5:
+        # Create some sample users if needed
+        for i in range(5 - len(users)):
+            user = User.objects.create_user(
+                username=f'user{i}',
+                email=f'user{i}@example.com',
+                password='password123'
+            )
+            users.append(user)
+    
+    # Create sample service requests
+    priorities = ['low', 'normal', 'high']
+    statuses = ['pending', 'assigned', 'accepted', 'in_progress', 'completed', 'closed']
+    
+    sample_requests = [
+        {
+            'request_type': request_types[0],
+            'location': locations[0],
+            'requester_user': users[0],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+        {
+            'request_type': request_types[1],
+            'location': locations[2],
+            'requester_user': users[1],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+        {
+            'request_type': request_types[3],
+            'location': locations[1],
+            'requester_user': users[2],
+            'priority': 'normal',
+            'status': 'pending',
+        },
+        {
+            'request_type': request_types[4],
+            'location': locations[4],
+            'requester_user': users[3],
+            'priority': 'low',
+            'status': 'completed',
+        },
+        {
+            'request_type': request_types[2],
+            'location': locations[3],
+            'requester_user': users[4],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+    ]
+    
+    for req_data in sample_requests:
+        # Randomly assign an assignee user (or leave unassigned)
+        assignee = random.choice(users) if random.choice([True, False]) else None
+        
+        # Create the service request
+        sr = ServiceRequest.objects.create(
+            request_type=req_data['request_type'],
+            location=req_data['location'],
+            requester_user=req_data['requester_user'],
+            assignee_user=assignee,
+            priority=req_data['priority'],
+            status=req_data['status'],
+            notes='Sample request for testing',
+        )
+        
+        # If status is completed, set a closed_at time
+        if req_data['status'] == 'completed':
+            sr.closed_at = timezone.now()
+            sr.save()
 
 
 @login_required
@@ -1634,6 +2040,121 @@ def configure_requests_api_fields(request, request_id):
 
     else:
         return JsonResponse({'error': 'Unsupported method'}, status=405)
+
+
+def create_sample_service_requests():
+    """Create sample service requests for testing purposes."""
+    from hotel_app.models import ServiceRequest, RequestType, Location, User
+    from django.utils import timezone
+    import random
+    
+    # Create sample request types if they don't exist
+    request_types_data = [
+        {'name': 'Room Cleaning'},
+        {'name': 'AC Repair'},
+        {'name': 'TV Issue'},
+        {'name': 'Extra Towels'},
+        {'name': 'Restaurant Reservation'},
+    ]
+    
+    request_types = []
+    for rt_data in request_types_data:
+        rt, created = RequestType.objects.get_or_create(
+            name=rt_data['name'],
+            defaults={}
+        )
+        request_types.append(rt)
+    
+    # Create sample locations if they don't exist
+    locations_data = [
+        {'name': 'Room 101', 'room_no': '101'},
+        {'name': 'Room 205', 'room_no': '205'},
+        {'name': 'Room 304', 'room_no': '304'},
+        {'name': 'Room 412', 'room_no': '412'},
+        {'name': 'Lobby', 'room_no': 'Lobby'},
+    ]
+    
+    locations = []
+    for loc_data in locations_data:
+        loc, created = Location.objects.get_or_create(
+            name=loc_data['name'],
+            defaults={'room_no': loc_data['room_no']}
+        )
+        locations.append(loc)
+    
+    # Get some users (use existing ones or create new ones)
+    users = list(User.objects.all())
+    if len(users) < 5:
+        # Create some sample users if needed
+        for i in range(5 - len(users)):
+            user = User.objects.create_user(
+                username=f'user{i}',
+                email=f'user{i}@example.com',
+                password='password123'
+            )
+            users.append(user)
+    
+    # Create sample service requests
+    priorities = ['low', 'normal', 'high']
+    statuses = ['pending', 'assigned', 'accepted', 'in_progress', 'completed', 'closed']
+    
+    sample_requests = [
+        {
+            'request_type': request_types[0],
+            'location': locations[0],
+            'requester_user': users[0],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+        {
+            'request_type': request_types[1],
+            'location': locations[2],
+            'requester_user': users[1],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+        {
+            'request_type': request_types[3],
+            'location': locations[1],
+            'requester_user': users[2],
+            'priority': 'normal',
+            'status': 'pending',
+        },
+        {
+            'request_type': request_types[4],
+            'location': locations[4],
+            'requester_user': users[3],
+            'priority': 'low',
+            'status': 'completed',
+        },
+        {
+            'request_type': request_types[2],
+            'location': locations[3],
+            'requester_user': users[4],
+            'priority': 'high',
+            'status': 'in_progress',
+        },
+    ]
+    
+    for req_data in sample_requests:
+        # Randomly assign an assignee user (or leave unassigned)
+        assignee = random.choice(users) if random.choice([True, False]) else None
+        
+        # Create the service request
+        sr = ServiceRequest.objects.create(
+            request_type=req_data['request_type'],
+            location=req_data['location'],
+            requester_user=req_data['requester_user'],
+            assignee_user=assignee,
+            priority=req_data['priority'],
+            status=req_data['status'],
+            notes='Sample request for testing',
+        )
+        
+        # If status is completed, set a closed_at time
+        if req_data['status'] == 'completed':
+            sr.closed_at = timezone.now()
+            sr.save()
 
 
 @login_required
@@ -2763,6 +3284,288 @@ def voucher_analytics(request):
         'recent_scans': recent_scans,
     }
     return render(request, "dashboard/voucher_analytics.html", context)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def create_ticket_api(request):
+    """API endpoint to create a new ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest, RequestType, Location, User
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            
+            # Extract data from request
+            guest_name = data.get('guest_name')
+            room_number = data.get('room_number')
+            department_name = data.get('department')
+            category = data.get('category')
+            priority = data.get('priority')
+            description = data.get('description')
+            
+            # Validate required fields
+            if not guest_name or not room_number or not department_name or not category or not priority:
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+            
+            # Get or create location
+            location, _ = Location.objects.get_or_create(
+                room_no=room_number,
+                defaults={'name': f'Room {room_number}'}
+            )
+            
+            # Get or create request type
+            request_type, _ = RequestType.objects.get_or_create(
+                name=category,
+                defaults={}
+            )
+            
+            # Map priority to model values
+            priority_mapping = {
+                'High': 'high',
+                'Medium': 'normal',
+                'Normal': 'normal',
+                'Low': 'low',
+            }
+            model_priority = priority_mapping.get(priority, 'normal')
+            
+            # Set SLA hours based on priority
+            sla_hours = 24  # Default SLA
+            if model_priority == 'high':
+                sla_hours = 4  # 4 hours for high priority
+            elif model_priority == 'normal':
+                sla_hours = 24  # 24 hours for normal priority
+            elif model_priority == 'low':
+                sla_hours = 72  # 72 hours for low priority
+            
+            # Create service request
+            service_request = ServiceRequest.objects.create(
+                request_type=request_type,
+                location=location,
+                requester_user=request.user,
+                priority=model_priority,
+                status='pending',
+                notes=description,
+                sla_hours=sla_hours,
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket created successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def assign_ticket_api(request, ticket_id):
+    """API endpoint to assign a ticket to a user."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest, User
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            assignee_id = data.get('assignee_id')
+            
+            if not assignee_id:
+                return JsonResponse({'error': 'Assignee ID is required'}, status=400)
+            
+            # Get the service request and assignee user
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            assignee = get_object_or_404(User, id=assignee_id)
+            
+            # Assign the ticket to the user
+            service_request.assign_to_user(assignee)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Ticket assigned to {assignee.get_full_name() or assignee.username}',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def accept_ticket_api(request, ticket_id):
+    """API endpoint for a user to accept a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee
+            if service_request.assignee_user != request.user:
+                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
+            
+            # Accept the ticket
+            service_request.accept_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket accepted successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def start_ticket_api(request, ticket_id):
+    """API endpoint to start working on a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee
+            if service_request.assignee_user != request.user:
+                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
+            
+            # Start working on the ticket
+            service_request.start_work()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Work started on ticket',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def complete_ticket_api(request, ticket_id):
+    """API endpoint to mark a ticket as completed."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            resolution_notes = data.get('resolution_notes', '')
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee
+            if service_request.assignee_user != request.user:
+                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
+            
+            # Complete the ticket
+            service_request.complete_task(resolution_notes)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket marked as completed',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def close_ticket_api(request, ticket_id):
+    """API endpoint to close a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Close the ticket
+            service_request.close_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket closed successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def escalate_ticket_api(request, ticket_id):
+    """API endpoint to escalate a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Escalate the ticket
+            service_request.escalate_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket escalated successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def reject_ticket_api(request, ticket_id):
+    """API endpoint to reject a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Reject the ticket
+            service_request.reject_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket rejected successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
 # ---- New Voucher System: Guest Management ----
