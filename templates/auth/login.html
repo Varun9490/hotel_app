@@ -8,13 +8,12 @@
 <div class="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-['Inter']">
     <div class="w-full max-w-md bg-white rounded-xl shadow-md p-8 space-y-8">
 
+        <!-- Logo and Brand -->
         <div class="text-center">
             <div class="inline-block">
                 <a href="#" class="flex flex-col items-center">
                     <div class="w-12 h-12 bg-sky-600 rounded-lg flex justify-center items-center mb-4">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5.636 18.364a9 9 0 0112.728 0M8.464 15.536a5 5 0 017.072 0M11.293 12.707a1 1 0 011.414 0"></path>
-                        </svg>
+                        <img src="{% static 'images/login/logo.svg' %}" alt="Logo" class="w-7 h-7">
                     </div>
                     <div>
                         <span class="text-xl font-bold text-gray-900">GuestConnect</span>
@@ -24,11 +23,13 @@
             </div>
         </div>
 
+        <!-- Title -->
         <div class="text-center">
             <h2 class="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
             <p class="mt-2 text-base text-gray-600">Sign in to manage your property</p>
         </div>
 
+        <!-- Form -->
         <form method="post" class="mt-8 space-y-6">
             {% csrf_token %}
             
@@ -40,34 +41,31 @@
                 </div>
             {% endif %}
 
+            <!-- Email -->
             <div class="space-y-2">
                 <label for="username" class="text-sm font-medium text-gray-700">Email</label>
                 <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                        </svg>
-                    </div>
                     <input type="email" name="username" id="username" placeholder="Enter your email" required
-                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                           class="block w-full pr-10 pl-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <img src="{% static 'images/login/username.svg' %}" alt="Username" class="h-5 w-5">
+                    </div>
                 </div>
             </div>
 
+            <!-- Password -->
             <div class="space-y-2">
                 <label for="password" class="text-sm font-medium text-gray-700">Password</label>
                 <div class="relative">
                     <input type="password" name="password" id="password" placeholder="Enter your password" required
                            class="block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                        </svg>
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" id="togglePassword">
+                        <img src="{% static 'images/login/eye.svg' %}" alt="Toggle Password Visibility" class="h-5 w-5 text-gray-400" id="eyeIcon">
                     </div>
                 </div>
             </div>
 
+            <!-- Submit -->
             <div>
                 <button type="submit"
                         class="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">
@@ -76,6 +74,7 @@
             </div>
         </form>
 
+        <!-- Forgot password -->
         <div class="text-center">
             <a href="{% url 'password_reset' %}" class="font-medium text-sky-600 hover:text-sky-500 text-sm">
                 Forgot your password?
@@ -83,4 +82,24 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Password visibility toggle
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    
+    togglePassword.addEventListener('click', function() {
+        // Toggle the type attribute
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        // Change opacity for indication
+        if (type === 'password') {
+            eyeIcon.style.opacity = '1';
+        } else {
+            eyeIcon.style.opacity = '0.5';
+        }
+    });
+</script>
 {% endblock %}
