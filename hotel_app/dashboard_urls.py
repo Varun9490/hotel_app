@@ -6,6 +6,7 @@ app_name = 'dashboard'
 
 urlpatterns = [
     path('', dashboard_views.dashboard_view, name='main'),
+    path('dashboard2/', dashboard_views.dashboard2_view, name='dashboard2'),
     path('users/', dashboard_views.dashboard_users, name='users'),
     path('manage-users/departments/', dashboard_views.dashboard_departments, name='departments'),
     path('groups/', dashboard_views.dashboard_groups, name='groups'),
@@ -89,6 +90,7 @@ urlpatterns = [
     path('api/groups/<int:group_id>/permissions/update/', dashboard_views.api_group_permissions_update, name='api_group_permissions_update'),
     path('api/groups/bulk-permissions/update/', dashboard_views.api_bulk_permissions_update, name='api_bulk_permissions_update'),
     path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
+    path('tickets/', dashboard_views.tickets, name='tickets'),
     path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),
     path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),
 ]

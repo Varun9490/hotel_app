@@ -1,0 +1,46 @@
+{% extends "dashboard2/base_dashboard.html" %}
+{% load dashboard2_extras %}
+
+{% block content %}
+<div class="w-[1184px] h-[1965px] relative bg-transparent border-gray-200">
+    <div class="w-[1184px] h-20 left-0 top-0 absolute bg-white border-b border-gray-200">
+        <div class="w-[1136px] h-12 left-[24px] top-[16px] absolute inline-flex justify-between items-center">
+            <div>
+                <h1 class="text-gray-900 text-2xl font-bold font-['Inter']">Manager Dashboard</h1>
+                <p class="text-gray-600 text-sm font-normal font-['Inter']">Welcome back, {{ user_name }}. Here's what's happening at your property.</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="w-7 h-10 relative rounded-lg"></div>
+                <div class="w-8 h-10 relative rounded-lg"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="w-[1184px] h-auto left-0 top-[85px] absolute p-6 space-y-6">
+        <div class="w-full">
+            {% include 'dashboard2/components/stats_cards.html' %}
+        </div>
+        
+        <div class="w-full">
+            {% include 'dashboard2/components/secondary_stats.html' %}
+        </div>
+        
+        <div class="w-full">
+            {% include 'dashboard2/components/charts_section.html' %}
+        </div>
+        
+        <div class="w-full">
+            {% include 'dashboard2/components/department_performance.html' %}
+        </div>
+        
+        <div class="w-full grid grid-cols-3 gap-6">
+            <div class="col-span-2">
+                {% include 'dashboard2/components/critical_tickets.html' %}
+            </div>
+            <div class="col-span-1">
+                {% include 'dashboard2/components/guest_feedback.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

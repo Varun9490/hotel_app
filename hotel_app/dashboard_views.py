@@ -394,6 +394,132 @@ def dashboard_view(request):
 
 
 @login_required
+def dashboard2_view(request):
+    """Render the new dashboard2 with the provided design."""
+    # For now, we'll use dummy data to match the design
+    # In a real implementation, this would fetch actual data from the database
+    
+    context = {
+        'user_name': 'Sarah',
+        # Stats data
+        'active_tickets': 47,
+        'avg_review_rating': 4.8,
+        'sla_breaches': 3,
+        'vouchers_redeemed': 28,
+        'guest_satisfaction': 94,
+        'avg_response_time': '12m',
+        'staff_efficiency': 87,
+        'active_gym_members': 389,
+        'active_guests': 342,
+        # Chart data
+        'tickets_data': [20, 15, 25, 22, 18, 23, 19],
+        'feedback_data': [18, 16, 20, 19, 17, 22, 21],
+        'peak_day_tickets': 23,
+        'peak_day_feedback': 22,
+        'weekly_growth': 18,
+        # Sentiment data
+        'positive_reviews': 68,
+        'neutral_reviews': 22,
+        'negative_reviews': 10,
+        'positive_count': 106,
+        'neutral_count': 34,
+        'negative_count': 16,
+        # Department data
+        'departments': [
+            {'name': 'Housekeeping', 'tickets': 15, 'color': 'sky-600'},
+            {'name': 'Maintenance', 'tickets': 12, 'color': 'yellow-400'},
+            {'name': 'Guest Services', 'tickets': 8, 'color': 'teal-500'},
+            {'name': 'Restaurant', 'tickets': 6, 'color': 'green-500'},
+            {'name': 'Front Desk', 'tickets': 4, 'color': 'fuchsia-700'},
+            {'name': 'Concierge', 'tickets': 2, 'color': 'red-500'},
+        ],
+        # Critical tickets
+        'critical_tickets': [
+            {
+                'id': 2847,
+                'title': 'Room AC not working',
+                'room': '304',
+                'department': 'Maintenance',
+                'guest': 'John Smith',
+                'reported': '2 hours ago',
+                'priority': 'HIGH',
+                'time_left': '2h left',
+                'color': 'red-500',
+                'progress': 80
+            },
+            {
+                'id': 2846,
+                'title': 'Extra towels needed',
+                'room': '218',
+                'department': 'Housekeeping',
+                'guest': 'Sarah Johnson',
+                'reported': '45 minutes ago',
+                'priority': 'MED',
+                'time_left': '6h left',
+                'color': 'yellow-400',
+                'progress': 25
+            },
+            {
+                'id': 2845,
+                'title': 'Restaurant reservation',
+                'room': '',
+                'department': 'Guest Services',
+                'guest': 'Michael Brown',
+                'reported': '20 minutes ago',
+                'priority': 'NORM',
+                'time_left': '18h left',
+                'color': 'sky-600',
+                'progress': 10
+            },
+            {
+                'id': 2844,
+                'title': 'WiFi password reset',
+                'room': '156',
+                'department': 'IT Support',
+                'guest': 'Emily Davis',
+                'reported': 'Resolved: 15 minutes ago',
+                'priority': 'RESOLVED',
+                'time_left': 'Completed',
+                'color': 'green-500',
+                'progress': 100
+            }
+        ],
+        # Guest feedback
+        'guest_feedback': [
+            {
+                'rating': 5,
+                'location': 'Room 405',
+                'time': '2 min ago',
+                'comment': 'Amazing service and spotless room! The staff went above and beyond.',
+                'guest': 'Amanda Wilson',
+                'sentiment': 'Positive',
+                'color': 'green-500'
+            },
+            {
+                'rating': 3,
+                'location': 'Restaurant',
+                'time': '15 min ago',
+                'comment': 'Food quality was good but service was slower than expected.',
+                'guest': 'Robert Chen',
+                'sentiment': 'Neutral',
+                'color': 'yellow-400'
+            },
+            {
+                'rating': 2,
+                'location': 'Room 201',
+                'time': '1 hour ago',
+                'comment': 'Room was not properly cleaned upon arrival. Bathroom had issues.',
+                'guest': 'Lisa Martinez',
+                'sentiment': 'Negative',
+                'color': 'red-500'
+            }
+        ]
+    }
+    
+    return render(request, 'dashboard2/dashboard.html', context)
+
+
+@login_required
 def manage_users(request):
     """Render the Manage Users / User Groups screen on the right panel.
 
@@ -1141,6 +1267,108 @@ def api_reset_user_password(request, user_id):
         logger = logging.getLogger(__name__)
         logger.error(f"Error resetting password for user ID {user_id}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def tickets(request):
+    """Render the Tickets Management page.
+    """
+    # Sample data for department cards
+    departments = [
+        {
+            'name': 'Housekeeping',
+            'active_tickets': 15,
+            'sla_compliance': 94,
+            'color': 'sky-600',
+            'icon_color': 'sky-600',
+        },
+        {
+            'name': 'Maintenance',
+            'active_tickets': 12,
+            'sla_compliance': 78,
+            'color': 'yellow-400',
+            'icon_color': 'sky-600',
+        },
+        {
+            'name': 'Guest Services',
+            'active_tickets': 8,
+            'sla_compliance': 98,
+            'color': 'green-500',
+            'icon_color': 'sky-600',
+        },
+    ]
+    
+    # Sample data for tickets table
+    tickets_data = [
+        {
+            'id': 2847,
+            'priority': 'Critical',
+            'priority_color': 'red-500',
+            'subject': 'Room AC not working - Room 304',
+            'owner': 'Mike Johnson',
+            'owner_avatar': 'https://placehold.co/24x24',
+            'sla_percentage': 85,
+            'sla_color': 'red-500',
+            'status': 'In Progress',
+            'status_color': 'sky-600',
+        },
+        {
+            'id': 2846,
+            'priority': 'High',
+            'priority_color': 'yellow-400',
+            'subject': 'Extra towels needed - Room 218',
+            'owner': 'Lisa Chen',
+            'owner_avatar': 'https://placehold.co/24x24',
+            'sla_percentage': 45,
+            'sla_color': 'yellow-400',
+            'status': 'Pending',
+            'status_color': 'yellow-400',
+        },
+        {
+            'id': 2845,
+            'priority': 'Medium',
+            'priority_color': 'sky-600',
+            'subject': 'Restaurant reservation request',
+            'owner': 'David Rodriguez',
+            'owner_avatar': 'https://placehold.co/24x24',
+            'sla_percentage': 25,
+            'sla_color': 'sky-600',
+            'status': 'In Progress',
+            'status_color': 'sky-600',
+        },
+        {
+            'id': 2844,
+            'priority': 'Low',
+            'priority_color': 'gray-100',
+            'subject': 'WiFi password request - Room 156',
+            'owner': 'Emma Wilson',
+            'owner_avatar': 'https://placehold.co/24x24',
+            'sla_percentage': 100,
+            'sla_color': 'green-500',
+            'status': 'Resolved',
+            'status_color': 'green-500',
+        },
+        {
+            'id': 2843,
+            'priority': 'Critical',
+            'priority_color': 'red-500',
+            'subject': 'Elevator out of service - Floor 3',
+            'owner': 'James Smith',
+            'owner_avatar': 'https://placehold.co/24x24',
+            'sla_percentage': 95,
+            'sla_color': 'red-500',
+            'status': 'In Progress',
+            'status_color': 'sky-600',
+        },
+    ]
+    
+    context = {
+        'departments': departments,
+        'tickets': tickets_data,
+        'total_tickets': 47,
+    }
+    return render(request, 'dashboard/tickets.html', context)
 
 
 @login_required
