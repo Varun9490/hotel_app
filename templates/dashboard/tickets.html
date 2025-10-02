@@ -38,10 +38,13 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <div class="relative">
+                <form id="searchForm" method="get" class="relative">
                     <img src="{% static 'images/tickets/search.svg' %}" alt="Search Icon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
-                    <input type="text" placeholder="Search tickets..." class="w-80 h-10 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500" />
-                </div>
+                    <input type="text" name="search" placeholder="Search by ID, Subject, Room..." value="{{ search_query|default:'' }}" class="w-80 h-10 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                    {% if department_filter %}<input type="hidden" name="department" value="{{ department_filter }}">{% endif %}
+                    {% if priority_filter %}<input type="hidden" name="priority" value="{{ priority_filter }}">{% endif %}
+                    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                </form>
                 <button class="p-2 rounded-lg hover:bg-gray-100">
                     <img src="{% static 'images/tickets/notification.svg' %}" alt="Notifications" class="w-6 h-6" />
                 </button>
@@ -76,7 +79,7 @@
                                 <div class="mt-4 space-y-4">
                                     <div class="flex justify-between items-center">
                                         <p class="text-gray-600 text-sm font-normal font-['Inter']">Active Tickets</p>
-                                        <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets }}</p>
+                                        <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets_count }}</p>
                                     </div>
                                     <div>
                                         <div class="flex justify-between items-center mb-1">
@@ -93,18 +96,14 @@
                         {% endfor %}
                     </div>
                 </div>
-
                 <button id="prevSlide" class="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-4 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
                 <button id="nextSlide" class="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-4 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-
                 <div id="sliderDots" class="flex justify-center mt-4 space-x-2">
-                    {% for dept in departments %}
-                    <button class="department-dot w-2.5 h-2.5 rounded-full bg-gray-300 transition-colors duration-300 focus:outline-none"></button>
-                    {% endfor %}
+                    {% for dept in departments %}<button class="department-dot w-2.5 h-2.5 rounded-full bg-gray-300 transition-colors duration-300 focus:outline-none"></button>{% endfor %}
                 </div>
             </div>
         </div>
@@ -120,7 +119,7 @@
                     <div class="mt-4 space-y-4">
                         <div class="flex justify-between items-center">
                             <p class="text-gray-600 text-sm font-normal font-['Inter']">Active Tickets</p>
-                            <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets }}</p>
+                            <p class="text-gray-900 text-lg font-bold font-['Inter']">{{ dept.active_tickets_count }}</p>
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-1">
@@ -146,29 +145,32 @@
                 </button>
             </div>
             <div class="mt-6 flex flex-wrap justify-between items-center gap-4">
-                <div class="flex flex-wrap items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <label class="text-gray-700 text-sm font-medium">Department:</label>
-                        <button class="w-40 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
-                            <span>All Departments</span>
-                            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <label class="text-gray-700 text-sm font-medium">Priority:</label>
-                        <button class="w-36 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
-                           <span>All Priorities</span>
-                           <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <label class="text-gray-700 text-sm font-medium">Status:</label>
-                        <button class="w-36 h-9 bg-white rounded-lg border border-gray-300 flex items-center justify-between px-3 text-sm">
-                           <span>All Statuses</span>
-                           <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                    </div>
-                </div>
+                <form id="filterForm" method="get" class="flex flex-wrap items-center gap-4">
+                    <input type="hidden" name="search" value="{{ search_query|default:'' }}">
+                    
+                    <select name="department" onchange="this.form.submit()" class="w-40 h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.name }}" {% if department_filter == dept.name %}selected{% endif %}>{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select name="priority" onchange="this.form.submit()" class="w-36 h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer">
+                        <option value="">All Priorities</option>
+                        <option value="Critical" {% if priority_filter == 'Critical' %}selected{% endif %}>Critical</option>
+                        <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low</option>
+                    </select>
+                    
+                    <select name="status" onchange="this.form.submit()" class="w-36 h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer">
+                        <option value="">All Statuses</option>
+                        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </form>
                 <button class="h-10 w-40 rounded-lg border border-sky-600 text-sky-600 flex items-center justify-center gap-2 hover:bg-sky-50 transition-colors">
                     <img src="{% static 'images/tickets/export.svg' %}" alt="Export Icon"/>
                     <span>Export</span>
@@ -196,15 +198,13 @@
                         <tr>
                             <td class="p-4"><input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ ticket.id }}</td>
-                            
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.priority_color }}-100 text-{{ ticket.priority_color }}-700">{{ ticket.priority_label }}</span>
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.priority_color }}-100 text-{{ ticket.priority_color }}-700">{{ ticket.get_priority_display }}</span>
                             </td>
-
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ticket.request_type.name }}{% if ticket.location %} - {{ ticket.location }}{% endif %}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <img class="w-6 h-6 rounded-full" src="{{ ticket.owner_avatar|default:'https://placehold.co/24x24' }}" alt="Avatar">
+                                    <img class="w-6 h-6 rounded-full" src="{{ ticket.assignee_user.profile.avatar.url|default:'/static/images/default_avatar.png' }}" alt="Avatar">
                                     <div class="ml-3 text-sm text-gray-900">{% if ticket.assignee_user %}{{ ticket.assignee_user.get_full_name|default:ticket.assignee_user.username }}{% else %}Unassigned{% endif %}</div>
                                 </div>
                             </td>
@@ -216,11 +216,9 @@
                                     <span class="text-sm font-medium" style="color: {{ ticket.sla_color|default:'#6b7280' }};">{{ ticket.sla_percentage|default:0 }}%</span>
                                 </div>
                             </td>
-
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-700">{{ ticket.status_label }}</span>
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-700">{{ ticket.get_status_display }}</span>
                             </td>
-                            
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <div class="flex items-center gap-1">
                                     <button class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
@@ -235,6 +233,12 @@
                                 </div>
                             </td>
                         </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                No tickets found matching your criteria.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -245,24 +249,21 @@
                 <div class="text-sm text-gray-500">
                     Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} tickets
                 </div>
-                
                 <div class="flex items-center gap-2">
                     {% if page_obj.has_previous %}
-                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Previous</a>
+                        <a href="?page={{ page_obj.previous_page_number }}&amp;department={{ department_filter }}&amp;priority={{ priority_filter }}&amp;status={{ status_filter }}&amp;search={{ search_query }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Previous</a>
                     {% else %}
                         <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-50" disabled>Previous</button>
                     {% endif %}
-                    
                     {% for page_num in page_obj.paginator.page_range %}
                         {% if page_obj.number == page_num %}
                              <button class="w-8 h-8 text-sm rounded-lg bg-sky-600 text-white">{{ page_num }}</button>
                         {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
-                             <a href="?page={{ page_num }}" class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center">{{ page_num }}</a>
+                             <a href="?page={{ page_num }}&amp;department={{ department_filter }}&amp;priority={{ priority_filter }}&amp;status={{ status_filter }}&amp;search={{ search_query }}" class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center">{{ page_num }}</a>
                         {% endif %}
                     {% endfor %}
-
                     {% if page_obj.has_next %}
-                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Next</a>
+                        <a href="?page={{ page_obj.next_page_number }}&amp;department={{ department_filter }}&amp;priority={{ priority_filter }}&amp;status={{ status_filter }}&amp;search={{ search_query }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Next</a>
                     {% else %}
                          <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-50" disabled>Next</button>
                     {% endif %}
@@ -277,105 +278,39 @@
             <div class="flex justify-between items-center p-6 border-b border-gray-200">
                 <h2 class="text-xl font-semibold text-gray-900">Create New Ticket</h2>
                 <button id="closeCreateTicketModal" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-
             <form class="p-6 space-y-6 overflow-y-auto" onsubmit="return false;">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="guestName" class="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <img src="{% static 'images/tickets/guest.svg' %}" alt="Guest Icon" class="h-5 w-5 text-gray-400" />
-                            </div>
-                            <input type="text" id="guestName" placeholder="Enter guest name" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        </div>
+                        <div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><img src="{% static 'images/tickets/guest.svg' %}" alt="Guest Icon" class="h-5 w-5 text-gray-400" /></div><input type="text" id="guestName" placeholder="Enter guest name" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"></div>
                     </div>
                     <div>
                         <label for="roomNumber" class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <img src="{% static 'images/tickets/room.svg' %}" alt="Room Icon" class="h-5 w-5 text-gray-400" />
-                            </div>
-                            <input type="text" id="roomNumber" placeholder="Enter room number" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        </div>
+                        <div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><img src="{% static 'images/tickets/room.svg' %}" alt="Room Icon" class="h-5 w-5 text-gray-400" /></div><input type="text" id="roomNumber" placeholder="Enter room number" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"></div>
                     </div>
                 </div>
-
                 <div>
                     <label for="department" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <img src="{% static 'images/tickets/department.svg' %}" alt="Department Icon" class="h-5 w-5 text-gray-400" />
-                        </div>
-                        <select id="department" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none">
-                            <option value="">Select department</option>
-                            {% for dept in departments %}
-                            <option value="{{ dept.name }}">{{ dept.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                           <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
+                    <div class="relative"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><img src="{% static 'images/tickets/department.svg' %}" alt="Department Icon" class="h-5 w-5 text-gray-400" /></div><select id="department" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none"><option value="">Select department</option>{% for dept in departments %}<option value="{{ dept.name }}">{{ dept.name }}</option>{% endfor %}</select><div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div>
                 </div>
-
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Ticket Category</label>
-                    <div class="flex flex-wrap gap-3">
-                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Cleaning</button>
-                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Maintenance</button>
-                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Service Issue</button>
-                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Amenity Request</button>
-                        <button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Complaint</button>
-                    </div>
+                    <div class="flex flex-wrap gap-3"><button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Cleaning</button><button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Maintenance</button><button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Service Issue</button><button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Amenity Request</button><button type="button" class="category-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">Complaint</button></div>
                 </div>
-
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Priority Level</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Critical">
-                            <span class="w-4 h-4 rounded-full bg-red-500"></span>
-                            <span class="text-sm font-medium text-gray-700">Critical</span>
-                        </button>
-                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="High">
-                            <span class="w-4 h-4 rounded-full bg-yellow-400"></span>
-                            <span class="text-sm font-medium text-gray-700">High</span>
-                        </button>
-                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Medium">
-                            <span class="w-4 h-4 rounded-full bg-sky-500"></span>
-                            <span class="text-sm font-medium text-gray-700">Medium</span>
-                        </button>
-                        <button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Low">
-                            <span class="w-4 h-4 rounded-full bg-green-500"></span>
-                            <span class="text-sm font-medium text-gray-700">Low</span>
-                        </button>
-                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Critical"><span class="w-4 h-4 rounded-full bg-red-500"></span><span class="text-sm font-medium text-gray-700">Critical</span></button><button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="High"><span class="w-4 h-4 rounded-full bg-yellow-400"></span><span class="text-sm font-medium text-gray-700">High</span></button><button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Medium"><span class="w-4 h-4 rounded-full bg-sky-500"></span><span class="text-sm font-medium text-gray-700">Medium</span></button><button type="button" class="priority-btn w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500" data-priority="Low"><span class="w-4 h-4 rounded-full bg-green-500"></span><span class="text-sm font-medium text-gray-700">Low</span></button></div>
                 </div>
-
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="description" rows="4" placeholder="Describe the issue or request..." class="w-full p-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"></textarea>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea id="description" rows="4" placeholder="Describe the issue or request..." class="w-full p-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"></textarea>
                 </div>
-                
                 <div>
-                    <label for="attachments" class="block text-sm font-medium text-gray-700 mb-1">Attachments (Optional)</label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div class="space-y-1 text-center">
-                            <img src="{% static 'images/tickets/file.svg' %}" class="mx-auto h-12 w-12 text-gray-400" alt="File upload icon">
-                            <div class="flex text-sm text-gray-600">
-                                <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-sky-600 hover:text-sky-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-sky-500">
-                                    <span>Upload photos or voice note</span>
-                                    <input id="file-upload" name="file-upload" type="file" class="sr-only">
-                                </label>
-                            </div>
-                            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                        </div>
-                    </div>
+                    <label for="attachments" class="block text-sm font-medium text-gray-700 mb-1">Attachments (Optional)</label><div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"><div class="space-y-1 text-center"><img src="{% static 'images/tickets/file.svg' %}" class="mx-auto h-12 w-12 text-gray-400" alt="File upload icon"><div class="flex text-sm text-gray-600"><label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-sky-600 hover:text-sky-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-sky-500"><span>Upload photos or voice note</span><input id="file-upload" name="file-upload" type="file" class="sr-only"></label></div><p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p></div></div>
                 </div>
             </form>
-
             <div class="flex justify-end items-center gap-4 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                 <button id="cancelCreateTicket" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
                 <button id="submitCreateTicket" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Create Ticket</button>
@@ -390,11 +325,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- PAGE LOAD ANIMATIONS ---
     const animatedElements = document.querySelectorAll('.animate-on-load');
-    animatedElements.forEach((el, index) => {
-        setTimeout(() => {
-            el.classList.add('animate-slide-in-up');
-        }, index * 150); // Stagger the animation
-    });
+    animatedElements.forEach((el, index) => { setTimeout(() => { el.classList.add('animate-slide-in-up'); }, index * 150); });
 
     // --- MODAL SCRIPT ---
     const openModalBtn = document.getElementById('openCreateTicketModal');
@@ -403,225 +334,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('createTicketModal');
     const modalContent = document.getElementById('modalContent');
     const modalForm = modal.querySelector('form');
-
-    const openModal = () => {
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modalContent.classList.remove('opacity-0', 'scale-95');
-            modalContent.classList.add('opacity-100', 'scale-100');
-        }, 10);
-    };
-
-    const closeModal = () => {
-        modalContent.classList.remove('opacity-100', 'scale-100');
-        modalContent.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            if (modalForm) modalForm.reset();
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
-                btn.classList.add('text-gray-700', 'border-gray-300');
-            });
-            document.querySelectorAll('.priority-btn').forEach(btn => {
-                 btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500');
-            });
-            selectedCategory = '';
-            selectedPriority = '';
-        }, 300);
-    };
-
+    const openModal = () => { modal.classList.remove('hidden'); setTimeout(() => { modalContent.classList.remove('opacity-0', 'scale-95'); modalContent.classList.add('opacity-100', 'scale-100'); }, 10); };
+    const closeModal = () => { modalContent.classList.remove('opacity-100', 'scale-100'); modalContent.classList.add('opacity-0', 'scale-95'); setTimeout(() => { modal.classList.add('hidden'); if (modalForm) modalForm.reset(); document.querySelectorAll('.category-btn').forEach(btn => { btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600'); btn.classList.add('text-gray-700', 'border-gray-300'); }); document.querySelectorAll('.priority-btn').forEach(btn => { btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500'); }); selectedCategory = ''; selectedPriority = ''; }, 300); };
     if(openModalBtn) openModalBtn.addEventListener('click', openModal);
     if(closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
     if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if(modal) modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
+    if(modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     // --- DEPARTMENT STATS TOGGLE ---
     const expandDepartmentsBtn = document.getElementById('expandDepartmentsBtn');
     const expandedDepartments = document.getElementById('expandedDepartments');
     const sliderWrapper = document.getElementById('sliderWrapper');
+    if (expandDepartmentsBtn) { expandDepartmentsBtn.addEventListener('click', () => { const isExpanded = !expandedDepartments.classList.contains('hidden'); if (isExpanded) { expandedDepartments.classList.add('hidden'); sliderWrapper.classList.remove('hidden'); expandDepartmentsBtn.innerHTML = `<span>View All</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`; } else { expandedDepartments.classList.remove('hidden'); sliderWrapper.classList.add('hidden'); expandDepartmentsBtn.innerHTML = `<span>Show Less</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`; } }); }
 
-    if (expandDepartmentsBtn) {
-        expandDepartmentsBtn.addEventListener('click', () => {
-            const isExpanded = !expandedDepartments.classList.contains('hidden');
-            if (isExpanded) {
-                expandedDepartments.classList.add('hidden');
-                sliderWrapper.classList.remove('hidden');
-                expandDepartmentsBtn.innerHTML = `<span>View All</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
-            } else {
-                expandedDepartments.classList.remove('hidden');
-                sliderWrapper.classList.add('hidden');
-                expandDepartmentsBtn.innerHTML = `<span>Show Less</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`;
-            }
-        });
-    }
-
-    // --- REFACTORED INFINITE DEPARTMENT SLIDER SCRIPT ---
+    // --- INFINITE DEPARTMENT SLIDER SCRIPT ---
     const slider = document.getElementById('departmentSlider');
     const prevBtn = document.getElementById('prevSlide');
     const nextBtn = document.getElementById('nextSlide');
     const dots = document.querySelectorAll('.department-dot');
-    
-    if (slider && dots.length > 0) {
-        let currentIndex = 0;
-        let itemsPerScreen = 1;
-        let totalOriginalItems = dots.length;
-        let isTransitioning = false;
-        let autoPlayInterval;
+    if (slider && dots.length > 0) { let currentIndex = 0, itemsPerScreen = 1, totalOriginalItems = dots.length, isTransitioning = false, autoPlayInterval; const setupSlider = () => { itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1); const slides = Array.from(slider.children); for(let i = 0; i < itemsPerScreen; i++) { slider.appendChild(slides[i].cloneNode(true)); } for(let i = totalOriginalItems - 1; i >= totalOriginalItems - itemsPerScreen; i--) { slider.prepend(slides[i].cloneNode(true)); } currentIndex = itemsPerScreen; updateSliderPosition(false); }; const updateSliderPosition = (withTransition = true) => { slider.style.transition = withTransition ? 'transform 0.5s ease-in-out' : 'none'; const itemWidth = slider.children[0].getBoundingClientRect().width; slider.style.transform = `translateX(${-currentIndex * itemWidth}px)`; updateDots(); }; const updateDots = () => { const dotIndex = (currentIndex - itemsPerScreen + totalOriginalItems) % totalOriginalItems; dots.forEach((dot, index) => { dot.classList.toggle('bg-sky-600', index === dotIndex); dot.classList.toggle('bg-gray-300', index !== dotIndex); }); }; const moveTo = (index) => { if (isTransitioning) return; isTransitioning = true; currentIndex = index; updateSliderPosition(); stopAutoPlay(); startAutoPlay(); }; nextBtn.addEventListener('click', () => moveTo(currentIndex + 1)); prevBtn.addEventListener('click', () => moveTo(currentIndex - 1)); slider.addEventListener('transitionend', () => { isTransitioning = false; if (currentIndex <= itemsPerScreen - 1) { currentIndex += totalOriginalItems; updateSliderPosition(false); } if (currentIndex >= totalOriginalItems + itemsPerScreen) { currentIndex -= totalOriginalItems; updateSliderPosition(false); } }); dots.forEach((dot, index) => { dot.addEventListener('click', () => moveTo(index + itemsPerScreen)); }); const startAutoPlay = () => { stopAutoPlay(); autoPlayInterval = setInterval(() => moveTo(currentIndex + 1), 5000); }; const stopAutoPlay = () => clearInterval(autoPlayInterval); window.addEventListener('resize', () => { updateSliderPosition(false); }); setupSlider(); startAutoPlay(); }
 
-        const setupSlider = () => {
-            itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
-            const slides = Array.from(slider.children);
-            
-            for(let i = 0; i < itemsPerScreen; i++) {
-                slider.appendChild(slides[i].cloneNode(true));
-            }
-            for(let i = totalOriginalItems - 1; i >= totalOriginalItems - itemsPerScreen; i--) {
-                slider.prepend(slides[i].cloneNode(true));
-            }
-
-            currentIndex = itemsPerScreen;
-            updateSliderPosition(false);
-        };
-
-        const updateSliderPosition = (withTransition = true) => {
-            slider.style.transition = withTransition ? 'transform 0.5s ease-in-out' : 'none';
-            const itemWidth = slider.children[0].getBoundingClientRect().width;
-            const offset = -currentIndex * itemWidth;
-            slider.style.transform = `translateX(${offset}px)`;
-            updateDots();
-        };
-        
-        const updateDots = () => {
-            const dotIndex = (currentIndex - itemsPerScreen + totalOriginalItems) % totalOriginalItems;
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('bg-sky-600', index === dotIndex);
-                dot.classList.toggle('bg-gray-300', index !== dotIndex);
-            });
-        };
-        
-        const moveTo = (index) => {
-            if (isTransitioning) return;
-            isTransitioning = true;
-            currentIndex = index;
-            updateSliderPosition();
-            stopAutoPlay();
-            startAutoPlay();
-        };
-
-        nextBtn.addEventListener('click', () => moveTo(currentIndex + 1));
-        prevBtn.addEventListener('click', () => moveTo(currentIndex - 1));
-
-        slider.addEventListener('transitionend', () => {
-            isTransitioning = false;
-            if (currentIndex <= itemsPerScreen - 1) {
-                currentIndex += totalOriginalItems;
-                updateSliderPosition(false);
-            }
-            if (currentIndex >= totalOriginalItems + itemsPerScreen) {
-                currentIndex -= totalOriginalItems;
-                updateSliderPosition(false);
-            }
-        });
-        
-        dots.forEach((dot, index) => {
-            dot.addEventListener('click', () => moveTo(index + itemsPerScreen));
-        });
-
-        const startAutoPlay = () => {
-            stopAutoPlay();
-            autoPlayInterval = setInterval(() => moveTo(currentIndex + 1), 5000);
-        };
-
-        const stopAutoPlay = () => clearInterval(autoPlayInterval);
-        
-        window.addEventListener('resize', () => { updateSliderPosition(false); });
-
-        setupSlider();
-        startAutoPlay();
-    }
-    
     // --- TICKET CREATION SCRIPT ---
-    let selectedCategory = '';
-    let selectedPriority = '';
-
-    document.querySelectorAll('.category-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
-                btn.classList.add('text-gray-700', 'border-gray-300');
-            });
-            button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
-            button.classList.remove('text-gray-700', 'border-gray-300');
-            selectedCategory = button.textContent.trim();
-        });
-    });
-
-    document.querySelectorAll('.priority-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500'));
-            button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500');
-            selectedPriority = button.dataset.priority;
-        });
-    });
-    
+    let selectedCategory = '', selectedPriority = '';
+    document.querySelectorAll('.category-btn').forEach(button => { button.addEventListener('click', () => { document.querySelectorAll('.category-btn').forEach(btn => { btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600'); btn.classList.add('text-gray-700', 'border-gray-300'); }); button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600'); button.classList.remove('text-gray-700', 'border-gray-300'); selectedCategory = button.textContent.trim(); }); });
+    document.querySelectorAll('.priority-btn').forEach(button => { button.addEventListener('click', () => { document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500')); button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500'); selectedPriority = button.dataset.priority; }); });
     const submitTicketBtn = document.getElementById('submitCreateTicket');
-    if (submitTicketBtn) {
-        submitTicketBtn.addEventListener('click', () => {
-            const ticketData = {
-                guest_name: document.getElementById('guestName').value.trim(),
-                room_number: document.getElementById('roomNumber').value.trim(),
-                department: document.getElementById('department').value,
-                category: selectedCategory,
-                priority: selectedPriority,
-                description: document.getElementById('description').value.trim()
-            };
-
-            if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) {
-                alert('Please fill in all required fields: Guest Name, Room Number, Department, Category, and Priority.');
-                return;
-            }
-
-            fetch('{% url "dashboard:api_create_ticket" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(ticketData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Ticket created successfully!');
-                    location.reload();
-                } else {
-                    alert('Error creating ticket: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            });
-        });
-    }
-
-    // Helper function to get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
+    if (submitTicketBtn) { submitTicketBtn.addEventListener('click', () => { const ticketData = { guest_name: document.getElementById('guestName').value.trim(), room_number: document.getElementById('roomNumber').value.trim(), department: document.getElementById('department').value, category: selectedCategory, priority: selectedPriority, description: document.getElementById('description').value.trim() }; if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) { alert('Please fill in all required fields: Guest Name, Room Number, Department, Category, and Priority.'); return; } fetch('{% url "dashboard:api_create_ticket" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }, body: JSON.stringify(ticketData) }).then(response => response.json()).then(data => { if (data.success) { alert('Ticket created successfully!'); location.reload(); } else { alert('Error creating ticket: ' + (data.error || 'Unknown error')); } }).catch(error => { console.error('Error:', error); alert('An error occurred. Please try again.'); }); }); }
+    function getCookie(name) { let cookieValue = null; if (document.cookie && document.cookie !== '') { const cookies = document.cookie.split(';'); for (let i = 0; i < cookies.length; i++) { const cookie = cookies[i].trim(); if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; } } } return cookieValue; }
 });
 </script>
 {% endblock extra_js %}

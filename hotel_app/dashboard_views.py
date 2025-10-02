@@ -1288,6 +1288,12 @@ def tickets(request):
     from django.utils import timezone
     from django.core.paginator import Paginator
     
+    # Get filter parameters from request
+    department_filter = request.GET.get('department', '')
+    priority_filter = request.GET.get('priority', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
     # Get departments with active ticket counts
     departments_data = []
     departments = Department.objects.all()
@@ -1331,14 +1337,54 @@ def tickets(request):
             'icon_url': f'/static/images/manage_users/{dept.name.lower().replace(" ", "_")}.svg',
         })
     
-    # Get all service requests
-    tickets_list_all = ServiceRequest.objects.select_related(
+    # Get all service requests with filters applied
+    tickets_queryset = ServiceRequest.objects.select_related(
         'request_type', 'location', 'requester_user', 'assignee_user'
     ).all().order_by('-id')
     
+    # Apply filters
+    if department_filter and department_filter != 'All Departments':
+        tickets_queryset = tickets_queryset.filter(
+            request_type__name__icontains=department_filter
+        )
+    
+    if priority_filter and priority_filter != 'All Priorities':
+        # Map display values to model values
+        priority_mapping = {
+            'High': 'high',
+            'Medium': 'normal',
+            'Low': 'low'
+        }
+        model_priority = priority_mapping.get(priority_filter)
+        if model_priority:
+            tickets_queryset = tickets_queryset.filter(priority=model_priority)
+    
+    if status_filter and status_filter != 'All Statuses':
+        # Map display values to model values
+        status_mapping = {
+            'Pending': 'pending',
+            'Assigned': 'assigned',
+            'Accepted': 'accepted',
+            'In Progress': 'in_progress',
+            'Completed': 'completed',
+            'Closed': 'closed',
+            'Escalated': 'escalated',
+            'Rejected': 'rejected'
+        }
+        model_status = status_mapping.get(status_filter)
+        if model_status:
+            tickets_queryset = tickets_queryset.filter(status=model_status)
+    
+    if search_query:
+        tickets_queryset = tickets_queryset.filter(
+            Q(request_type__name__icontains=search_query) |
+            Q(location__name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+    
     # Process tickets to add color attributes
     processed_tickets = []
-    for ticket in tickets_list_all:
+    for ticket in tickets_queryset:
         # Map priority to display values
         priority_mapping = {
             'high': {'label': 'High', 'color': 'red'},
@@ -1405,7 +1451,12 @@ def tickets(request):
         'departments': departments_data,
         'tickets': page_obj,  # Pass the page_obj to the template
         'page_obj': page_obj,  # Pass it again as page_obj for clarity
-        'total_tickets': tickets_list_all.count(),
+        'total_tickets': tickets_queryset.count(),
+        # Pass filter values back to template
+        'department_filter': department_filter,
+        'priority_filter': priority_filter,
+        'status_filter': status_filter,
+        'search_query': search_query,
     }
     return render(request, 'dashboard/tickets.html', context)
 
