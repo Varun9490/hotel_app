@@ -2,6 +2,31 @@
 {% load static %}
 {% load dashboard2_extras %}
 
+{% block extra_css %}
+<style>
+    /* Custom CSS for animations and smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-slide-in-up {
+        opacity: 0; /* Start hidden */
+        animation: slideInUp 0.6s ease-out forwards;
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="w-full max-w-[1184px] mx-auto bg-transparent">
 
@@ -29,7 +54,7 @@
 
     <div class="p-6">
         
-        <div class="w-full mb-6">
+        <div class="w-full mb-6 animate-on-load">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Department Statistics</h2>
                 <button id="expandDepartmentsBtn" class="text-sky-600 text-sm font-medium flex items-center gap-1 hover:text-sky-800 transition-colors">
@@ -40,13 +65,13 @@
             
             <div id="sliderWrapper" class="relative">
                 <div class="overflow-hidden">
-                    <div id="departmentSlider" class="flex transition-transform duration-500 ease-in-out">
+                    <div id="departmentSlider" class="flex">
                         {% for dept in departments %}
                         <div class="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 p-3">
                             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
                                 <div class="flex justify-between items-start">
                                     <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
-                                    <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                                    <img src="{{ dept.icon_url|default:'#' }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
                                 </div>
                                 <div class="mt-4 space-y-4">
                                     <div class="flex justify-between items-center">
@@ -69,10 +94,10 @@
                     </div>
                 </div>
 
-                <button id="prevSlide" class="absolute top-1/2 left-0 transform -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
+                <button id="prevSlide" class="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-4 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
-                <button id="nextSlide" class="absolute top-1/2 right-0 transform -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
+                <button id="nextSlide" class="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-4 bg-white/80 rounded-full p-2 shadow-md hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed z-10">
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
 
@@ -90,7 +115,7 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div class="flex justify-between items-start">
                         <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
-                        <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                        <img src="{{ dept.icon_url|default:'#' }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
                     </div>
                     <div class="mt-4 space-y-4">
                         <div class="flex justify-between items-center">
@@ -103,7 +128,7 @@
                                 <p class="text-lg font-bold font-['Inter']" style="color: {{ dept.sla_color|default:'#22c55e' }};">{{ dept.sla_compliance }}%</p>
                             </div>
                             <div class="w-full h-2 bg-gray-200 rounded-full">
-                                 <div class="h-2 rounded-full" style="width: {{ dept.sla_compliance }}%; background-color: {{ dept.sla_color|default:'#22c55e' }};"></div>
+                                <div class="h-2 rounded-full" style="width: {{ dept.sla_compliance }}%; background-color: {{ dept.sla_color|default:'#22c55e' }};"></div>
                             </div>
                         </div>
                     </div>
@@ -112,7 +137,7 @@
             </div>
         </div>
         
-        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-on-load">
             <div class="flex justify-between items-center">
                 <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Tickets Overview</h2>
                 <button id="openCreateTicketModal" class="h-10 w-40 bg-sky-600 rounded-lg text-white flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors">
@@ -151,7 +176,7 @@
             </div>
         </div>
 
-        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="mt-6 w-full bg-white rounded-xl shadow-sm border border-gray-200 animate-on-load">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -173,33 +198,41 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ ticket.id }}</td>
                             
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-{{ ticket.priority_color }}-100 text-{{ ticket.priority_color }}-800">{{ ticket.priority }}</span>
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.priority_color }}-100 text-{{ ticket.priority_color }}-700">{{ ticket.priority_label }}</span>
                             </td>
 
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ticket.subject }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ticket.request_type.name }}{% if ticket.location %} - {{ ticket.location }}{% endif %}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <img class="w-6 h-6 rounded-full" src="{{ ticket.owner_avatar }}" alt="Avatar">
-                                    <div class="ml-3 text-sm text-gray-900">{{ ticket.owner }}</div>
+                                    <img class="w-6 h-6 rounded-full" src="{{ ticket.owner_avatar|default:'https://placehold.co/24x24' }}" alt="Avatar">
+                                    <div class="ml-3 text-sm text-gray-900">{% if ticket.assignee_user %}{{ ticket.assignee_user.get_full_name|default:ticket.assignee_user.username }}{% else %}Unassigned{% endif %}</div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
                                     <div class="w-16 h-2 bg-gray-200 rounded-full">
-                                        <div class="h-2 rounded-full" style="width: {{ ticket.sla_percentage }}%; background-color: {{ ticket.sla_color|default:'#6b7280' }};"></div>
+                                        <div class="h-2 rounded-full" style="width: {{ ticket.sla_percentage|default:0 }}%; background-color: {{ ticket.sla_color|default:'#6b7280' }};"></div>
                                     </div>
-                                    <span class="text-sm font-medium" style="color: {{ ticket.sla_color|default:'#6b7280' }};">{{ ticket.sla_percentage }}%</span>
+                                    <span class="text-sm font-medium" style="color: {{ ticket.sla_color|default:'#6b7280' }};">{{ ticket.sla_percentage|default:0 }}%</span>
                                 </div>
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-800">{{ ticket.status }}</span>
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-700">{{ ticket.status_label }}</span>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap text-sm flex items-center gap-2">
-                                <button class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/eye.svg' %}" alt="View ticket" class="w-3.5 h-3.5"></button>
-                                <a href="{% url 'dashboard:ticket_detail' ticket.id %}" class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/edit.svg' %}" alt="Edit ticket" class="w-3.5 h-3.5"></a>
-                                <button class="p-1 hover:bg-gray-100 rounded-md"><img src="{% static 'images/tickets/more.svg' %}" alt="More options" class="w-3.5 h-3.5"></button>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <div class="flex items-center gap-1">
+                                    <button class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
+                                        <img src="{% static 'images/tickets/eye.svg' %}" alt="View ticket" class="w-5 h-5">
+                                    </button>
+                                    <a href="{% url 'dashboard:ticket_detail' ticket.id %}" class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
+                                        <img src="{% static 'images/tickets/edit.svg' %}" alt="Edit ticket" class="w-5 h-5">
+                                    </a>
+                                    <button class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
+                                        <img src="{% static 'images/tickets/more.svg' %}" alt="More options" class="w-5 h-5">
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -208,22 +241,39 @@
             </div>
 
             <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                {% if page_obj %}
                 <div class="text-sm text-gray-500">
-                    Showing 1-{{ tickets|length }} of {{ total_tickets }} tickets
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} tickets
                 </div>
+                
                 <div class="flex items-center gap-2">
-                    <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
-                    <button class="w-8 h-8 text-sm rounded-lg bg-sky-600 text-white">1</button>
-                    <button class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">2</button>
-                    <button class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">3</button>
-                    <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50">Next</button>
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Previous</a>
+                    {% else %}
+                        <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-50" disabled>Previous</button>
+                    {% endif %}
+                    
+                    {% for page_num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == page_num %}
+                             <button class="w-8 h-8 text-sm rounded-lg bg-sky-600 text-white">{{ page_num }}</button>
+                        {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                             <a href="?page={{ page_num }}" class="w-8 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center">{{ page_num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center">Next</a>
+                    {% else %}
+                         <button class="px-3 h-8 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-50" disabled>Next</button>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
     
     <div id="createTicketModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col max-h-[95vh]">
+        <div id="modalContent" class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col max-h-[95vh] transform transition-all duration-300 ease-out opacity-0 scale-95">
             <div class="flex justify-between items-center p-6 border-b border-gray-200">
                 <h2 class="text-xl font-semibold text-gray-900">Create New Ticket</h2>
                 <button id="closeCreateTicketModal" class="text-gray-400 hover:text-gray-600">
@@ -231,7 +281,7 @@
                 </button>
             </div>
 
-            <div class="p-6 space-y-6 overflow-y-auto">
+            <form class="p-6 space-y-6 overflow-y-auto" onsubmit="return false;">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="guestName" class="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
@@ -245,7 +295,7 @@
                     <div>
                         <label for="roomNumber" class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
                         <div class="relative">
-                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <img src="{% static 'images/tickets/room.svg' %}" alt="Room Icon" class="h-5 w-5 text-gray-400" />
                             </div>
                             <input type="text" id="roomNumber" placeholder="Enter room number" class="w-full h-11 pl-10 pr-4 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
@@ -324,7 +374,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </form>
 
             <div class="flex justify-end items-center gap-4 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                 <button id="cancelCreateTicket" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
@@ -338,25 +388,46 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- PAGE LOAD ANIMATIONS ---
+    const animatedElements = document.querySelectorAll('.animate-on-load');
+    animatedElements.forEach((el, index) => {
+        setTimeout(() => {
+            el.classList.add('animate-slide-in-up');
+        }, index * 150); // Stagger the animation
+    });
+
     // --- MODAL SCRIPT ---
     const openModalBtn = document.getElementById('openCreateTicketModal');
     const closeModalBtn = document.getElementById('closeCreateTicketModal');
     const cancelBtn = document.getElementById('cancelCreateTicket');
     const modal = document.getElementById('createTicketModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalForm = modal.querySelector('form');
 
-    const openModal = () => modal.classList.remove('hidden');
+    const openModal = () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('opacity-0', 'scale-95');
+            modalContent.classList.add('opacity-100', 'scale-100');
+        }, 10);
+    };
+
     const closeModal = () => {
-        modal.classList.add('hidden');
-        // Resetting form elements inside the modal
-        const modalForm = modal.querySelector('form');
-        if (modalForm) {
-            modalForm.reset();
-        }
-        document.querySelectorAll('.category-btn, .priority-btn').forEach(btn => {
-            btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-600', 'ring-2', 'ring-offset-2', 'ring-sky-500');
-        });
-        selectedCategory = '';
-        selectedPriority = '';
+        modalContent.classList.remove('opacity-100', 'scale-100');
+        modalContent.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            if (modalForm) modalForm.reset();
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
+                btn.classList.add('text-gray-700', 'border-gray-300');
+            });
+            document.querySelectorAll('.priority-btn').forEach(btn => {
+                 btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500');
+            });
+            selectedCategory = '';
+            selectedPriority = '';
+        }, 300);
     };
 
     if(openModalBtn) openModalBtn.addEventListener('click', openModal);
@@ -386,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- DEPARTMENT SLIDER SCRIPT ---
+    // --- REFACTORED INFINITE DEPARTMENT SLIDER SCRIPT ---
     const slider = document.getElementById('departmentSlider');
     const prevBtn = document.getElementById('prevSlide');
     const nextBtn = document.getElementById('nextSlide');
@@ -394,73 +465,80 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (slider && dots.length > 0) {
         let currentIndex = 0;
-        let itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
-        const totalItems = dots.length;
+        let itemsPerScreen = 1;
+        let totalOriginalItems = dots.length;
+        let isTransitioning = false;
         let autoPlayInterval;
 
-        const updateSlider = () => {
-            // Recalculate items per screen on each update to be safe
+        const setupSlider = () => {
             itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
-            const maxIndex = totalItems - itemsPerScreen;
-            if (currentIndex > maxIndex) {
-                currentIndex = maxIndex;
+            const slides = Array.from(slider.children);
+            
+            for(let i = 0; i < itemsPerScreen; i++) {
+                slider.appendChild(slides[i].cloneNode(true));
+            }
+            for(let i = totalOriginalItems - 1; i >= totalOriginalItems - itemsPerScreen; i--) {
+                slider.prepend(slides[i].cloneNode(true));
             }
 
-            const offset = currentIndex * (100 / itemsPerScreen);
-            slider.style.transform = `translateX(-${offset}%)`;
+            currentIndex = itemsPerScreen;
+            updateSliderPosition(false);
+        };
 
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('bg-sky-600', index === currentIndex);
-                dot.classList.toggle('bg-gray-300', index !== currentIndex);
-            });
-            
-            prevBtn.disabled = currentIndex === 0;
-            nextBtn.disabled = currentIndex >= maxIndex;
+        const updateSliderPosition = (withTransition = true) => {
+            slider.style.transition = withTransition ? 'transform 0.5s ease-in-out' : 'none';
+            const itemWidth = slider.children[0].getBoundingClientRect().width;
+            const offset = -currentIndex * itemWidth;
+            slider.style.transform = `translateX(${offset}px)`;
+            updateDots();
         };
         
-        const moveNext = () => {
-            if (currentIndex < totalItems - itemsPerScreen) {
-                currentIndex++;
-            } else {
-                currentIndex = 0; // Loop back to start
-            }
-            updateSlider();
+        const updateDots = () => {
+            const dotIndex = (currentIndex - itemsPerScreen + totalOriginalItems) % totalOriginalItems;
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('bg-sky-600', index === dotIndex);
+                dot.classList.toggle('bg-gray-300', index !== dotIndex);
+            });
         };
+        
+        const moveTo = (index) => {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            currentIndex = index;
+            updateSliderPosition();
+            stopAutoPlay();
+            startAutoPlay();
+        };
+
+        nextBtn.addEventListener('click', () => moveTo(currentIndex + 1));
+        prevBtn.addEventListener('click', () => moveTo(currentIndex - 1));
+
+        slider.addEventListener('transitionend', () => {
+            isTransitioning = false;
+            if (currentIndex <= itemsPerScreen - 1) {
+                currentIndex += totalOriginalItems;
+                updateSliderPosition(false);
+            }
+            if (currentIndex >= totalOriginalItems + itemsPerScreen) {
+                currentIndex -= totalOriginalItems;
+                updateSliderPosition(false);
+            }
+        });
+        
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => moveTo(index + itemsPerScreen));
+        });
 
         const startAutoPlay = () => {
             stopAutoPlay();
-            autoPlayInterval = setInterval(moveNext, 5000);
+            autoPlayInterval = setInterval(() => moveTo(currentIndex + 1), 5000);
         };
-        
+
         const stopAutoPlay = () => clearInterval(autoPlayInterval);
-
-        nextBtn.addEventListener('click', () => {
-            moveNext();
-            stopAutoPlay();
-            startAutoPlay();
-        });
-
-        prevBtn.addEventListener('click', () => {
-            if (currentIndex > 0) {
-                currentIndex--;
-                updateSlider();
-                stopAutoPlay();
-                startAutoPlay();
-            }
-        });
-
-        dots.forEach((dot, index) => {
-            dot.addEventListener('click', () => {
-                currentIndex = index;
-                updateSlider();
-                stopAutoPlay();
-                startAutoPlay();
-            });
-        });
         
-        window.addEventListener('resize', updateSlider);
+        window.addEventListener('resize', () => { updateSliderPosition(false); });
 
-        updateSlider(); // Initial setup
+        setupSlider();
         startAutoPlay();
     }
     
@@ -470,8 +548,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('.category-btn').forEach(button => {
         button.addEventListener('click', () => {
-            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-600'));
-            button.classList.add('bg-sky-600', 'text-white', 'border-sky-600');
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
+                btn.classList.add('text-gray-700', 'border-gray-300');
+            });
+            button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600');
+            button.classList.remove('text-gray-700', 'border-gray-300');
             selectedCategory = button.textContent.trim();
         });
     });

@@ -1219,6 +1219,16 @@ def api_group_permissions_update(request, group_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+
+from hotel_app.models import User
+# Constants
+ADMINS_GROUP = 'Admins'
+STAFF_GROUP = 'Staff'
 
 
 @login_required
@@ -1276,6 +1286,7 @@ def tickets(request):
     from django.db.models import Count, Q
     from datetime import timedelta
     from django.utils import timezone
+    from django.core.paginator import Paginator
     
     # Get departments with active ticket counts
     departments_data = []
@@ -1316,52 +1327,53 @@ def tickets(request):
             'name': dept.name,
             'active_tickets': active_tickets_count,
             'sla_compliance': sla_compliance,
-            'color': dept_colors['color'],
-            'icon_color': dept_colors['icon_color'],
+            'sla_color': dept_colors['color'],
+            'icon_url': f'/static/images/manage_users/{dept.name.lower().replace(" ", "_")}.svg',
         })
     
-    # Get service requests for the table
-    service_requests = ServiceRequest.objects.select_related(
+    # Get all service requests
+    tickets_list_all = ServiceRequest.objects.select_related(
         'request_type', 'location', 'requester_user', 'assignee_user'
-    ).all()[:10]  # Limit to 10 for performance
+    ).all().order_by('-id')
     
-    tickets_data = []
-    for sr in service_requests:
+    # Process tickets to add color attributes
+    processed_tickets = []
+    for ticket in tickets_list_all:
         # Map priority to display values
         priority_mapping = {
-            'high': {'label': 'Critical', 'color': 'red-500'},
-            'normal': {'label': 'Medium', 'color': 'sky-600'},
-            'low': {'label': 'Low', 'color': 'gray-100'},
+            'high': {'label': 'High', 'color': 'red'},
+            'normal': {'label': 'Medium', 'color': 'sky'},
+            'low': {'label': 'Low', 'color': 'gray'},
         }
         
-        priority_data = priority_mapping.get(sr.priority, {'label': 'Medium', 'color': 'sky-600'})
+        priority_data = priority_mapping.get(ticket.priority, {'label': 'Medium', 'color': 'sky'})
         
         # Map status to display values
         status_mapping = {
-            'pending': {'label': 'Pending', 'color': 'yellow-400'},
-            'assigned': {'label': 'Assigned', 'color': 'yellow-400'},
-            'accepted': {'label': 'Accepted', 'color': 'blue-500'},
-            'in_progress': {'label': 'In Progress', 'color': 'sky-600'},
-            'completed': {'label': 'Resolved', 'color': 'green-500'},
-            'closed': {'label': 'Closed', 'color': 'green-500'},
-            'escalated': {'label': 'Escalated', 'color': 'red-500'},
-            'rejected': {'label': 'Rejected', 'color': 'red-500'},
+            'pending': {'label': 'Pending', 'color': 'yellow'},
+            'assigned': {'label': 'Assigned', 'color': 'yellow'},
+            'accepted': {'label': 'Accepted', 'color': 'blue'},
+            'in_progress': {'label': 'In Progress', 'color': 'sky'},
+            'completed': {'label': 'Completed', 'color': 'green'},
+            'closed': {'label': 'Closed', 'color': 'green'},
+            'escalated': {'label': 'Escalated', 'color': 'red'},
+            'rejected': {'label': 'Rejected', 'color': 'red'},
         }
         
-        status_data = status_mapping.get(sr.status, {'label': 'Pending', 'color': 'yellow-400'})
+        status_data = status_mapping.get(ticket.status, {'label': 'Pending', 'color': 'yellow'})
         
         # Calculate SLA percentage
         sla_percentage = 0
         sla_color = 'green-500'
-        if sr.created_at and sr.due_at:
+        if ticket.created_at and ticket.due_at:
             # Calculate time taken so far or total time if completed
-            if sr.completed_at:
-                time_taken = sr.completed_at - sr.created_at
+            if ticket.completed_at:
+                time_taken = ticket.completed_at - ticket.created_at
             else:
-                time_taken = timezone.now() - sr.created_at
+                time_taken = timezone.now() - ticket.created_at
             
             # Calculate SLA percentage (time taken / total allowed time)
-            total_allowed_time = sr.due_at - sr.created_at
+            total_allowed_time = ticket.due_at - ticket.created_at
             if total_allowed_time.total_seconds() > 0:
                 sla_percentage = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
             
@@ -1373,177 +1385,27 @@ def tickets(request):
             else:
                 sla_color = 'green-500'
         
-        # Get requester name
-        requester_name = 'Unknown'
-        if sr.requester_user:
-            requester_name = sr.requester_user.get_full_name() or sr.requester_user.username
+        # Add attributes to the ticket object
+        ticket.priority_label = priority_data['label']
+        ticket.priority_color = priority_data['color']
+        ticket.status_label = status_data['label']
+        ticket.status_color = status_data['color']
+        ticket.sla_percentage = sla_percentage
+        ticket.sla_color = sla_color
+        ticket.owner_avatar = 'https://placehold.co/24x24'
         
-        # Get assignee name
-        assignee_name = 'Unassigned'
-        if sr.assignee_user:
-            assignee_name = sr.assignee_user.get_full_name() or sr.assignee_user.username
-        
-        # Create subject line
-        subject = f'{sr.request_type.name if sr.request_type else "Unknown Request"}'
-        if sr.location:
-            subject += f' - {sr.location}'
-        
-        # Check if current user is the assignee
-        is_assignee = (sr.assignee_user == request.user)
-        
-        tickets_data.append({
-            'id': sr.id,
-            'priority': priority_data['label'],
-            'priority_color': priority_data['color'],
-            'subject': subject,
-            'owner': assignee_name,
-            'owner_avatar': 'https://placehold.co/24x24',
-            'sla_percentage': sla_percentage,
-            'sla_color': sla_color,
-            'status': status_data['label'],
-            'status_color': status_data['color'],
-            'is_assignee': is_assignee,
-        })
+        processed_tickets.append(ticket)
     
-    # Get total ticket count
-    total_tickets = ServiceRequest.objects.count()
-    
-    # If there are no service requests, create some sample data
-    if total_tickets == 0:
-        create_sample_service_requests()
-        # Refresh the data
-        service_requests = ServiceRequest.objects.select_related(
-            'request_type', 'location', 'requester_user', 'assignee_user'
-        ).all()[:10]
-        
-        tickets_data = []
-        for sr in service_requests:
-            # Map priority to display values
-            priority_mapping = {
-                'high': {'label': 'Critical', 'color': 'red-500'},
-                'normal': {'label': 'Medium', 'color': 'sky-600'},
-                'low': {'label': 'Low', 'color': 'gray-100'},
-            }
-            
-            priority_data = priority_mapping.get(sr.priority, {'label': 'Medium', 'color': 'sky-600'})
-            
-            # Map status to display values
-            status_mapping = {
-                'pending': {'label': 'Pending', 'color': 'yellow-400'},
-                'assigned': {'label': 'Assigned', 'color': 'yellow-400'},
-                'accepted': {'label': 'Accepted', 'color': 'blue-500'},
-                'in_progress': {'label': 'In Progress', 'color': 'sky-600'},
-                'completed': {'label': 'Resolved', 'color': 'green-500'},
-                'closed': {'label': 'Closed', 'color': 'green-500'},
-                'escalated': {'label': 'Escalated', 'color': 'red-500'},
-                'rejected': {'label': 'Rejected', 'color': 'red-500'},
-            }
-            
-            status_data = status_mapping.get(sr.status, {'label': 'Pending', 'color': 'yellow-400'})
-            
-            # Calculate SLA percentage
-            sla_percentage = 0
-            sla_color = 'green-500'
-            if sr.created_at and sr.due_at:
-                # Calculate time taken so far or total time if completed
-                if sr.completed_at:
-                    time_taken = sr.completed_at - sr.created_at
-                else:
-                    time_taken = timezone.now() - sr.created_at
-                
-                # Calculate SLA percentage (time taken / total allowed time)
-                total_allowed_time = sr.due_at - sr.created_at
-                if total_allowed_time.total_seconds() > 0:
-                    sla_percentage = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
-                
-                # Determine color based on SLA
-                if sla_percentage > 90:
-                    sla_color = 'red-500'
-                elif sla_percentage > 70:
-                    sla_color = 'yellow-400'
-                else:
-                    sla_color = 'green-500'
-            
-            # Get requester name
-            requester_name = 'Unknown'
-            if sr.requester_user:
-                requester_name = sr.requester_user.get_full_name() or sr.requester_user.username
-            
-            # Get assignee name
-            assignee_name = 'Unassigned'
-            if sr.assignee_user:
-                assignee_name = sr.assignee_user.get_full_name() or sr.assignee_user.username
-            
-            # Create subject line
-            subject = f'{sr.request_type.name if sr.request_type else "Unknown Request"}'
-            if sr.location:
-                subject += f' - {sr.location}'
-            
-            # Check if current user is the assignee
-            is_assignee = (sr.assignee_user == request.user)
-            
-            tickets_data.append({
-                'id': sr.id,
-                'priority': priority_data['label'],
-                'priority_color': priority_data['color'],
-                'subject': subject,
-                'owner': assignee_name,
-                'owner_avatar': 'https://placehold.co/24x24',
-                'sla_percentage': sla_percentage,
-                'sla_color': sla_color,
-                'status': status_data['label'],
-                'status_color': status_data['color'],
-                'is_assignee': is_assignee,
-            })
-        
-        total_tickets = ServiceRequest.objects.count()
-        # Refresh departments data after creating sample requests
-        departments_data = []
-        departments = Department.objects.all()
-        
-        for dept in departments:
-            # Count active tickets for this department
-            active_tickets_count = ServiceRequest.objects.filter(
-                request_type__name__icontains=dept.name
-            ).exclude(
-                status__in=['completed', 'closed']
-            ).count()
-            
-            # Calculate SLA compliance (simplified calculation)
-            total_tickets_dept = ServiceRequest.objects.filter(
-                request_type__name__icontains=dept.name
-            ).count()
-            
-            completed_tickets = ServiceRequest.objects.filter(
-                request_type__name__icontains=dept.name,
-                status='completed'
-            ).count()
-            
-            sla_compliance = 0
-            if total_tickets_dept > 0:
-                sla_compliance = int((completed_tickets / total_tickets_dept) * 100)
-            
-            # Determine colors based on department
-            color_mapping = {
-                'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
-                'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
-                'Guest Services': {'color': 'green-500', 'icon_color': 'sky-600'},
-            }
-            
-            dept_colors = color_mapping.get(dept.name, {'color': 'blue-500', 'icon_color': 'sky-600'})
-            
-            departments_data.append({
-                'name': dept.name,
-                'active_tickets': active_tickets_count,
-                'sla_compliance': sla_compliance,
-                'color': dept_colors['color'],
-                'icon_color': dept_colors['icon_color'],
-            })
+    # --- Pagination Logic ---
+    paginator = Paginator(processed_tickets, 10)  # Show 10 tickets per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     context = {
         'departments': departments_data,
-        'tickets': tickets_data,
-        'total_tickets': total_tickets,
+        'tickets': page_obj,  # Pass the page_obj to the template
+        'page_obj': page_obj,  # Pass it again as page_obj for clarity
+        'total_tickets': tickets_list_all.count(),
     }
     return render(request, 'dashboard/tickets.html', context)
 
