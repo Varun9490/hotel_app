@@ -22,7 +22,8 @@ import os
 from hotel_app.models import (
     Department, Location, RequestType, Checklist,
     Complaint, BreakfastVoucher, Review, Guest,
-    Voucher, VoucherScan, ServiceRequest, UserProfile, UserGroup, UserGroupMembership
+    Voucher, VoucherScan, ServiceRequest, UserProfile, UserGroup, UserGroupMembership,
+    Notification  # Add Notification model
 )
 
 # Import all forms from the local forms.py
@@ -33,25 +34,7 @@ from .forms import (
 )
 
 # Import local utils and services
-from .utils import user_in_group
-from hotel_app.whatsapp_service import WhatsAppService
-
-# Import all models from hotel_app
-from hotel_app.models import (
-    Department, Location, RequestType, Checklist,
-    Complaint, BreakfastVoucher, Review, Guest,
-    Voucher, VoucherScan, ServiceRequest, UserProfile
-)
-
-# Import all forms from the local forms.py
-from .forms import (
-    UserForm, DepartmentForm, GroupForm, LocationForm,
-    RequestTypeForm, ChecklistForm, ComplaintForm,
-    BreakfastVoucherForm, ReviewForm, VoucherForm
-)
-
-# Import local utils and services
-from .utils import user_in_group
+from .utils import user_in_group, create_notification
 from hotel_app.whatsapp_service import WhatsAppService
 
 # ---- Constants ----
@@ -154,6 +137,62 @@ def require_permission(group_names):
         return wrapper
     return decorator
 
+
+# ---- Notification Examples ----
+# These are examples of how notifications would be created in real scenarios
+
+def create_voucher_notification(voucher):
+    """Create a notification when a voucher is issued"""
+    # Create notification for the staff member who issued the voucher
+    if voucher.issued_by:
+        create_notification(
+            recipient=voucher.issued_by,
+            title="Voucher Issued",
+            message=f"Voucher for {voucher.guest_name} has been issued successfully.",
+            notification_type="voucher"
+        )
+    
+    # Create notification for the guest (if we have a user account for them)
+    # This would typically be implemented when guests have user accounts
+
+def create_voucher_scan_notification(voucher, scanned_by):
+    """Create a notification when a voucher is scanned"""
+    # Create notification for the staff member who scanned the voucher
+    create_notification(
+        recipient=scanned_by,
+        title="Voucher Scanned",
+        message=f"Voucher for {voucher.guest_name} has been scanned successfully.",
+        notification_type="voucher"
+    )
+    
+    # Create notification for the staff member who issued the voucher
+    if voucher.issued_by and voucher.issued_by != scanned_by:
+        create_notification(
+            recipient=voucher.issued_by,
+            title="Voucher Redeemed",
+            message=f"Voucher for {voucher.guest_name} has been redeemed.",
+            notification_type="voucher"
+        )
+
+def create_service_request_notification(service_request):
+    """Create a notification when a service request is created"""
+    # Create notification for the department head
+    if service_request.department and service_request.department.head:
+        create_notification(
+            recipient=service_request.department.head,
+            title="New Service Request",
+            message=f"A new service request has been submitted: {service_request.title}",
+            notification_type="request"
+        )
+    
+    # Create notification for the requester
+    if service_request.requester:
+        create_notification(
+            recipient=service_request.requester,
+            title="Service Request Submitted",
+            message=f"Your service request '{service_request.title}' has been submitted successfully.",
+            notification_type="request"
+        )
 
 # ---- Dashboard Home ----
 @login_required
@@ -1329,12 +1368,16 @@ def tickets(request):
         
         dept_colors = color_mapping.get(dept.name, {'color': 'blue-500', 'icon_color': 'sky-600'})
         
+        # Get logo URL if available using the new method
+        logo_url = dept.get_logo_url() if dept.get_logo_url() else f'/static/images/manage_users/{dept.name.lower().replace(" ", "_")}.svg'
+        
         departments_data.append({
+            'id': dept.id,
             'name': dept.name,
             'active_tickets': active_tickets_count,
             'sla_compliance': sla_compliance,
             'sla_color': dept_colors['color'],
-            'icon_url': f'/static/images/manage_users/{dept.name.lower().replace(" ", "_")}.svg',
+            'icon_url': logo_url,
         })
     
     # Get all service requests with filters applied
@@ -1545,6 +1588,10 @@ def ticket_detail(request, ticket_id):
     # Format created time
     created_time = service_request.created_at.strftime("%b %d, %H:%M") if service_request.created_at else "Unknown"
     
+    # Get notification count (for now, we'll simulate this with a static value)
+    # In a real implementation, this would come from a notification model
+    notification_count = 3  # This will be replaced with dynamic count
+    
     context = {
         'ticket': service_request,
         'ticket_priority_label': priority_data['label'],
@@ -1563,6 +1610,7 @@ def ticket_detail(request, ticket_id):
         'room_type': room_type,
         'department_name': department_name,
         'created_time': created_time,
+        'notification_count': notification_count,
     }
     
     return render(request, 'dashboard/ticket_detail.html', context)
@@ -2403,6 +2451,97 @@ def user_create(request):
     })
 
 
+@require_http_methods(['POST'])
+@require_http_methods(['POST'])
+@csrf_protect
+@require_permission([ADMINS_GROUP])
+def department_create(request):
+    """Create a department with optional logo."""
+    form = DepartmentForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            dept = form.save()
+            
+            # Handle logo upload if provided (from FormData)
+            logo = request.FILES.get('logo') if hasattr(request, 'FILES') else None
+            if logo:
+                try:
+                    # Create department directory if it doesn't exist
+                    dept_dir = os.path.join(settings.MEDIA_ROOT, 'departments', str(dept.pk))
+                    os.makedirs(dept_dir, exist_ok=True)
+
+                    filename = f"logo{os.path.splitext(logo.name)[1]}"
+                    file_path = os.path.join(dept_dir, filename)
+
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in logo.chunks():
+                            destination.write(chunk)
+
+                    media_url = settings.MEDIA_URL or '/media/'
+                    if not media_url.endswith('/'):
+                        media_url = media_url + '/'
+                    dept.logo = f"{media_url}departments/{dept.pk}/{filename}"
+                    dept.save(update_fields=['logo'])
+                except Exception:
+                    # Non-fatal: continue but log if available
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.exception('Failed to save uploaded logo for department %s', dept.pk)
+
+            return JsonResponse({
+                "success": True, 
+                "department": {
+                    "id": dept.id, 
+                    "name": dept.name,
+                    "logo_url": dept.logo.url if dept.logo else None
+                }
+            })
+        except Exception as e:
+            return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+    else:
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+
+@require_permission([ADMINS_GROUP])
+def department_update(request, dept_id):
+    department = get_object_or_404(Department, pk=dept_id)
+    if request.method == "POST":
+        form = DepartmentForm(request.POST, request.FILES, instance=department)
+        if form.is_valid():
+            dept = form.save()
+            
+            # Handle logo upload if provided (from FormData)
+            logo = request.FILES.get('logo') if hasattr(request, 'FILES') else None
+            if logo:
+                try:
+                    # Create department directory if it doesn't exist
+                    dept_dir = os.path.join(settings.MEDIA_ROOT, 'departments', str(dept.pk))
+                    os.makedirs(dept_dir, exist_ok=True)
+
+                    filename = f"logo{os.path.splitext(logo.name)[1]}"
+                    file_path = os.path.join(dept_dir, filename)
+
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in logo.chunks():
+                            destination.write(chunk)
+
+                    media_url = settings.MEDIA_URL or '/media/'
+                    if not media_url.endswith('/'):
+                        media_url = media_url + '/'
+                    dept.logo = f"{media_url}departments/{dept.pk}/{filename}"
+                    dept.save(update_fields=['logo'])
+                except Exception:
+                    # Non-fatal: continue but log if available
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.exception('Failed to save uploaded logo for department %s', dept.pk)
+            
+            messages.success(request, "Department updated successfully.")
+        else:
+            messages.error(request, "Error updating department. Please check the form.")
+    return redirect("dashboard:departments")
+
+
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def user_update(request, user_id):
     user = get_object_or_404(User, pk=user_id)
@@ -2613,9 +2752,32 @@ def dashboard_departments(request):
                 if p.title and 'department head' in p.title.lower():
                     lead = {'user_id': getattr(p, 'user_id', None), 'full_name': p.full_name, 'email': getattr(p, 'user', None).email if getattr(p, 'user', None) else None, 'avatar_url': getattr(p, 'avatar_url', None)}
 
-            # Basic visual metadata (defaults)
-            # set image relative path for template to call {% static %}; template will fallback if file missing
-            image = f'images/manage_users/{slugify(d.name)}.svg' if d.name else ''
+            # Get logo URL if available using the new method
+            logo_url = d.get_logo_url()
+            if logo_url:
+                image = logo_url
+            else:
+                # Provide proper fallback icons based on department name
+                dept_name_slug = d.name.lower().replace(" ", "_").replace("-", "_").replace("&", "_").replace("___", "_")
+                # Map common department names to their icons
+                icon_mapping = {
+                    'front_office': 'front_office.svg',
+                    'housekeeping': 'housekeeping.svg',
+                    'food_beverage': 'food_beverage.svg',
+                    'food&beverage': 'food_beverage.svg',
+                    'food_&_beverage': 'food_beverage.svg',
+                    'security': 'security.svg',
+                    'maintenance': 'maintainence.svg',
+                    'it': 'name.svg',
+                    'hr': 'name.svg',
+                    'finance': 'name.svg',
+                    'marketing': 'name.svg',
+                    'sales': 'name.svg',
+                }
+                # Try to find a matching icon or use default
+                icon_file = icon_mapping.get(dept_name_slug, 'name.svg')
+                image = f'images/manage_users/{icon_file}'
+
             icon_bg = 'bg-gray-500/10'
             tag_bg = 'bg-gray-500/10'
             icon_color = 'gray-500'
@@ -2677,7 +2839,32 @@ def dashboard_departments(request):
     except Exception:
         # fallback to simple data matching the expected structure
         for index, d in enumerate(depts_page):
-            featured_group = {'id': getattr(d, 'pk', ''), 'name': getattr(d, 'name', ''), 'description': getattr(d, 'description', '') or '', 'members_count': getattr(d, 'user_count', 0), 'image': '', 'icon_bg': 'bg-gray-500/10', 'tag_bg': 'bg-gray-500/10', 'icon_color': 'gray-500', 'dot_bg': 'bg-gray-500', 'position_top': index * 270}
+            # Get logo URL if available using the new method
+            logo_url = d.get_logo_url()
+            if logo_url:
+                image = logo_url
+            else:
+                # Provide proper fallback icons based on department name
+                dept_name_slug = d.name.lower().replace(" ", "_").replace("-", "_").replace("&", "_").replace("___", "_")
+                # Map common department names to their icons
+                icon_mapping = {
+                    'front_office': 'front_office.svg',
+                    'housekeeping': 'housekeeping.svg',
+                    'food_beverage': 'food_beverage.svg',
+                    'food&beverage': 'food_beverage.svg',
+                    'food_&_beverage': 'food_beverage.svg',
+                    'security': 'security.svg',
+                    'maintenance': 'maintainence.svg',
+                    'it': 'name.svg',
+                    'hr': 'name.svg',
+                    'finance': 'name.svg',
+                    'marketing': 'name.svg',
+                    'sales': 'name.svg',
+                }
+                # Try to find a matching icon or use default
+                icon_file = icon_mapping.get(dept_name_slug, 'name.svg')
+                image = f'images/manage_users/{icon_file}'
+            featured_group = {'id': getattr(d, 'pk', ''), 'name': getattr(d, 'name', ''), 'description': getattr(d, 'description', '') or '', 'members_count': getattr(d, 'user_count', 0), 'image': image, 'icon_bg': 'bg-gray-500/10', 'tag_bg': 'bg-gray-500/10', 'icon_color': 'gray-500', 'dot_bg': 'bg-gray-500', 'position_top': index * 270}
             departments.append({'featured_group': featured_group, 'members': [], 'lead': None, 'open_tickets': 0, 'sla_label': 'N/A', 'sla_tag_bg': 'bg-gray-200', 'sla_color': 'gray-600', 'performance_pct': '0%', 'performance_color': 'gray-500', 'performance_width': '2', 'status_label': 'Unknown', 'status_bg': 'bg-gray-200', 'status_color': 'gray-500'})
 
     # Render the Manage Users base template when navigated via the Manage Users tabs.
@@ -2764,36 +2951,88 @@ def remove_group_member(request, group_id):
 @csrf_protect
 @require_permission([ADMINS_GROUP])
 def department_create(request):
-    name = (request.POST.get("name") or "").strip()
-    description = (request.POST.get("description") or "").strip()
+    """Create a department with optional logo."""
+    form = DepartmentForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            dept = form.save()
+            
+            # Handle logo upload if provided (from FormData)
+            logo = request.FILES.get('logo') if hasattr(request, 'FILES') else None
+            if logo:
+                try:
+                    # Create department directory if it doesn't exist
+                    dept_dir = os.path.join(settings.MEDIA_ROOT, 'departments', str(dept.pk))
+                    os.makedirs(dept_dir, exist_ok=True)
 
-    errors = {}
-    if not name:
-        errors["name"] = ["Department name is required."]
-    if Department.objects.filter(name__iexact=name).exists():
-        errors["name"] = [f"Department '{name}' already exists."]
+                    filename = f"logo{os.path.splitext(logo.name)[1]}"
+                    file_path = os.path.join(dept_dir, filename)
 
-    if errors:
-        return JsonResponse({"success": False, "errors": errors}, status=400)
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in logo.chunks():
+                            destination.write(chunk)
 
-    try:
-        dept = Department.objects.create(
-            name=name,
-            description=description or None
-        )
-    except Exception as e:
-        return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+                    media_url = settings.MEDIA_URL or '/media/'
+                    if not media_url.endswith('/'):
+                        media_url = media_url + '/'
+                    dept.logo = f"{media_url}departments/{dept.pk}/{filename}"
+                    dept.save(update_fields=['logo'])
+                except Exception:
+                    # Non-fatal: continue but log if available
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.exception('Failed to save uploaded logo for department %s', dept.pk)
 
-    return JsonResponse({"success": True, "department": {"id": dept.id, "name": dept.name}})
+            return JsonResponse({
+                "success": True, 
+                "department": {
+                    "id": dept.id, 
+                    "name": dept.name,
+                    "logo_url": dept.logo.url if dept.logo else None
+                }
+            })
+        except Exception as e:
+            return JsonResponse({"success": False, "errors": {"non_field_errors": [str(e)]}}, status=500)
+    else:
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
 @require_permission([ADMINS_GROUP])
 def department_update(request, dept_id):
     department = get_object_or_404(Department, pk=dept_id)
     if request.method == "POST":
-        form = DepartmentForm(request.POST, instance=department)
+        form = DepartmentForm(request.POST, request.FILES, instance=department)
         if form.is_valid():
-            form.save()
+            dept = form.save()
+            
+            # Handle logo upload if provided (from FormData)
+            logo = request.FILES.get('logo') if hasattr(request, 'FILES') else None
+            if logo:
+                try:
+                    # Create department directory if it doesn't exist
+                    dept_dir = os.path.join(settings.MEDIA_ROOT, 'departments', str(dept.pk))
+                    os.makedirs(dept_dir, exist_ok=True)
+
+                    filename = f"logo{os.path.splitext(logo.name)[1]}"
+                    file_path = os.path.join(dept_dir, filename)
+
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in logo.chunks():
+                            destination.write(chunk)
+
+                    media_url = settings.MEDIA_URL or '/media/'
+                    if not media_url.endswith('/'):
+                        media_url = media_url + '/'
+                    dept.logo = f"{media_url}departments/{dept.pk}/{filename}"
+                    dept.save(update_fields=['logo'])
+                except Exception:
+                    # Non-fatal: continue but log if available
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.exception('Failed to save uploaded logo for department %s', dept.pk)
+            
             messages.success(request, "Department updated successfully.")
+        else:
+            messages.error(request, "Error updating department. Please check the form.")
     return redirect("dashboard:departments")
 
 @require_permission([ADMINS_GROUP])
@@ -2803,9 +3042,6 @@ def department_delete(request, dept_id):
         department.delete()
         messages.success(request, "Department deleted successfully.")
     return redirect("dashboard:departments")
-
-
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
 @require_http_methods(['POST'])
 def assign_department_lead(request, dept_id):
     """Assign a department lead.

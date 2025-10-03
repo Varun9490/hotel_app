@@ -8,9 +8,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 
-
-
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
@@ -21,11 +18,13 @@ urlpatterns = [
     
     # Guest Registration and QR Code features
     path('register-guest/', views.register_guest, name='register_guest'),
-    path('guest-qr-success/<int:guest_id>/', views.guest_qr_success, name='guest_qr_success'),
-    path('generate-guest-qr/<int:guest_id>/', views.generate_guest_qr, name='generate_guest_qr'),
+    # Removed missing URLs:
+    # path('guest-qr-success/<int:guest_id>/', views.guest_qr_success, name='guest_qr_success'),
+    # path('generate-guest-qr/<int:guest_id>/', views.generate_guest_qr, name='generate_guest_qr'),
     
     # API
     path('api/', include('hotel_app.api_urls')),  # Updated API URL
+    path('api/notification/', include('hotel_app.api_notification_urls')),  # Notification API URL
     path('api-gui/', views.api_gui_view, name='api_gui'),  # New API GUI view
 
     # Screens

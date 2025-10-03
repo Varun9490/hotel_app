@@ -68,13 +68,13 @@
             
             <div id="sliderWrapper" class="relative">
                 <div class="overflow-hidden">
-                    <div id="departmentSlider" class="flex">
+                    <div id="departmentSlider" class="flex transition-transform duration-500 ease-in-out">
                         {% for dept in departments %}
                         <div class="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 p-3">
                             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
                                 <div class="flex justify-between items-start">
                                     <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
-                                    <img src="{{ dept.icon_url|default:'#' }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                                    <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" onerror="this.src='{% static 'images/manage_users/name.svg' %}';" />
                                 </div>
                                 <div class="mt-4 space-y-4">
                                     <div class="flex justify-between items-center">
@@ -114,7 +114,7 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div class="flex justify-between items-start">
                         <h3 class="text-gray-900 text-lg font-semibold font-['Inter']">{{ dept.name }}</h3>
-                        <img src="{{ dept.icon_url|default:'#' }}" alt="{{ dept.name }} Icon" class="w-6 h-6" />
+                        <img src="{{ dept.icon_url }}" alt="{{ dept.name }} Icon" class="w-6 h-6" onerror="this.src='{% static 'images/manage_users/name.svg' %}';" />
                     </div>
                     <div class="mt-4 space-y-4">
                         <div class="flex justify-between items-center">
@@ -345,22 +345,164 @@ document.addEventListener('DOMContentLoaded', function() {
     const expandDepartmentsBtn = document.getElementById('expandDepartmentsBtn');
     const expandedDepartments = document.getElementById('expandedDepartments');
     const sliderWrapper = document.getElementById('sliderWrapper');
-    if (expandDepartmentsBtn) { expandDepartmentsBtn.addEventListener('click', () => { const isExpanded = !expandedDepartments.classList.contains('hidden'); if (isExpanded) { expandedDepartments.classList.add('hidden'); sliderWrapper.classList.remove('hidden'); expandDepartmentsBtn.innerHTML = `<span>View All</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`; } else { expandedDepartments.classList.remove('hidden'); sliderWrapper.classList.add('hidden'); expandDepartmentsBtn.innerHTML = `<span>Show Less</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`; } }); }
+    if (expandDepartmentsBtn && expandedDepartments && sliderWrapper) {
+        expandDepartmentsBtn.addEventListener('click', () => {
+            const isExpanded = expandedDepartments.classList.contains('hidden');
+            if (isExpanded) {
+                expandedDepartments.classList.remove('hidden');
+                sliderWrapper.classList.add('hidden');
+                expandDepartmentsBtn.innerHTML = `<span>Show Less</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`;
+            } else {
+                expandedDepartments.classList.add('hidden');
+                sliderWrapper.classList.remove('hidden');
+                expandDepartmentsBtn.innerHTML = `<span>View All</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+            }
+        });
+    }
 
-    // --- INFINITE DEPARTMENT SLIDER SCRIPT ---
+    // --- REWRITTEN & CORRECTED INFINITE DEPARTMENT SLIDER SCRIPT ---
     const slider = document.getElementById('departmentSlider');
-    const prevBtn = document.getElementById('prevSlide');
-    const nextBtn = document.getElementById('nextSlide');
-    const dots = document.querySelectorAll('.department-dot');
-    if (slider && dots.length > 0) { let currentIndex = 0, itemsPerScreen = 1, totalOriginalItems = dots.length, isTransitioning = false, autoPlayInterval; const setupSlider = () => { itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1); const slides = Array.from(slider.children); for(let i = 0; i < itemsPerScreen; i++) { slider.appendChild(slides[i].cloneNode(true)); } for(let i = totalOriginalItems - 1; i >= totalOriginalItems - itemsPerScreen; i--) { slider.prepend(slides[i].cloneNode(true)); } currentIndex = itemsPerScreen; updateSliderPosition(false); }; const updateSliderPosition = (withTransition = true) => { slider.style.transition = withTransition ? 'transform 0.5s ease-in-out' : 'none'; const itemWidth = slider.children[0].getBoundingClientRect().width; slider.style.transform = `translateX(${-currentIndex * itemWidth}px)`; updateDots(); }; const updateDots = () => { const dotIndex = (currentIndex - itemsPerScreen + totalOriginalItems) % totalOriginalItems; dots.forEach((dot, index) => { dot.classList.toggle('bg-sky-600', index === dotIndex); dot.classList.toggle('bg-gray-300', index !== dotIndex); }); }; const moveTo = (index) => { if (isTransitioning) return; isTransitioning = true; currentIndex = index; updateSliderPosition(); stopAutoPlay(); startAutoPlay(); }; nextBtn.addEventListener('click', () => moveTo(currentIndex + 1)); prevBtn.addEventListener('click', () => moveTo(currentIndex - 1)); slider.addEventListener('transitionend', () => { isTransitioning = false; if (currentIndex <= itemsPerScreen - 1) { currentIndex += totalOriginalItems; updateSliderPosition(false); } if (currentIndex >= totalOriginalItems + itemsPerScreen) { currentIndex -= totalOriginalItems; updateSliderPosition(false); } }); dots.forEach((dot, index) => { dot.addEventListener('click', () => moveTo(index + itemsPerScreen)); }); const startAutoPlay = () => { stopAutoPlay(); autoPlayInterval = setInterval(() => moveTo(currentIndex + 1), 5000); }; const stopAutoPlay = () => clearInterval(autoPlayInterval); window.addEventListener('resize', () => { updateSliderPosition(false); }); setupSlider(); startAutoPlay(); }
+    if (slider) {
+        const prevBtn = document.getElementById('prevSlide');
+        const nextBtn = document.getElementById('nextSlide');
+        const dotsContainer = document.getElementById('sliderDots');
+        const dots = document.querySelectorAll('.department-dot');
+        
+        if (dots.length > 0) {
+            const originalSlides = Array.from(slider.children);
+            const totalOriginalItems = originalSlides.length;
+
+            let currentIndex;
+            let itemsPerScreen = 1;
+            let isTransitioning = false;
+            let autoPlayInterval;
+            let resizeTimeout;
+
+            const updateSliderPosition = (withTransition = true) => {
+                slider.style.transition = withTransition ? 'transform 0.5s ease-in-out' : 'none';
+                if (slider.children.length === 0) return;
+                const itemWidth = slider.children[0].getBoundingClientRect().width;
+                slider.style.transform = `translateX(${-currentIndex * itemWidth}px)`;
+                updateDots();
+            };
+
+            const updateDots = () => {
+                const dotIndex = (currentIndex - itemsPerScreen + totalOriginalItems) % totalOriginalItems;
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('bg-sky-600', index === dotIndex);
+                    dot.classList.toggle('bg-gray-300', index !== dotIndex);
+                });
+            };
+            
+            const moveTo = (newIndex) => {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                currentIndex = newIndex;
+                updateSliderPosition();
+                stopAutoPlay();
+                startAutoPlay();
+            };
+
+            const handleTransitionEnd = () => {
+                isTransitioning = false;
+                if (currentIndex < itemsPerScreen) {
+                    currentIndex += totalOriginalItems;
+                    updateSliderPosition(false);
+                } else if (currentIndex >= totalOriginalItems + itemsPerScreen) {
+                    currentIndex -= totalOriginalItems;
+                    updateSliderPosition(false);
+                }
+            };
+
+            const startAutoPlay = () => {
+                stopAutoPlay();
+                autoPlayInterval = setInterval(() => moveTo(currentIndex + 1), 5000);
+            };
+
+            const stopAutoPlay = () => clearInterval(autoPlayInterval);
+            
+            const setupSlider = () => {
+                stopAutoPlay();
+                isTransitioning = false;
+                itemsPerScreen = window.innerWidth >= 1024 ? 3 : (window.innerWidth >= 768 ? 2 : 1);
+                
+                const sliderControlsVisible = totalOriginalItems > itemsPerScreen;
+                if(prevBtn) prevBtn.style.display = sliderControlsVisible ? 'block' : 'none';
+                if(nextBtn) nextBtn.style.display = sliderControlsVisible ? 'block' : 'none';
+                if(dotsContainer) dotsContainer.style.display = sliderControlsVisible ? 'flex' : 'none';
+
+                slider.innerHTML = '';
+                originalSlides.forEach(slide => slider.appendChild(slide));
+                
+                if (sliderControlsVisible) {
+                    for (let i = 0; i < itemsPerScreen; i++) {
+                        slider.appendChild(originalSlides[i].cloneNode(true));
+                    }
+                    for (let i = totalOriginalItems - 1; i >= totalOriginalItems - itemsPerScreen; i--) {
+                        slider.prepend(originalSlides[i].cloneNode(true));
+                    }
+                }
+
+                currentIndex = sliderControlsVisible ? itemsPerScreen : 0;
+                updateSliderPosition(false);
+                if (sliderControlsVisible) startAutoPlay();
+            };
+            
+            setupSlider();
+
+            if(nextBtn) nextBtn.addEventListener('click', () => moveTo(currentIndex + 1));
+            if(prevBtn) prevBtn.addEventListener('click', () => moveTo(currentIndex - 1));
+            slider.addEventListener('transitionend', handleTransitionEnd);
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => moveTo(index + itemsPerScreen));
+            });
+
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(setupSlider, 250);
+            });
+        }
+    }
 
     // --- TICKET CREATION SCRIPT ---
     let selectedCategory = '', selectedPriority = '';
     document.querySelectorAll('.category-btn').forEach(button => { button.addEventListener('click', () => { document.querySelectorAll('.category-btn').forEach(btn => { btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600'); btn.classList.add('text-gray-700', 'border-gray-300'); }); button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500', 'border-sky-600', 'text-sky-600'); button.classList.remove('text-gray-700', 'border-gray-300'); selectedCategory = button.textContent.trim(); }); });
     document.querySelectorAll('.priority-btn').forEach(button => { button.addEventListener('click', () => { document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500')); button.classList.add('ring-2', 'ring-offset-2', 'ring-sky-500'); selectedPriority = button.dataset.priority; }); });
     const submitTicketBtn = document.getElementById('submitCreateTicket');
-    if (submitTicketBtn) { submitTicketBtn.addEventListener('click', () => { const ticketData = { guest_name: document.getElementById('guestName').value.trim(), room_number: document.getElementById('roomNumber').value.trim(), department: document.getElementById('department').value, category: selectedCategory, priority: selectedPriority, description: document.getElementById('description').value.trim() }; if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) { alert('Please fill in all required fields: Guest Name, Room Number, Department, Category, and Priority.'); return; } fetch('{% url "dashboard:api_create_ticket" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }, body: JSON.stringify(ticketData) }).then(response => response.json()).then(data => { if (data.success) { alert('Ticket created successfully!'); location.reload(); } else { alert('Error creating ticket: ' + (data.error || 'Unknown error')); } }).catch(error => { console.error('Error:', error); alert('An error occurred. Please try again.'); }); }); }
-    function getCookie(name) { let cookieValue = null; if (document.cookie && document.cookie !== '') { const cookies = document.cookie.split(';'); for (let i = 0; i < cookies.length; i++) { const cookie = cookies[i].trim(); if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; } } } return cookieValue; }
+    if (submitTicketBtn) { 
+        submitTicketBtn.addEventListener('click', () => { 
+            const ticketData = { guest_name: document.getElementById('guestName').value.trim(), room_number: document.getElementById('roomNumber').value.trim(), department: document.getElementById('department').value, category: selectedCategory, priority: selectedPriority, description: document.getElementById('description').value.trim() }; 
+            if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) { alert('Please fill in all required fields: Guest Name, Room Number, Department, Category, and Priority.'); return; } 
+            fetch('{% url "dashboard:api_create_ticket" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }, body: JSON.stringify(ticketData) })
+            .then(response => response.json())
+            .then(data => { 
+                if (data.success) { 
+                    alert('Ticket created successfully!'); 
+                    location.reload(); 
+                } else { 
+                    alert('Error creating ticket: ' + (data.error || 'Unknown error')); 
+                } 
+            })
+            .catch(error => { 
+                console.error('Error:', error); 
+                alert('An error occurred. Please try again.'); 
+            }); 
+        });
+    }
+    function getCookie(name) { 
+        let cookieValue = null; 
+        if (document.cookie && document.cookie !== '') { 
+            const cookies = document.cookie.split(';'); 
+            for (let i = 0; i < cookies.length; i++) { 
+                const cookie = cookies[i].trim(); 
+                if (cookie.substring(0, name.length + 1) === (name + '=')) { 
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); 
+                    break; 
+                } 
+            } 
+        } 
+        return cookieValue; 
+    }
 });
 </script>
 {% endblock extra_js %}
