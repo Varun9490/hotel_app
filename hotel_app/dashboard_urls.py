@@ -10,12 +10,6 @@ urlpatterns = [
     path('users/', dashboard_views.dashboard_users, name='users'),
     path('manage-users/departments/', dashboard_views.dashboard_departments, name='departments'),
     path('groups/', dashboard_views.dashboard_groups, name='groups'),
-    path('locations/', dashboard_views.dashboard_locations, name='locations'),
-    path('request-types/', dashboard_views.dashboard_request_types, name='request_types'),
-    path('checklists/', dashboard_views.dashboard_checklists, name='checklists'),
-    path('complaints/', dashboard_views.complaints, name='complaints'),
-    path('breakfast-vouchers/', dashboard_views.breakfast_vouchers, name='breakfast_vouchers'),
-    path('reviews/', dashboard_views.reviews, name='reviews'),
     # CRUD endpoints
     path('users/create/', dashboard_views.user_create, name='user_create'),
     path('users/<int:user_id>/update/', dashboard_views.user_update, name='user_update'),

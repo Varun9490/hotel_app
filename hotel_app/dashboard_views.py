@@ -3213,16 +3213,6 @@ def location_delete(request, loc_id):
     return redirect("dashboard:locations")
 
 
-# ---- Request Type Management ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def dashboard_request_types(request):
-    request_types = RequestType.objects.all()
-    form = RequestTypeForm()
-    context = {
-        "request_types": request_types,
-        "form": form,
-    }
-    return render(request, "dashboard/request_types.html", context)
 
 @require_permission([ADMINS_GROUP])
 def request_type_create(request):
@@ -3253,15 +3243,7 @@ def request_type_delete(request, rt_id):
 
 
 # ---- Checklist Management ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def dashboard_checklists(request):
-    checklists = Checklist.objects.all()
-    form = ChecklistForm()
-    context = {
-        "checklists": checklists,
-        "form": form,
-    }
-    return render(request, "dashboard/checklists.html", context)
+
 
 @require_permission([ADMINS_GROUP])
 def checklist_create(request):
@@ -3291,18 +3273,6 @@ def checklist_delete(request, cl_id):
     return redirect("dashboard:checklists")
 
 
-# ---- Complaint Management ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def complaints(request):
-    complaints_list = Complaint.objects.all().order_by('-created_at')
-    form = ComplaintForm()
-    context = {
-        "complaints": complaints_list,
-        "form": form,
-        "users": User.objects.all(),
-        "guests": Guest.objects.all(),
-    }
-    return render(request, "dashboard/complaints.html", context)
 
 @require_permission([ADMINS_GROUP])
 def complaint_create(request):
@@ -3332,31 +3302,7 @@ def complaint_delete(request, complaint_id):
     return redirect("dashboard:complaints")
 
 
-# ---- Legacy Breakfast Voucher Management ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def breakfast_vouchers(request):
-    vouchers_list = BreakfastVoucher.objects.all().order_by('-created_at')
-    form = BreakfastVoucherForm()
-    context = {
-        "vouchers": vouchers_list,
-        "form": form,
-        "guests": Guest.objects.all(),
-        "locations": Location.objects.all(),
-    }
-    return render(request, "dashboard/breakfast_vouchers.html", context)
-
-
 # ---- Review Management ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def reviews(request):
-    reviews_list = Review.objects.all().order_by('-created_at')
-    form = ReviewForm()
-    context = {
-        "reviews": reviews_list,
-        "form": form,
-        "guests": Guest.objects.all(),
-    }
-    return render(request, "dashboard/reviews.html", context)
 
 @require_permission([ADMINS_GROUP])
 def review_create(request):

@@ -168,7 +168,7 @@ from .models import Voucher
 
 def breakfast_vouchers(request):
     vouchers = Voucher.objects.all()
-    return render(request, "dashboard/breakfast_vouchers.html", {"vouchers": vouchers})
+    return render(request, "dashboard/", {"vouchers": vouchers})
 
 
 def issue_voucher(request, guest_id):
@@ -398,9 +398,6 @@ class MainDashboardView(BaseNavView):
         context["complaint_trends"] = json.dumps(complaint_trends)
         return context
 
-
-def api_gui_view(request):
-    return render(request, 'api_gui.html')
 
 
 # ------------------- Bulk Actions -------------------
