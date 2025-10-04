@@ -3906,6 +3906,137 @@ def get_guest_whatsapp_message(request, guest_id):
     })
 
 
+# ---- Feedback View ----
+@login_required
+@user_passes_test(is_staff)
+def feedback_inbox(request):
+    """Feedback inbox view showing all guest feedback."""
+    # Sample feedback data - in a real implementation, this would come from the database
+    feedback_data = [
+        {
+            'id': 1,
+            'date': 'Dec 15, 2024',
+            'guest': 'Maria Rodriguez',
+            'room': 'Room 304',
+            'rating': 2.0,
+            'feedback': 'Room was not clean upon arrival, found hair in bathroom. AC was too noisy...',
+            'keywords': ['cleanliness', 'noise'],
+            'sentiment': 'Negative',
+            'status': 'needs_attention'
+        },
+        {
+            'id': 2,
+            'date': 'Dec 15, 2024',
+            'guest': 'John Smith',
+            'room': 'Room 218',
+            'rating': 4.0,
+            'feedback': 'Great location and friendly staff. Room was comfortable but breakfast could be improved...',
+            'keywords': ['staff', 'breakfast'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        },
+        {
+            'id': 3,
+            'date': 'Dec 14, 2024',
+            'guest': 'David Chen',
+            'room': 'Suite 405',
+            'rating': 5.0,
+            'feedback': 'Exceptional service throughout our stay! The concierge went above and beyond...',
+            'keywords': ['service', 'concierge'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        },
+        {
+            'id': 4,
+            'date': 'Dec 14, 2024',
+            'guest': 'Emma Thompson',
+            'room': 'Room 156',
+            'rating': 3.0,
+            'feedback': 'Average experience. WiFi was slow and pool was crowded. Food was decent...',
+            'keywords': ['wifi', 'pool'],
+            'sentiment': 'Neutral',
+            'status': 'needs_attention'
+        },
+        {
+            'id': 5,
+            'date': 'Dec 13, 2024',
+            'guest': 'Lisa Anderson',
+            'room': 'Room 289',
+            'rating': 5.0,
+            'feedback': 'Perfect getaway! Beautiful views, excellent spa services, and amazing breakfast buffet...',
+            'keywords': ['spa', 'breakfast', 'views'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        }
+    ]
+    
+    context = {
+        'feedback_data': feedback_data,
+        'stats': {
+            'total_feedback': 1247,
+            'avg_rating': 4.6,
+            'needs_attention': 23,
+            'response_rate': 87
+        }
+    }
+    
+    return render(request, 'dashboard/feedback_inbox.html', context)
+
+
+@login_required
+@user_passes_test(is_staff)
+def feedback_detail(request, feedback_id):
+    """Feedback detail view showing detailed information about a specific feedback."""
+    # Sample feedback data - in a real implementation, this would come from the database
+    feedback = {
+        'id': feedback_id,
+        'date': 'March 15, 2024',
+        'time': '2:30 PM',
+        'guest': 'Michael Johnson',
+        'room': 'Room 304',
+        'room_type': 'Premium Suite',
+        'rating': 4.0,
+        'sentiment': 'Positive',
+        'title': 'Great stay but room service was slow',
+        'comment': 'Overall, I had a wonderful stay at your hotel. The room was clean and comfortable, and the staff was very friendly and helpful. The location is perfect for exploring the city center.\n\nHowever, I did have some issues with room service. I ordered dinner on my second night, and it took over an hour to arrive. When it finally came, the food was lukewarm. This was disappointing, especially considering the premium I paid for the suite.\n\nDespite this issue, I would still recommend the hotel to others, but I hope you can improve the room service response times. The breakfast buffet was excellent, and the concierge was particularly helpful with restaurant recommendations.',
+        'keywords': ['Clean Room', 'Friendly Staff', 'Great Location', 'Room Service', 'Slow Response', 'Breakfast', 'Concierge'],
+        'department_impact': [
+            {'department': 'Room Service', 'sentiment': 'Negative'},
+            {'department': 'Housekeeping', 'sentiment': 'Positive'},
+            {'department': 'Front Desk', 'sentiment': 'Positive'}
+        ],
+        'activity_timeline': [
+            {'event': 'Feedback received', 'time': 'March 15, 2:30 PM', 'description': 'Guest submitted feedback via email', 'status': 'completed'},
+            {'event': 'Auto-tagged by AI', 'time': 'March 15, 2:31 PM', 'description': 'System identified keywords and sentiment', 'status': 'completed'},
+            {'event': 'Assigned to manager', 'time': 'March 15, 3:15 PM', 'description': 'Escalated to Sarah Wilson for review', 'status': 'completed'},
+            {'event': 'Pending action', 'time': 'Now', 'description': 'Awaiting manager response', 'status': 'pending'}
+        ],
+        'attachments': [
+            {'name': 'Room Service Receipt', 'type': 'PDF', 'size': '245 KB', 'color': 'red'},
+            {'name': 'Room Photo', 'type': 'JPG', 'size': '1.2 MB', 'color': 'blue'}
+        ],
+        'guest_info': {
+            'name': 'Michael Johnson',
+            'loyalty_member': True,
+            'check_in': 'March 13, 2024',
+            'check_out': 'March 16, 2024',
+            'stay_duration': '3 nights',
+            'previous_stays': 7
+        },
+        'response_status': {
+            'status': 'Pending Review',
+            'priority': 'High',
+            'due_date': 'March 17, 2024'
+        }
+    }
+    
+    context = {
+        'feedback': feedback
+    }
+    
+    return render(request, 'dashboard/feedback_detail.html', context)
+
+
 # ---- Tailwind Test ----
 @login_required
 def tailwind_test(request):

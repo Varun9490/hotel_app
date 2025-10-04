@@ -96,4 +96,6 @@ urlpatterns = [
     path('api/tickets/<int:ticket_id>/reject/', dashboard_views.reject_ticket_api, name='api_reject_ticket'),
     path('configure-requests/', dashboard_views.configure_requests, name='configure_requests'),
     path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),
+    path('feedback/', dashboard_views.feedback_inbox, name='feedback_inbox'),
+    path('feedback/<int:feedback_id>/', dashboard_views.feedback_detail, name='feedback_detail'),
 ]
