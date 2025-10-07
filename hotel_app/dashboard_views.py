@@ -3334,6 +3334,17 @@ def review_delete(request, review_id):
 
 # ---- New Voucher System: Analytics ----
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
+def sla_escalations(request):
+    """SLA & Escalations dashboard."""
+    context = {
+        'active_tab': 'sla_escalations',
+        'title': 'SLA & Escalations',
+        'subtitle': 'Define service level agreements and escalation workflows for guest requests',
+    }
+    return render(request, 'dashboard/sla_escalations.html', context)
+
+
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def voucher_analytics(request):
     """Voucher analytics dashboard with actual data."""
     today = timezone.now().date()
@@ -4035,6 +4046,13 @@ def feedback_detail(request, feedback_id):
     }
     
     return render(request, 'dashboard/feedback_detail.html', context)
+
+
+# ---- Integrations ----
+@login_required
+def integrations(request):
+    """View for the integrations page."""
+    return render(request, "dashboard/integrations.html")
 
 
 # ---- Tailwind Test ----

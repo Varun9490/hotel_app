@@ -98,4 +98,6 @@ urlpatterns = [
     path('messaging-setup/', dashboard_views.messaging_setup, name='messaging_setup'),
     path('feedback/', dashboard_views.feedback_inbox, name='feedback_inbox'),
     path('feedback/<int:feedback_id>/', dashboard_views.feedback_detail, name='feedback_detail'),
+    path('integrations/', dashboard_views.integrations, name='integrations'),
+    path('sla-escalations/', dashboard_views.sla_escalations, name='sla_escalations'),
 ]

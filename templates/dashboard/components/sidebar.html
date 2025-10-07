@@ -81,6 +81,32 @@
           <span class="font-medium">Locations </span>
         </a>
         <a
+          href="{% url 'dashboard:sla_escalations' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:sla_escalations' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}">
+          <img
+            src="{% if request.resolver_match.view_name == 'dashboard:sla_escalations' %}{% static 'images/sidebar/sla_highlighted.svg' %}{% else %}{% static 'images/sidebar/sla.svg' %}{% endif %}"
+            alt="SLA & Escalations Icon"
+            class="w-5 h-5"
+          />
+          <span class="font-medium">SLA & Escalations</span>
+        </a>
+        <a
+          href="{% url 'dashboard:integrations' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:integrations' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
+        >
+          <img
+            src="{% if request.resolver_match.view_name == 'dashboard:integrations' %}{% static 'images/sidebar/integration_highlighted.svg' %}{% else %}{% static 'images/sidebar/integration.svg' %}{% endif %}"
+            alt="Integration Icon"
+            class="w-5 h-5"
+          />
+          <span class="font-medium">Integration</span>
+          <div class="ml-auto">
+            <div class="w-2.5 h-3.5 relative bg-black/0 border-gray-200 overflow-hidden">
+              
+            </div>
+          </div>
+        </a>
+        <a
           href="{% url 'dashboard:messaging_setup' %}"
           class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:messaging_setup' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
         >
@@ -136,6 +162,8 @@
         </a>
       </div>
     </div>
+
+
   </nav>
 
   <div class="p-4 border-t border-gray-200">
