@@ -4119,6 +4119,330 @@ def feedback_detail(request, feedback_id):
     return render(request, 'dashboard/feedback_detail.html', context)
 
 
+# ---- Ticket Workflow API Endpoints ----
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def create_ticket_api(request):
+    """API endpoint to create a new ticket with department routing."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest, RequestType, Location, Department, User
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            
+            # Extract data from request
+            guest_name = data.get('guest_name')
+            room_number = data.get('room_number')
+            department_name = data.get('department')
+            category = data.get('category')
+            priority = data.get('priority')
+            description = data.get('description')
+            
+            # Validate required fields
+            if not guest_name or not room_number or not department_name or not category or not priority:
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+            
+            # Get or create location
+            location, _ = Location.objects.get_or_create(
+                room_no=room_number,
+                defaults={'name': f'Room {room_number}'}
+            )
+            
+            # Get or create request type
+            request_type, _ = RequestType.objects.get_or_create(
+                name=category,
+                defaults={}
+            )
+            
+            # Get department
+            try:
+                department = Department.objects.get(name=department_name)
+            except Department.DoesNotExist:
+                return JsonResponse({'error': 'Invalid department'}, status=400)
+            
+            # Map priority to model values
+            priority_mapping = {
+                'High': 'high',
+                'Medium': 'normal',
+                'Normal': 'normal',
+                'Low': 'low',
+            }
+            model_priority = priority_mapping.get(priority, 'normal')
+            
+            # Set SLA hours based on priority
+            sla_hours = 24  # Default SLA
+            response_sla_hours = 1  # Default response SLA (1 hour)
+            
+            if model_priority == 'high':
+                sla_hours = 2  # 2 hours for high priority
+                response_sla_hours = 0.25  # 15 minutes for high priority
+            elif model_priority == 'normal':
+                sla_hours = 24  # 24 hours for normal priority
+                response_sla_hours = 1  # 1 hour for normal priority
+            elif model_priority == 'low':
+                sla_hours = 72  # 72 hours for low priority
+                response_sla_hours = 4  # 4 hours for low priority
+            
+            # Create service request
+            service_request = ServiceRequest.objects.create(
+                request_type=request_type,
+                location=location,
+                requester_user=request.user,
+                department=department,
+                priority=model_priority,
+                status='pending',
+                notes=description,
+                sla_hours=sla_hours,
+                response_sla_hours=response_sla_hours
+            )
+            
+            # Notify department staff
+            service_request.notify_department_staff()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket created successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def assign_ticket_api(request, ticket_id):
+    """API endpoint to assign a ticket to a user or department."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest, User, Department
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            assignee_id = data.get('assignee_id')
+            department_id = data.get('department_id')
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Assign to user if provided
+            if assignee_id:
+                assignee = get_object_or_404(User, id=assignee_id)
+                service_request.assign_to_user(assignee)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Ticket assigned to {assignee.get_full_name() or assignee.username}',
+                    'ticket_id': service_request.id
+                })
+            
+            # Assign to department if provided
+            elif department_id:
+                department = get_object_or_404(Department, id=department_id)
+                service_request.assign_to_department(department)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Ticket assigned to {department.name} department',
+                    'ticket_id': service_request.id
+                })
+            
+            return JsonResponse({'error': 'Assignee or department ID is required'}, status=400)
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def accept_ticket_api(request, ticket_id):
+    """API endpoint for a user to accept a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee or has permission
+            if service_request.assignee_user != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'You are not authorized to accept this ticket'}, status=403)
+            
+            # Accept the ticket
+            service_request.accept_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket accepted successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def start_ticket_api(request, ticket_id):
+    """API endpoint to start working on a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee or has permission
+            if service_request.assignee_user != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'You are not authorized to start this ticket'}, status=403)
+            
+            # Start working on the ticket
+            service_request.start_work()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Work started on ticket',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def complete_ticket_api(request, ticket_id):
+    """API endpoint to mark a ticket as completed."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            import json
+            
+            data = json.loads(request.body.decode('utf-8'))
+            resolution_notes = data.get('resolution_notes', '')
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee or has permission
+            if service_request.assignee_user != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'You are not authorized to complete this ticket'}, status=403)
+            
+            # Complete the ticket
+            service_request.complete_task(resolution_notes)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket marked as completed',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def close_ticket_api(request, ticket_id):
+    """API endpoint to close a ticket (only Front Desk or requester can close)."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the requester, in Front Desk group, or superuser
+            is_requester = service_request.requester_user == request.user
+            is_front_desk = user_in_group(request.user, 'Front Desk')
+            is_superuser = request.user.is_superuser
+            
+            if not (is_requester or is_front_desk or is_superuser):
+                return JsonResponse({'error': 'You are not authorized to close this ticket'}, status=403)
+            
+            # Close the ticket
+            service_request.close_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket closed successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def escalate_ticket_api(request, ticket_id):
+    """API endpoint to escalate a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Escalate the ticket
+            service_request.escalate_task()
+            
+            # Notify department leader
+            service_request.notify_department_leader_on_escalation()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket escalated successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def reject_ticket_api(request, ticket_id):
+    """API endpoint to reject a ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the current user is the assignee or has permission
+            if service_request.assignee_user != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'You are not authorized to reject this ticket'}, status=403)
+            
+            # Reject the ticket
+            service_request.reject_task()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket rejected successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
 # ---- Integrations ----
 @login_required
 def integrations(request):

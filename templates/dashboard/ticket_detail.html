@@ -127,8 +127,54 @@
 
         <aside class="flex flex-col gap-6 lg:w-1/3">
             <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                <div class="space-y-3"><button class="w-full py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600">Mark as Resolved</button><button class="w-full py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Start Working</button><button class="w-full py-2 text-sm font-medium text-white bg-yellow-400 rounded-lg hover:bg-yellow-500">Put on Hold</button><button class="w-full py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Contact Guest</button></div>
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Workflow Actions</h3>
+                <div class="space-y-3">
+                    {% if ticket.status == 'pending' %}
+                        <button id="assignBtn" class="w-full py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600">Assign Ticket</button>
+                    {% elif ticket.status == 'assigned' and ticket.assignee_user == user %}
+                        <button id="acceptBtn" class="w-full py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600" data-ticket-id="{{ ticket.id }}">Accept Ticket</button>
+                    {% elif ticket.status == 'accepted' and ticket.assignee_user == user %}
+                        <button id="startBtn" class="w-full py-2 text-sm font-medium text-white bg-yellow-500 rounded-lg hover:bg-yellow-600" data-ticket-id="{{ ticket.id }}">Start Work</button>
+                    {% elif ticket.status == 'in_progress' and ticket.assignee_user == user %}
+                        <button id="completeBtn" class="w-full py-2 text-sm font-medium text-white bg-purple-500 rounded-lg hover:bg-purple-600" data-ticket-id="{{ ticket.id }}">Mark as Completed</button>
+                    {% elif ticket.status == 'completed' and user == ticket.requester_user or user.groups.name == 'Front Desk' or user.is_superuser %}
+                        <button id="closeBtn" class="w-full py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800" data-ticket-id="{{ ticket.id }}">Close Ticket</button>
+                    {% endif %}
+                    
+                    {% if ticket.status != 'closed' and ticket.status != 'rejected' %}
+                        <button id="escalateBtn" class="w-full py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600" data-ticket-id="{{ ticket.id }}">Escalate Ticket</button>
+                        {% if ticket.assignee_user == user or user.is_superuser %}
+                            <button id="rejectBtn" class="w-full py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" data-ticket-id="{{ ticket.id }}">Reject Ticket</button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </section>
+            
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">SLA Status</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Response SLA</span>
+                        <span class="text-sm font-medium {% if ticket.response_sla_breached %}text-red-500{% else %}text-green-500{% endif %}">
+                            {% if ticket.response_sla_breached %}Breached{% else %}On Track{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Resolution SLA</span>
+                        <span class="text-sm font-medium {% if ticket.resolution_sla_breached %}text-red-500{% else %}text-green-500{% endif %}">
+                            {% if ticket.resolution_sla_breached %}Breached{% else %}On Track{% endif %}
+                        </span>
+                    </div>
+                    <div class="pt-2">
+                        <div class="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>Time Elapsed</span>
+                            <span>{{ ticket.get_time_left }}</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full {% if ticket.sla_breached %}bg-red-500{% elif ticket.get_sla_status == 'On Track' %}bg-green-500{% else %}bg-yellow-500{% endif %}" style="width: {% if ticket.sla_breached %}100%{% else %}70%{% endif %}"></div>
+                        </div>
+                    </div>
+                </div>
             </section>
             <!-- Removed the maintenance checklist section -->
             <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -241,32 +287,241 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Assign ticket dialog
     const assignTicketBtn = document.getElementById('assignTicketBtn');
     const assignTicketDialog = document.getElementById('assignTicketDialog');
     const closeDialogBtn = document.getElementById('closeDialogBtn');
     const cancelAssignBtn = document.getElementById('cancelAssignBtn');
     
     // Show dialog when assign button is clicked
-    assignTicketBtn.addEventListener('click', function() {
-        assignTicketDialog.classList.remove('hidden');
-    });
+    if (assignTicketBtn) {
+        assignTicketBtn.addEventListener('click', function() {
+            assignTicketDialog.classList.remove('hidden');
+        });
+    }
     
     // Hide dialog when close button is clicked
-    closeDialogBtn.addEventListener('click', function() {
-        assignTicketDialog.classList.add('hidden');
-    });
+    if (closeDialogBtn) {
+        closeDialogBtn.addEventListener('click', function() {
+            assignTicketDialog.classList.add('hidden');
+        });
+    }
     
     // Hide dialog when cancel button is clicked
-    cancelAssignBtn.addEventListener('click', function() {
-        assignTicketDialog.classList.add('hidden');
-    });
+    if (cancelAssignBtn) {
+        cancelAssignBtn.addEventListener('click', function() {
+            assignTicketDialog.classList.add('hidden');
+        });
+    }
     
     // Hide dialog when clicking outside the dialog content
-    assignTicketDialog.addEventListener('click', function(e) {
-        if (e.target === assignTicketDialog) {
-            assignTicketDialog.classList.add('hidden');
+    if (assignTicketDialog) {
+        assignTicketDialog.addEventListener('click', function(e) {
+            if (e.target === assignTicketDialog) {
+                assignTicketDialog.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Workflow action buttons
+    const acceptBtn = document.getElementById('acceptBtn');
+    const startBtn = document.getElementById('startBtn');
+    const completeBtn = document.getElementById('completeBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const escalateBtn = document.getElementById('escalateBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+    
+    // Accept ticket
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            if (confirm('Are you sure you want to accept this ticket?')) {
+                fetch(`/dashboard/api/tickets/${ticketId}/accept/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ticket accepted successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Start working on ticket
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            if (confirm('Are you sure you want to start working on this ticket?')) {
+                fetch(`/dashboard/api/tickets/${ticketId}/start/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Work started on ticket!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Complete ticket
+    if (completeBtn) {
+        completeBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            const resolutionNotes = prompt('Please enter resolution notes:');
+            if (resolutionNotes !== null) {
+                fetch(`/dashboard/api/tickets/${ticketId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({resolution_notes: resolutionNotes})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ticket marked as completed!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Close ticket
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            if (confirm('Are you sure you want to close this ticket?')) {
+                fetch(`/dashboard/api/tickets/${ticketId}/close/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ticket closed successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Escalate ticket
+    if (escalateBtn) {
+        escalateBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            if (confirm('Are you sure you want to escalate this ticket?')) {
+                fetch(`/dashboard/api/tickets/${ticketId}/escalate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ticket escalated successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Reject ticket
+    if (rejectBtn) {
+        rejectBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            if (confirm('Are you sure you want to reject this ticket?')) {
+                fetch(`/dashboard/api/tickets/${ticketId}/reject/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ticket rejected successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-    });
+        return cookieValue;
+    }
 });
 </script>
 {% endblock %}
