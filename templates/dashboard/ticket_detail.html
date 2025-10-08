@@ -20,23 +20,9 @@
             </div>
         </div>
         <div class="flex items-center gap-2 sm:gap-4">
-            <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full" aria-label="Notifications">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                {% if notification_count > 0 %}
-                <span class="absolute top-1 right-1 flex h-4 w-4">
-                    <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-xs items-center justify-center">{{ notification_count }}</span>
-                </span>
-                {% endif %}
-            </button>
-            <button id="assignTicketBtn" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg flex items-center gap-2 hover:bg-sky-700">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-                <span>Assign</span>
-            </button>
-            <button class="px-4 py-2 text-sm font-medium text-white bg-gray-400 rounded-lg flex items-center gap-2 hover:bg-gray-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5"></path></svg>
-                <span>Reassign</span>
-            </button>
-            <!-- Removed profile pic in the top right icon -->
+            <!-- Removed notification button -->
+            <!-- Removed assign ticket button -->
+            <!-- Removed reassign button -->
         </div>
     </header>
 
@@ -130,7 +116,7 @@
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Workflow Actions</h3>
                 <div class="space-y-3">
                     {% if ticket.status == 'pending' %}
-                        <button id="assignBtn" class="w-full py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600">Assign Ticket</button>
+                        <!-- Removed assign ticket button -->
                     {% elif ticket.status == 'assigned' and ticket.assignee_user == user %}
                         <button id="acceptBtn" class="w-full py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600" data-ticket-id="{{ ticket.id }}">Accept Ticket</button>
                     {% elif ticket.status == 'accepted' and ticket.assignee_user == user %}
@@ -191,137 +177,12 @@
         </aside>
     </main>
     
-    <!-- Updated Assign Ticket Dialog -->
-    <div id="assignTicketDialog" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
-        <div class="w-[520px] h-[718px] relative bg-white rounded-lg shadow-[0px_10px_15px_0px_rgba(0,0,0,0.10)] shadow-[0px_4px_6px_0px_rgba(0,0,0,0.10)] border border-gray-200 overflow-hidden">
-            <div class="w-full h-20 p-6 border-b border-gray-200 flex justify-between items-center">
-                <div class="text-xl font-bold text-gray-900 font-['Inter']">Assign Ticket</div>
-                <button id="closeDialogBtn" class="w-6 h-6 flex justify-center items-center">
-                    <svg class="w-3 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="w-full h-[554px] p-6">
-                <div class="w-full h-28 mb-6">
-                    <div class="flex items-center gap-2 mb-2">
-                        <img src="{% static 'images/tickets/department.svg' %}" alt="Department" class="w-3 h-4">
-                        <div class="text-sm font-semibold text-gray-900 font-['Inter']">Department</div>
-                    </div>
-                    <div class="relative mb-3">
-                        <select class="w-full h-9 bg-white rounded-lg outline outline-1 outline-gray-300 text-sm text-gray-700 font-['Inter'] pl-3 pr-8">
-                            <option>Select Department</option>
-                            <option>Maintenance</option>
-                            <option>Housekeeping</option>
-                            <option>Concierge</option>
-                            <option>Guest Services</option>
-                        </select>
-                        <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <svg class="w-3 h-1.5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" id="autoAssign" class="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
-                        <label for="autoAssign" class="text-sm text-gray-700 font-['Inter']">Auto-assign to department rules</label>
-                    </div>
-                </div>
-
-                <div class="w-full h-32 mb-8">
-                    <div class="flex items-center gap-2 mb-2">
-                        <img src="{% static 'images/tickets/user.svg' %}" alt="User" class="w-4 h-4">
-                        <div class="text-sm font-semibold text-gray-900 font-['Inter']">Staff Member</div>
-                    </div>
-                    <div class="relative mb-3">
-                        <div class="relative">
-                            <input type="text" placeholder="Search staff..." class="w-full h-9 bg-white rounded-lg outline outline-1 outline-gray-300 text-sm text-gray-400 font-['Inter'] pl-10 pr-3">
-                            <img src="{% static 'images/tickets/user.svg' %}" alt="User" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4">
-                        </div>
-                    </div>
-                    <div class="relative">
-                        <select class="w-full h-9 bg-white rounded-lg outline outline-1 outline-gray-300 text-sm text-gray-700 font-['Inter'] pl-3 pr-8">
-                            <option>Select Staff Member</option>
-                            <option>John Smith</option>
-                            <option>Jane Doe</option>
-                            <option>Mike Johnson</option>
-                        </select>
-                        <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <svg class="w-3 h-1.5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full h-16 mb-8">
-                    <div class="text-sm font-semibold text-gray-900 font-['Inter'] mb-2">Priority Level</div>
-                    <div class="flex gap-2">
-                        <button class="w-16 h-7 bg-red-500 text-white text-xs font-medium font-['Inter'] rounded-full outline outline-2 outline-red-500">High</button>
-                        <button class="w-20 h-7 bg-white text-yellow-500 text-xs font-medium font-['Inter'] rounded-full outline outline-2 outline-yellow-500">Medium</button>
-                        <button class="w-20 h-7 bg-white text-blue-500 text-xs font-medium font-['Inter'] rounded-full outline outline-2 outline-blue-500">Normal</button>
-                        <button class="w-16 h-7 bg-white text-green-500 text-xs font-medium font-['Inter'] rounded-full outline outline-2 outline-green-500">Low</button>
-                    </div>
-                </div>
-
-                <div class="w-full h-36">
-                    <div class="text-sm font-semibold text-gray-900 font-['Inter'] mb-2">Assignment Notes (Optional)</div>
-                    <div class="relative">
-                        <textarea class="w-full h-24 bg-white rounded-lg outline outline-1 outline-gray-300 text-sm text-gray-400 font-['Inter'] p-3" placeholder="Add assignment notes (optional)..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="w-full h-20 p-6 border-t border-gray-200 flex justify-start items-center gap-3">
-                <button id="cancelAssignBtn" class="w-20 h-9 bg-white rounded-lg outline outline-1 outline-gray-300">
-                    <div class="text-sm font-medium text-gray-700 font-['Inter']">Cancel</div>
-                </button>
-                <button class="w-32 h-9 bg-sky-600 rounded-lg">
-                    <div class="text-sm font-medium text-white font-['Inter']">Assign Ticket</div>
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Removed the assign ticket dialog -->
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Assign ticket dialog
-    const assignTicketBtn = document.getElementById('assignTicketBtn');
-    const assignTicketDialog = document.getElementById('assignTicketDialog');
-    const closeDialogBtn = document.getElementById('closeDialogBtn');
-    const cancelAssignBtn = document.getElementById('cancelAssignBtn');
-    
-    // Show dialog when assign button is clicked
-    if (assignTicketBtn) {
-        assignTicketBtn.addEventListener('click', function() {
-            assignTicketDialog.classList.remove('hidden');
-        });
-    }
-    
-    // Hide dialog when close button is clicked
-    if (closeDialogBtn) {
-        closeDialogBtn.addEventListener('click', function() {
-            assignTicketDialog.classList.add('hidden');
-        });
-    }
-    
-    // Hide dialog when cancel button is clicked
-    if (cancelAssignBtn) {
-        cancelAssignBtn.addEventListener('click', function() {
-            assignTicketDialog.classList.add('hidden');
-        });
-    }
-    
-    // Hide dialog when clicking outside the dialog content
-    if (assignTicketDialog) {
-        assignTicketDialog.addEventListener('click', function(e) {
-            if (e.target === assignTicketDialog) {
-                assignTicketDialog.classList.add('hidden');
-            }
-        });
-    }
+    // Removed assign ticket dialog code
     
     // Workflow action buttons
     const acceptBtn = document.getElementById('acceptBtn');
