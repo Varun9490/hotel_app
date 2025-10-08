@@ -510,14 +510,14 @@ class ServiceRequest(models.Model):
         now = timezone.now()
         
         # If already completed or closed, show time taken
-        if self.completed_at or self.status == 'completed':
-            completion_time = self.completed_at or now
+        if self.completed_at or self.status == 'completed' or self.status == 'closed':
+            completion_time = self.completed_at or self.closed_at or now
             time_taken = completion_time - self.created_at
             hours = int(time_taken.total_seconds() // 3600)
             minutes = int((time_taken.total_seconds() % 3600) // 60)
             return f"{hours}h {minutes}m"
         
-        # For open tickets, show time left
+        # For open tickets, show time left until resolution SLA breach
         elapsed_time = now - self.created_at
         sla_seconds = self.sla_hours * 3600
         time_left_seconds = sla_seconds - elapsed_time.total_seconds()

@@ -1653,6 +1653,306 @@ def ticket_detail(request, ticket_id):
 
 
 @login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def my_tickets(request):
+    """Render the My Tickets page - shows tickets assigned to the current user's department."""
+    from hotel_app.models import ServiceRequest, RequestType, Department, User
+    from django.db.models import Count, Q
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.core.paginator import Paginator
+    
+    # Get the current user's department
+    user_department = None
+    if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
+        user_department = request.user.userprofile.department
+    
+    # Get filter parameters from request
+    priority_filter = request.GET.get('priority', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
+    # Get service requests assigned to the user's department
+    tickets_queryset = ServiceRequest.objects.select_related(
+        'request_type', 'location', 'requester_user', 'assignee_user', 'department'
+    ).order_by('-id')
+    
+    # Filter by department if user has one
+    if user_department:
+        # Show tickets assigned to the department, or unassigned tickets in the department
+        tickets_queryset = tickets_queryset.filter(
+            Q(department=user_department) & (Q(assignee_user__isnull=True) | Q(assignee_user=request.user))
+        )
+    else:
+        # If user doesn't have a department, show only tickets assigned to them
+        tickets_queryset = tickets_queryset.filter(assignee_user=request.user)
+    
+    # Apply filters
+    if priority_filter and priority_filter != 'All Priorities':
+        # Map display values to model values
+        priority_mapping = {
+            'High': 'high',
+            'Medium': 'normal',
+            'Low': 'low'
+        }
+        model_priority = priority_mapping.get(priority_filter)
+        if model_priority:
+            tickets_queryset = tickets_queryset.filter(priority=model_priority)
+    
+    if status_filter and status_filter != 'All Statuses':
+        # Map display values to model values
+        status_mapping = {
+            'Pending': 'pending',
+            'Assigned': 'assigned',
+            'Accepted': 'accepted',
+            'In Progress': 'in_progress',
+            'Completed': 'completed',
+            'Closed': 'closed',
+            'Escalated': 'escalated',
+            'Rejected': 'rejected'
+        }
+        model_status = status_mapping.get(status_filter)
+        if model_status:
+            tickets_queryset = tickets_queryset.filter(status=model_status)
+    
+    if search_query:
+        tickets_queryset = tickets_queryset.filter(
+            Q(request_type__name__icontains=search_query) |
+            Q(location__name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+    
+    # Process tickets to add color attributes and workflow permissions
+    processed_tickets = []
+    for ticket in tickets_queryset:
+        # Map priority to display values
+        priority_mapping = {
+            'high': {'label': 'High', 'color': 'red'},
+            'normal': {'label': 'Medium', 'color': 'sky'},
+            'low': {'label': 'Low', 'color': 'gray'},
+        }
+        
+        priority_data = priority_mapping.get(ticket.priority, {'label': 'Medium', 'color': 'sky'})
+        
+        # Map status to display values
+        status_mapping = {
+            'pending': {'label': 'Pending', 'color': 'yellow'},
+            'assigned': {'label': 'Assigned', 'color': 'yellow'},
+            'accepted': {'label': 'Accepted', 'color': 'blue'},
+            'in_progress': {'label': 'In Progress', 'color': 'sky'},
+            'completed': {'label': 'Completed', 'color': 'green'},
+            'closed': {'label': 'Closed', 'color': 'green'},
+            'escalated': {'label': 'Escalated', 'color': 'red'},
+            'rejected': {'label': 'Rejected', 'color': 'red'},
+        }
+        
+        status_data = status_mapping.get(ticket.status, {'label': 'Pending', 'color': 'yellow'})
+        
+        # Check SLA breaches
+        ticket.check_sla_breaches()
+        
+        # Add attributes to the ticket object
+        ticket.priority_label = priority_data['label']
+        ticket.priority_color = priority_data['color']
+        ticket.status_label = status_data['label']
+        ticket.status_color = status_data['color']
+        ticket.owner_avatar = 'https://placehold.co/24x24'
+        
+        # Add user-specific workflow permissions
+        ticket.can_claim = False
+        ticket.can_accept = False
+        ticket.can_start = False
+        ticket.can_complete = False
+        ticket.can_close = False
+        
+        # Determine what actions the user can take based on workflow
+        if ticket.status == 'pending' and ticket.department == user_department and ticket.assignee_user is None:
+            # Unassigned ticket in user's department - user can claim it
+            ticket.can_claim = True
+        elif ticket.status == 'assigned' and ticket.assignee_user == request.user:
+            # Assigned to current user - can accept
+            ticket.can_accept = True
+        elif ticket.status == 'accepted' and ticket.assignee_user == request.user:
+            # Accepted by current user - can start work
+            ticket.can_start = True
+        elif ticket.status == 'in_progress' and ticket.assignee_user == request.user:
+            # In progress by current user - can complete
+            ticket.can_complete = True
+        elif ticket.status in ['completed', 'in_progress']:
+            # Check if user can close (requester, front desk, or superuser)
+            is_requester = (ticket.requester_user == request.user)
+            is_front_desk = user_in_group(request.user, 'Front Desk') or user_in_group(request.user, 'Front Desk Team')
+            is_superuser = request.user.is_superuser
+            if is_requester or is_front_desk or is_superuser:
+                ticket.can_close = True
+        
+        processed_tickets.append(ticket)
+    
+    # --- Pagination Logic ---
+    paginator = Paginator(processed_tickets, 10)  # Show 10 tickets per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tickets': page_obj,  # Pass the page_obj to the template
+        'page_obj': page_obj,  # Pass it again as page_obj for clarity
+        'total_tickets': tickets_queryset.count(),
+        'user_department': user_department,
+        # Pass filter values back to template
+        'priority_filter': priority_filter,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'dashboard/my_tickets.html', context)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def claim_ticket_api(request, ticket_id):
+    """API endpoint for a user to claim an unassigned ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the ticket is unassigned and in the user's department
+            user_department = None
+            if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
+                user_department = request.user.userprofile.department
+            
+            if service_request.assignee_user is not None:
+                return JsonResponse({'error': 'Ticket is already assigned'}, status=400)
+            
+            if service_request.department != user_department:
+                return JsonResponse({'error': 'You cannot claim tickets from other departments'}, status=403)
+            
+            # Assign the ticket to the current user
+            service_request.assign_to_user(request.user)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket claimed successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    # Apply filters
+    if search_query:
+        tickets_queryset = tickets_queryset.filter(
+            Q(request_type__name__icontains=search_query) |
+            Q(location__name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+    
+    # Process tickets to add color attributes
+    processed_tickets = []
+    for ticket in tickets_queryset:
+        # Map priority to display values
+        priority_mapping = {
+            'high': {'label': 'High', 'color': 'red'},
+            'normal': {'label': 'Medium', 'color': 'sky'},
+            'low': {'label': 'Low', 'color': 'gray'},
+        }
+        
+        priority_data = priority_mapping.get(ticket.priority, {'label': 'Medium', 'color': 'sky'})
+        
+        # Map status to display values
+        status_mapping = {
+            'pending': {'label': 'Pending', 'color': 'yellow'},
+            'assigned': {'label': 'Assigned', 'color': 'yellow'},
+            'accepted': {'label': 'Accepted', 'color': 'blue'},
+            'in_progress': {'label': 'In Progress', 'color': 'sky'},
+            'completed': {'label': 'Completed', 'color': 'green'},
+            'closed': {'label': 'Closed', 'color': 'green'},
+            'escalated': {'label': 'Escalated', 'color': 'red'},
+            'rejected': {'label': 'Rejected', 'color': 'red'},
+        }
+        
+        status_data = status_mapping.get(ticket.status, {'label': 'Pending', 'color': 'yellow'})
+        
+        # Calculate SLA percentage
+        sla_percentage = 0
+        sla_color = 'green-500'
+        if ticket.created_at and ticket.due_at:
+            # Calculate time taken so far or total time if completed
+            if ticket.completed_at:
+                time_taken = ticket.completed_at - ticket.created_at
+            else:
+                time_taken = timezone.now() - ticket.created_at
+            
+            # Calculate SLA percentage (time taken / total allowed time)
+            total_allowed_time = ticket.due_at - ticket.created_at
+            if total_allowed_time.total_seconds() > 0:
+                sla_percentage = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
+            
+            # Determine color based on SLA
+            if sla_percentage > 90:
+                sla_color = 'red-500'
+            elif sla_percentage > 70:
+                sla_color = 'yellow-400'
+            else:
+                sla_color = 'green-500'
+        
+        # Add attributes to the ticket object
+        ticket.priority_label = priority_data['label']
+        ticket.priority_color = priority_data['color']
+        ticket.status_label = status_data['label']
+        ticket.status_color = status_data['color']
+        ticket.sla_percentage = sla_percentage
+        ticket.sla_color = sla_color
+        ticket.owner_avatar = 'https://placehold.co/24x24'
+        
+        # Add user-specific information
+        ticket.can_accept = False
+        ticket.can_start = False
+        ticket.can_complete = False
+        ticket.can_close = False
+        
+        # Determine what actions the user can take
+        if ticket.status == 'assigned' and ticket.assignee_user == request.user:
+            ticket.can_accept = True
+        elif ticket.status == 'accepted' and ticket.assignee_user == request.user:
+            ticket.can_start = True
+        elif ticket.status == 'in_progress' and ticket.assignee_user == request.user:
+            ticket.can_complete = True
+        elif ticket.status in ['completed', 'in_progress']:
+            # Check if user is requester, front desk, or superuser
+            is_requester = (ticket.requester_user == request.user)
+            is_front_desk = user_in_group(request.user, 'Front Desk')
+            is_superuser = request.user.is_superuser
+            if is_requester or is_front_desk or is_superuser:
+                ticket.can_close = True
+        elif ticket.status == 'pending' and ticket.department == user_department and ticket.assignee_user is None:
+            # Unassigned ticket in user's department - user can claim it
+            ticket.can_claim = True
+        
+        processed_tickets.append(ticket)
+    
+    # --- Pagination Logic ---
+    paginator = Paginator(processed_tickets, 10)  # Show 10 tickets per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tickets': page_obj,  # Pass the page_obj to the template
+        'page_obj': page_obj,  # Pass it again as page_obj for clarity
+        'total_tickets': tickets_queryset.count(),
+        'user_department': user_department,
+        # Pass filter values back to template
+        'priority_filter': priority_filter,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'dashboard/my_tickets.html', context)
+
+
+@login_required
 @require_permission([ADMINS_GROUP])
 def configure_requests(request):
     """Render the Predefined / Configure Requests page.
@@ -3618,7 +3918,7 @@ def start_ticket_api(request, ticket_id):
             if service_request.assignee_user != request.user:
                 return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
             
-            # Start working on the ticket
+            # Start working on the ticket (change status to in_progress)
             service_request.start_work()
             
             return JsonResponse({
@@ -3652,7 +3952,7 @@ def complete_ticket_api(request, ticket_id):
             if service_request.assignee_user != request.user:
                 return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
             
-            # Complete the ticket
+            # Complete the ticket (change status to completed)
             service_request.complete_task(resolution_notes)
             
             return JsonResponse({
@@ -3678,7 +3978,16 @@ def close_ticket_api(request, ticket_id):
             # Get the service request
             service_request = get_object_or_404(ServiceRequest, id=ticket_id)
             
-            # Close the ticket
+            # Check if user can close (requester, front desk, or superuser)
+            is_requester = (service_request.requester_user == request.user)
+            is_front_desk = (user_in_group(request.user, 'Front Desk') or 
+                           user_in_group(request.user, 'Front Desk Team'))
+            is_superuser = request.user.is_superuser
+            
+            if not (is_requester or is_front_desk or is_superuser):
+                return JsonResponse({'error': 'You do not have permission to close this ticket'}, status=403)
+            
+            # Close the ticket (change status to closed)
             service_request.close_task()
             
             return JsonResponse({
@@ -4258,6 +4567,43 @@ def assign_ticket_api(request, ticket_id):
 
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
+def claim_ticket_api(request, ticket_id):
+    """API endpoint for a user to claim an unassigned ticket."""
+    if request.method == 'POST':
+        try:
+            from hotel_app.models import ServiceRequest
+            
+            # Get the service request
+            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
+            
+            # Check if the ticket is unassigned and in the user's department
+            user_department = None
+            if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
+                user_department = request.user.userprofile.department
+            
+            if service_request.assignee_user is not None:
+                return JsonResponse({'error': 'Ticket is already assigned'}, status=400)
+            
+            if service_request.department != user_department:
+                return JsonResponse({'error': 'You cannot claim tickets from other departments'}, status=403)
+            
+            # Assign the ticket to the current user
+            service_request.assign_to_user(request.user)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Ticket claimed successfully',
+                'ticket_id': service_request.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
 def accept_ticket_api(request, ticket_id):
     """API endpoint for a user to accept a ticket."""
     if request.method == 'POST':
@@ -4267,173 +4613,16 @@ def accept_ticket_api(request, ticket_id):
             # Get the service request
             service_request = get_object_or_404(ServiceRequest, id=ticket_id)
             
-            # Check if the current user is the assignee or has permission
-            if service_request.assignee_user != request.user and not request.user.is_superuser:
-                return JsonResponse({'error': 'You are not authorized to accept this ticket'}, status=403)
+            # Check if the current user is the assignee
+            if service_request.assignee_user != request.user:
+                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
             
-            # Accept the ticket
+            # Accept the ticket (change status to accepted)
             service_request.accept_task()
             
             return JsonResponse({
                 'success': True,
                 'message': 'Ticket accepted successfully',
-                'ticket_id': service_request.id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-@login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def start_ticket_api(request, ticket_id):
-    """API endpoint to start working on a ticket."""
-    if request.method == 'POST':
-        try:
-            from hotel_app.models import ServiceRequest
-            
-            # Get the service request
-            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
-            
-            # Check if the current user is the assignee or has permission
-            if service_request.assignee_user != request.user and not request.user.is_superuser:
-                return JsonResponse({'error': 'You are not authorized to start this ticket'}, status=403)
-            
-            # Start working on the ticket
-            service_request.start_work()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Work started on ticket',
-                'ticket_id': service_request.id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-@login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def complete_ticket_api(request, ticket_id):
-    """API endpoint to mark a ticket as completed."""
-    if request.method == 'POST':
-        try:
-            from hotel_app.models import ServiceRequest
-            import json
-            
-            data = json.loads(request.body.decode('utf-8'))
-            resolution_notes = data.get('resolution_notes', '')
-            
-            # Get the service request
-            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
-            
-            # Check if the current user is the assignee or has permission
-            if service_request.assignee_user != request.user and not request.user.is_superuser:
-                return JsonResponse({'error': 'You are not authorized to complete this ticket'}, status=403)
-            
-            # Complete the ticket
-            service_request.complete_task(resolution_notes)
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Ticket marked as completed',
-                'ticket_id': service_request.id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-@login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def close_ticket_api(request, ticket_id):
-    """API endpoint to close a ticket (only Front Desk or requester can close)."""
-    if request.method == 'POST':
-        try:
-            from hotel_app.models import ServiceRequest
-            
-            # Get the service request
-            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
-            
-            # Check if the current user is the requester, in Front Desk group, or superuser
-            is_requester = service_request.requester_user == request.user
-            is_front_desk = user_in_group(request.user, 'Front Desk')
-            is_superuser = request.user.is_superuser
-            
-            if not (is_requester or is_front_desk or is_superuser):
-                return JsonResponse({'error': 'You are not authorized to close this ticket'}, status=403)
-            
-            # Close the ticket
-            service_request.close_task()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Ticket closed successfully',
-                'ticket_id': service_request.id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-@login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def escalate_ticket_api(request, ticket_id):
-    """API endpoint to escalate a ticket."""
-    if request.method == 'POST':
-        try:
-            from hotel_app.models import ServiceRequest
-            
-            # Get the service request
-            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
-            
-            # Escalate the ticket
-            service_request.escalate_task()
-            
-            # Notify department leader
-            service_request.notify_department_leader_on_escalation()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Ticket escalated successfully',
-                'ticket_id': service_request.id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-@login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def reject_ticket_api(request, ticket_id):
-    """API endpoint to reject a ticket."""
-    if request.method == 'POST':
-        try:
-            from hotel_app.models import ServiceRequest
-            
-            # Get the service request
-            service_request = get_object_or_404(ServiceRequest, id=ticket_id)
-            
-            # Check if the current user is the assignee or has permission
-            if service_request.assignee_user != request.user and not request.user.is_superuser:
-                return JsonResponse({'error': 'You are not authorized to reject this ticket'}, status=403)
-            
-            # Reject the ticket
-            service_request.reject_task()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Ticket rejected successfully',
                 'ticket_id': service_request.id
             })
             
