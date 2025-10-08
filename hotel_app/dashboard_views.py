@@ -78,7 +78,43 @@ def dashboard(request):
 def api_manage_users_filters(request):
     departments = list(Department.objects.order_by('name').values_list('name', flat=True))
     roles = ROLES  # not from database
-    return JsonResponse({"departments": departments, "roles": roles})
+    
+    # Get all users with their profile information
+    users = User.objects.select_related('userprofile').all()
+    
+    # Format users data
+    formatted_users = []
+    unassigned_users = []
+    
+    for user in users:
+        # Get user profile if it exists
+        profile = getattr(user, 'userprofile', None)
+        
+        # Format user data
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'full_name': getattr(profile, 'full_name', None) or f"{user.first_name} {user.last_name}".strip() or user.username,
+            'avatar_url': getattr(profile, 'avatar_url', None),
+            'role': getattr(profile, 'title', None) or 'Staff'
+        }
+        
+        formatted_users.append(user_data)
+        
+        # Check if user is unassigned (no profile or no department in profile)
+        if not profile or not getattr(profile, 'department', None):
+            unassigned_users.append({
+                **user_data,
+                'department': 'Unassigned'
+            })
+    
+    return JsonResponse({
+        "departments": departments, 
+        "roles": roles,
+        "users": formatted_users,
+        "unassigned_users": unassigned_users
+    })
     # Get system status
     system_statuses = [
         {'name': 'Camera Health', 'value': '98%', 'color': 'green-500'},
@@ -2951,11 +2987,46 @@ def remove_group_member(request, group_id):
 @csrf_protect
 @require_permission([ADMINS_GROUP])
 def department_create(request):
-    """Create a department with optional logo."""
+    """Create a department with optional logo, head, and assigned staff."""
     form = DepartmentForm(request.POST, request.FILES)
     if form.is_valid():
         try:
             dept = form.save()
+            
+            # Handle additional fields
+            head_id = request.POST.get('head')
+            email = request.POST.get('email')
+            assigned_staff_ids = request.POST.getlist('assigned_staff')
+            
+            # Set department head if provided
+            if head_id:
+                try:
+                    head_user = User.objects.get(id=head_id)
+                    # Create or update user profile to set department
+                    profile, created = UserProfile.objects.get_or_create(user=head_user)
+                    profile.department = dept
+                    profile.title = profile.title or 'Department Head'
+                    profile.save()
+                    
+                    # Set the department head (if your Department model supports this)
+                    # dept.head = head_user
+                    # dept.save(update_fields=['head'])
+                except User.DoesNotExist:
+                    pass
+            
+            # Assign staff to department
+            if assigned_staff_ids:
+                for user_id in assigned_staff_ids:
+                    try:
+                        user = User.objects.get(id=user_id)
+                        profile, created = UserProfile.objects.get_or_create(user=user)
+                        profile.department = dept
+                        # Only set title if not already set
+                        if not profile.title:
+                            profile.title = 'Staff'
+                        profile.save()
+                    except User.DoesNotExist:
+                        continue
             
             # Handle logo upload if provided (from FormData)
             logo = request.FILES.get('logo') if hasattr(request, 'FILES') else None
@@ -4053,6 +4124,15 @@ def feedback_detail(request, feedback_id):
 def integrations(request):
     """View for the integrations page."""
     return render(request, "dashboard/integrations.html")
+
+
+@login_required
+def performance_dashboard(request):
+    """Render the Performance Dashboard page."""
+    context = {
+        # Add any context data needed for the performance dashboard
+    }
+    return render(request, 'dashboard/performance_dashboard.html', context)
 
 
 # ---- Tailwind Test ----

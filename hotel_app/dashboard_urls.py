@@ -100,4 +100,5 @@ urlpatterns = [
     path('feedback/<int:feedback_id>/', dashboard_views.feedback_detail, name='feedback_detail'),
     path('integrations/', dashboard_views.integrations, name='integrations'),
     path('sla-escalations/', dashboard_views.sla_escalations, name='sla_escalations'),
+    path('performance/', dashboard_views.performance_dashboard, name='performance'),
 ]
