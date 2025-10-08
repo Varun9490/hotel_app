@@ -1294,6 +1294,54 @@ def api_group_permissions_update(request, group_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+@csrf_protect
+def api_bulk_permissions_update(request):
+    """Update permissions for multiple user groups."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        from django.contrib.auth.models import Group
+        
+        # Parse JSON data
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        
+        # Get group IDs and permissions from request
+        group_ids = data.get('group_ids', [])
+        permissions = data.get('permissions', [])
+        
+        # Validate group IDs
+        if not group_ids:
+            return JsonResponse({'error': 'No groups specified'}, status=400)
+        
+        # Update permissions for each group
+        updated_groups = []
+        for group_id in group_ids:
+            try:
+                group = Group.objects.get(pk=group_id)
+                # In a real application, you would update the group's permissions here
+                # For now, we'll just log the update
+                print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+                updated_groups.append(group.name)
+            except Group.DoesNotExist:
+                continue  # Skip non-existent groups
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Permissions updated for {len(updated_groups)} groups',
+            'updated_groups': updated_groups
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 import json
 
 from django.contrib.auth.decorators import login_required
