@@ -37,19 +37,8 @@ class VoucherForm(forms.ModelForm):
 
     class Meta:
         model = Voucher
-        fields = ['guest', 'guest_name', 'room_number', 'location', 'quantity', 'check_in_date', 'check_out_date', 'status']
+        fields = ['guest_name', 'room_number', 'expiry_date']
 
-    def clean(self):
-        cleaned_data = super().clean()
-        check_in_date = cleaned_data.get('check_in_date')
-        check_out_date = cleaned_data.get('check_out_date')
-
-        if check_in_date and check_out_date:
-            if check_out_date <= check_in_date:
-                raise forms.ValidationError("Check-out date must be after check-in date.")
-        
-        return cleaned_data
-    
     def save(self, commit=True):
         voucher = super().save(commit=commit)
         
@@ -57,7 +46,6 @@ class VoucherForm(forms.ModelForm):
             from .utils import generate_voucher_qr_base64, generate_voucher_qr_data
             
             # Generate QR code with larger size for better visibility
-            voucher.qr_data = generate_voucher_qr_data(voucher)
             voucher.qr_image = generate_voucher_qr_base64(voucher, size='xxlarge')
             voucher.save()
         
