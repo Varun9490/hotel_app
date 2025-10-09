@@ -1,7 +1,7 @@
 {% load static %}
-<div class="mx-auto w-full max-w-[1184px] px-4 sm:px-0">
-  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 px-6 py-4">
+<div class="mx-auto w-full max-w-[100%] px-4 sm:px-0">
+  <div class="   rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
       <h2 class="text-lg font-semibold text-gray-900">All Departments</h2>
 
       <div class="flex flex-wrap items-center gap-3">
@@ -24,17 +24,17 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <div>
       <table id="departmentsTable" class="min-w-full divide-y divide-gray-200">
         <thead class="bg-neutral-50">
           <tr>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Name</th>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Department Head</th>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Users</th>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Open Tickets</th>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">SLA Performance</th>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Status</th>
-            <th scope="col" class="relative whitespace-nowrap px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">Actions</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Name</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Department Head</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Users</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Open Tickets</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">SLA Performance</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Status</th>
+            <th scope="col" class="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 bg-white">
@@ -75,11 +75,11 @@
               </div>
               {% endif %}
             </td>
-            <td class="whitespace-nowrap px-6 py-4">
+            <td class="px-6 py-4">
               <div class="text-sm font-medium text-gray-900">{{ dept.featured_group.members_count }}</div>
               <div class="text-xs text-gray-500">Active staff</div>
             </td>
-            <td class="whitespace-nowrap px-6 py-4">
+            <td class="px-6 py-4">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium text-gray-900">{{ dept.open_tickets|default:0 }}</span>
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ dept.sla_tag_bg|default:'bg-gray-100' }} {{ dept.sla_color|default:'text-gray-700' }}">
@@ -92,15 +92,15 @@
                 <div class="h-2 w-32 flex-shrink-0 rounded-full bg-gray-200">
                   <div class="h-2 rounded-full {{ dept.performance_color|default:'bg-green-500' }}" style="width: {{ dept.performance_pct|default:'0%' }};"></div>
                 </div>
-                <div class="whitespace-nowrap text-sm font-medium {{ dept.performance_color|default:'text-green-600' }}">{{ dept.performance_pct|default:'0%' }}</div>
+                <div class="text-sm font-medium {{ dept.performance_color|default:'text-green-600' }}">{{ dept.performance_pct|default:'0%' }}</div>
               </div>
             </td>
-            <td class="whitespace-nowrap px-6 py-4">
+            <td class="px-6 py-4">
               <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ dept.status_bg|default:'bg-green-500/10' }} {{ dept.status_color|default:'text-green-600' }}">
                 {{ dept.status_label|default:'Active' }}
               </span>
             </td>
-            <td class="whitespace-nowrap px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right">
               <div class="relative inline-block text-left">
                 <button type="button" id="actionsBtn-{{ dept.featured_group.id }}" onclick="toggleActionsMenu({{ dept.featured_group.id }})" class="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-2 text-sm font-medium text-gray-800 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
                   <img src="{% static 'images/manage_users/action.svg' %}" alt="Actions" class="h-4 w-4" />
@@ -314,16 +314,45 @@ const closeModal = (id) => showModal(id, false);
 let openMenuId = null;
 
 function toggleActionsMenu(deptId) {
-  const id = `actionsMenu-${deptId}`;
-  const menu = document.getElementById(id);
+  const menuId = `actionsMenu-${deptId}`;
+  const menu = document.getElementById(menuId);
   if (!menu) return;
 
-  if (openMenuId && openMenuId !== id) {
-    document.getElementById(openMenuId)?.classList.add('hidden');
+  // Close any other menu that is open
+  if (openMenuId && openMenuId !== menuId) {
+    const otherMenu = document.getElementById(openMenuId);
+    if (otherMenu) {
+      otherMenu.classList.add('hidden');
+    }
   }
-  const isHidden = menu.classList.toggle('hidden');
-  openMenuId = isHidden ? null : id;
+
+  const isCurrentlyHidden = menu.classList.contains('hidden');
+
+  if (isCurrentlyHidden) {
+    const btn = document.getElementById(`actionsBtn-${deptId}`);
+    const btnRect = btn.getBoundingClientRect();
+
+    // Clear previous position classes to avoid conflicts
+    menu.classList.remove('mt-2', 'bottom-full', 'mb-2', 'origin-top-right', 'origin-bottom-right');
+
+    // Heuristic: If button is in the bottom half of the viewport, open upwards.
+    // A 60% threshold prevents the menu from opening up too eagerly.
+    if (btnRect.top > window.innerHeight * 0.6) {
+      // Open upwards
+      menu.classList.add('bottom-full', 'mb-2', 'origin-bottom-right');
+    } else {
+      // Open downwards (default)
+      menu.classList.add('mt-2', 'origin-top-right');
+    }
+
+    menu.classList.remove('hidden');
+    openMenuId = menuId;
+  } else {
+    menu.classList.add('hidden');
+    openMenuId = null;
+  }
 }
+
 
 function closeActionsMenu() {
   if (openMenuId) {
@@ -335,7 +364,9 @@ function closeActionsMenu() {
 document.addEventListener('click', (e) => {
   if (!openMenuId) return;
   const btn = document.getElementById(openMenuId.replace('Menu', 'Btn'));
-  if (btn && !btn.contains(e.target)) {
+  const menu = document.getElementById(openMenuId);
+  // If the click is not on the button and not inside the menu, close it.
+  if (btn && !btn.contains(e.target) && menu && !menu.contains(e.target)) {
     closeActionsMenu();
   }
 });
