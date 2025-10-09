@@ -185,7 +185,7 @@
     });
     
     function loadNotifications() {
-        fetch('/api/notifications/')
+        fetch('/api/notification/notifications/')
             .then(response => response.json())
             .then(notifications => updateNotificationUI(notifications))
             .catch(error => {
@@ -259,7 +259,7 @@
     }
     
     function markNotificationsAsRead() {
-        fetch('/api/notifications/read-all/', {
+        fetch('/api/notification/notifications/read-all/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
