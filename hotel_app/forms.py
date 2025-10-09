@@ -1,8 +1,35 @@
 import os
 from django import forms
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.forms import UserCreationForm as BaseUserCreationForm
 from .models import Department, UserProfile, Voucher, BreakfastVoucher, Guest, Location, RequestType, Checklist, Complaint, Review
 from django.conf import settings
+
+
+class UserCreationForm(BaseUserCreationForm):
+    full_name = forms.CharField(max_length=160, required=False)
+    phone = forms.CharField(max_length=15, required=False)
+    department = forms.ModelChoiceField(queryset=Department.objects.all(), required=False)
+    role = forms.CharField(max_length=100, required=False)
+    password = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput,
+        required=False,
+        help_text="Leave blank to auto-generate a password"
+    )
+
+    class Meta:
+        model = User
+        fields = ("username", "email", "password")
+        
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # If no password was provided, set a random one
+        if not self.cleaned_data.get('password'):
+            user.set_password(User.objects.make_random_password())
+        if commit:
+            user.save()
+        return user
 
 
 class VoucherForm(forms.ModelForm):

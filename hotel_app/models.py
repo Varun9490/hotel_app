@@ -316,9 +316,10 @@ class ServiceRequest(models.Model):
         super().save(*args, **kwargs)
 
     def assign_to_user(self, user):
-        """Assign the ticket to a user."""
+        """Assign the ticket to a user and automatically accept it."""
         self.assignee_user = user
-        self.status = 'assigned'
+        self.status = 'accepted'
+        self.accepted_at = timezone.now()
         self.save()
         # Notify the assigned user
         self.notify_assigned_user()
@@ -333,14 +334,16 @@ class ServiceRequest(models.Model):
 
     def accept_task(self):
         """Accept the assigned task."""
-        if self.status == 'assigned':
+        # Since we're removing the 'assigned' state, we can accept directly from 'pending'
+        if self.status == 'pending':
             self.status = 'accepted'
             self.accepted_at = timezone.now()
+            # Save the changes
             self.save()
 
     def start_work(self):
         """Start working on the task."""
-        if self.status in ['accepted', 'assigned']:
+        if self.status == 'accepted':
             self.status = 'in_progress'
             self.started_at = timezone.now()
             self.save()
@@ -376,14 +379,13 @@ class ServiceRequest(models.Model):
     def can_transition_to(self, new_status):
         """Check if the ticket can transition to the new status."""
         valid_transitions = {
-            'pending': ['assigned'],
-            'assigned': ['accepted', 'rejected'],
+            'pending': ['accepted'],
             'accepted': ['in_progress'],
             'in_progress': ['completed'],
             'completed': ['closed'],
             'closed': [],
-            'escalated': ['assigned'],
-            'rejected': ['assigned'],
+            'escalated': ['accepted'],
+            'rejected': ['accepted'],
         }
         return new_status in valid_transitions.get(self.status, [])
 
@@ -401,8 +403,8 @@ class ServiceRequest(models.Model):
             # Create notifications for all department staff
             create_bulk_notifications(
                 recipients=department_users,
-                title=f"New Ticket Assigned: {self.request_type.name}",
-                message=f"A new ticket has been assigned to your department: {self.notes[:100]}...",
+                title=f"New Ticket #{self.pk} Assigned: {self.request_type.name}",
+                message=f"A new ticket #{self.pk} has been assigned to your department: {self.notes[:100]}...",
                 notification_type='request',
                 related_object=self
             )
@@ -414,8 +416,8 @@ class ServiceRequest(models.Model):
         if self.assignee_user:
             create_notification(
                 recipient=self.assignee_user,
-                title=f"Ticket Assigned: {self.request_type.name}",
-                message=f"You have been assigned a new ticket: {self.notes[:100]}...",
+                title=f"Ticket #{self.pk} Assigned: {self.request_type.name}",
+                message=f"You have been assigned ticket #{self.pk}: {self.notes[:100]}...",
                 notification_type='request',
                 related_object=self
             )
@@ -427,8 +429,8 @@ class ServiceRequest(models.Model):
         if self.requester_user:
             create_notification(
                 recipient=self.requester_user,
-                title=f"Ticket Resolved: {self.request_type.name}",
-                message=f"Your ticket has been resolved: {self.resolution_notes or 'No resolution notes provided.'}",
+                title=f"Ticket #{self.pk} Resolved: {self.request_type.name}",
+                message=f"Your ticket #{self.pk} has been resolved: {self.resolution_notes or 'No resolution notes provided.'}",
                 notification_type='success',
                 related_object=self
             )
@@ -444,7 +446,7 @@ class ServiceRequest(models.Model):
             for user in department_users:
                 create_notification(
                     recipient=user,
-                    title=f"Ticket Escalated: {self.request_type.name}",
+                    title=f"Ticket #{self.pk} Escalated: {self.request_type.name}",
                     message=f"Ticket #{self.pk} has been escalated. Please take immediate action.",
                     notification_type='warning',
                     related_object=self
