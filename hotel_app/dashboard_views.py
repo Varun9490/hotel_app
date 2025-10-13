@@ -464,7 +464,16 @@ def dashboard_view(request):
         'occupancy_data': json.dumps(occupancy_data),
     }
 
-    return render(request, 'dashboard/dashboard.html', context)
+    # The project now uses the new dashboard2 design as the primary dashboard.
+    # Reuse the existing dashboard2_view to render the latest dashboard template
+    # and context so we keep a single source of truth for the dashboard output.
+    try:
+        # Call dashboard2_view directly and return its response. It prepares
+        # a design-oriented context. If dashboard2_view raises, fall back to
+        # rendering the legacy dashboard template.
+        return dashboard2_view(request)
+    except Exception:
+        return render(request, 'dashboard/dashboard.html', context)
 
 
 @login_required
