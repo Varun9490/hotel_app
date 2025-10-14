@@ -227,16 +227,10 @@
                                 <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ ticket.status_color }}-100 text-{{ ticket.status_color }}-700">{{ ticket.get_status_display }}</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center">
                                     <a href="{% url 'dashboard:ticket_detail' ticket.id %}" class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
-                                        <img src="{% static 'images/tickets/eye.svg' %}" alt="View ticket" class="w-5 h-5">
+                                        <img src="{% static 'images/tickets/eye.svg' %}" alt="View ticket" class="w-6 h-6">
                                     </a>
-                                    <button class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
-                                        <img src="{% static 'images/tickets/edit.svg' %}" alt="Edit ticket" class="w-5 h-5">
-                                    </button>
-                                    <button class="p-2 rounded-lg text-gray-500 hover:bg-sky-100 hover:text-sky-600 transition-colors duration-200">
-                                        <img src="{% static 'images/tickets/more.svg' %}" alt="More options" class="w-5 h-5">
-                                    </button>
                                 </div>
                             </td>
                         </tr>
