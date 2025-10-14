@@ -682,10 +682,10 @@ class GuestComment(models.Model):
 
 class Voucher(models.Model):
     voucher_code = models.CharField(max_length=50, unique=True, blank=True)
-    guest_name = models.CharField(max_length=100)
+    guest_name = models.CharField(max_length=100, blank=True, null=True)
     room_number = models.CharField(max_length=10, blank=True, null=True)
     issue_date = models.DateTimeField(default=timezone.now)
-    expiry_date = models.DateField()
+    expiry_date = models.DateField(default=timezone.now)
     redeemed = models.BooleanField(default=False)
     redeemed_at = models.DateTimeField(blank=True, null=True)
     qr_image = models.TextField(blank=True, null=True)  # Base64 encoded QR image
@@ -730,7 +730,7 @@ class Complaint(models.Model):
     subject = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(max_length=20, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -744,7 +744,7 @@ class Review(models.Model):
     guest = models.ForeignKey(Guest, on_delete=models.SET_NULL, null=True, blank=True)
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])  # 1-5 stars
     comment = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -756,6 +756,8 @@ class GymMember(models.Model):
     full_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=15)
     email = models.EmailField(max_length=100, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
