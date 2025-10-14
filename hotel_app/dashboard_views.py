@@ -4079,6 +4079,188 @@ def voucher_analytics(request):
 
 
 @login_required
+def analytics_dashboard(request):
+    from django.db.models import Avg, Count
+    from datetime import datetime, timedelta
+    import json
+    
+    # Date range for analytics (last 30 days)
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # Ticket volume trends (last 30 days, grouped by day)
+    ticket_trends = []
+    ticket_dates = []
+    
+    for i in range(30):
+        date = thirty_days_ago + timedelta(days=i)
+        count = ServiceRequest.objects.filter(created_at__date=date).count()
+        ticket_trends.append(count)
+        ticket_dates.append(date.strftime('%b %d'))
+    
+    # Feedback volume trends (last 30 days, grouped by day)
+    feedback_trends = []
+    feedback_dates = []
+    
+    for i in range(30):
+        date = thirty_days_ago + timedelta(days=i)
+        count = Review.objects.filter(created_at__date=date).count()
+        feedback_trends.append(count)
+        feedback_dates.append(date.strftime('%b %d'))
+    
+    # Guest satisfaction score over time (last 4 weeks)
+    satisfaction_scores = []
+    satisfaction_weeks = []
+    
+    for i in range(4):
+        week_start = today - timedelta(days=today.weekday()) - timedelta(weeks=3-i)
+        week_end = week_start + timedelta(days=7)
+        reviews = Review.objects.filter(created_at__date__gte=week_start, created_at__date__lt=week_end)
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        satisfaction_weeks.append(f'Week {i+1}')
+        satisfaction_scores.append(round(avg_rating, 1))
+    
+    # Department performance data
+    departments = Department.objects.all()
+    dept_performance = []
+    
+    for dept in departments:
+        dept_requests = ServiceRequest.objects.filter(department=dept)
+        avg_resolution_time = 0
+        avg_satisfaction = 0
+        
+        if dept_requests.exists():
+            # Calculate average resolution time
+            resolved_requests = dept_requests.filter(status='completed')
+            if resolved_requests.exists():
+                total_resolution_time = timedelta()
+                for req in resolved_requests:
+                    if req.completed_at and req.created_at:
+                        total_resolution_time += (req.completed_at - req.created_at)
+                avg_resolution_time = total_resolution_time.total_seconds() / 3600 / resolved_requests.count()  # in hours
+            
+            # Calculate average satisfaction
+            # Since there's no direct relationship between ServiceRequest and Review,
+            # we'll use all reviews for now. In a real implementation, you would need
+            # to establish a proper relationship between requests and reviews.
+            dept_reviews = Review.objects.all()
+            avg_satisfaction = dept_reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        
+        dept_performance.append({
+            'name': dept.name,
+            'resolution_time': round(avg_resolution_time, 1),
+            'satisfaction': round(avg_satisfaction, 1)
+        })
+    
+    # Room type feedback distribution
+    room_types = ['Standard', 'Deluxe', 'Suite', 'Executive']
+    room_feedback = []
+    
+    for room_type in room_types:
+        # This is sample data - in a real implementation, you would join with actual room data
+        reviews = Review.objects.filter(created_at__date__gte=thirty_days_ago)
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        room_feedback.append({
+            'type': room_type,
+            'satisfaction': round(avg_rating, 1)
+        })
+    
+    # Busiest hours heatmap data (sample data for demonstration)
+    busiest_hours_data = []
+    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    hours = list(range(24))
+    
+    for day in days:
+        for hour in hours:
+            # Generate sample data - in a real implementation, you would query actual data
+            value = (hour * 2 + days.index(day)) % 20  # Sample calculation
+            busiest_hours_data.append({
+                'day': day,
+                'hour': hour,
+                'value': value
+            })
+    
+    # Overall statistics
+    total_tickets = ServiceRequest.objects.count()
+    total_reviews = Review.objects.count()
+    avg_rating = Review.objects.aggregate(Avg('rating'))['rating__avg'] or 0
+    completed_tickets = ServiceRequest.objects.filter(status='completed').count()
+    completion_rate = (completed_tickets / total_tickets * 100) if total_tickets > 0 else 0
+    
+    # Top performing departments
+    top_departments = sorted(dept_performance, key=lambda x: x['satisfaction'], reverse=True)[:3]
+    
+    # Recent activity
+    recent_tickets = ServiceRequest.objects.select_related('request_type', 'department').order_by('-created_at')[:5]
+    recent_reviews = Review.objects.select_related('guest').order_by('-created_at')[:5]
+    
+    # Scheduled reports data
+    scheduled_reports = [
+        {
+            'name': 'Weekly Performance Summary',
+            'schedule': 'Every Monday at 9:00 AM',
+            'next_run': 'Dec 18, 2023',
+            'status': 'Active'
+        },
+        {
+            'name': 'Guest Satisfaction Report',
+            'schedule': 'Monthly • 1st of each month',
+            'next_run': 'Jan 1, 2024',
+            'status': 'Active'
+        },
+        {
+            'name': 'SLA Breach Alert',
+            'schedule': 'Real-time • When SLA is breached',
+            'next_run': '',
+            'status': 'Paused'
+        }
+    ]
+    
+    # Quick templates data
+    quick_templates = [
+        {
+            'name': 'Daily Operations',
+            'description': 'Tickets, feedback, SLA status'
+        },
+        {
+            'name': 'Guest Experience',
+            'description': 'Satisfaction trends, reviews'
+        },
+        {
+            'name': 'Staff Performance',
+            'description': 'Resolution times, workload'
+        },
+        {
+            'name': 'Executive Summary',
+            'description': 'High-level KPIs, trends'
+        }
+    ]
+    
+    context = {
+        'ticket_trends': json.dumps(ticket_trends),
+        'ticket_dates': json.dumps(ticket_dates),
+        'feedback_trends': json.dumps(feedback_trends),
+        'feedback_dates': json.dumps(feedback_dates),
+        'satisfaction_scores': json.dumps(satisfaction_scores),
+        'satisfaction_weeks': json.dumps(satisfaction_weeks),
+        'dept_performance': json.dumps(dept_performance),
+        'room_feedback': json.dumps(room_feedback),
+        'busiest_hours_data': json.dumps(busiest_hours_data),
+        'total_tickets': total_tickets,
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'completion_rate': round(completion_rate, 1),
+        'top_departments': top_departments,
+        'recent_tickets': recent_tickets,
+        'recent_reviews': recent_reviews,
+        'scheduled_reports': scheduled_reports,
+        'quick_templates': quick_templates
+    }
+    
+    return render(request, 'dashboard/analytics_dashboard.html', context)
+
+
+@login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def create_ticket_api(request):
     """API endpoint to create a new ticket."""

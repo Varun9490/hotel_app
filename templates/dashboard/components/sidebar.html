@@ -161,11 +161,11 @@
       </div>
       <div class="space-y-1">
         <a
-          href="#"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.path == '/analytics/' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
+          href="{% url 'dashboard:analytics' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:analytics' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
         >
           <img
-            src="{% if request.path == '/analytics/' %}{% static 'images/sidebar/analytics_highlighted.svg' %}{% else %}{% static 'images/sidebar/analytics.svg' %}{% endif %}"
+            src="{% if request.resolver_match.view_name == 'dashboard:analytics' %}{% static 'images/sidebar/analytics_highlighted.svg' %}{% else %}{% static 'images/sidebar/analytics.svg' %}{% endif %}"
             alt="Analytics Icon"
             class="w-5 h-5"
           />
