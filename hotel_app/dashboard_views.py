@@ -1918,12 +1918,27 @@ def my_tickets(request):
         # Check SLA breaches
         ticket.check_sla_breaches()
         
+        # Calculate SLA progress percentage
+        sla_progress_percent = 0
+        if ticket.created_at and ticket.due_at:
+            # Calculate time taken so far or total time if completed
+            if ticket.completed_at:
+                time_taken = ticket.completed_at - ticket.created_at
+            else:
+                time_taken = timezone.now() - ticket.created_at
+            
+            # Calculate SLA percentage (time taken / total allowed time)
+            total_allowed_time = ticket.due_at - ticket.created_at
+            if total_allowed_time.total_seconds() > 0:
+                sla_progress_percent = min(100, int((time_taken.total_seconds() / total_allowed_time.total_seconds()) * 100))
+        
         # Add attributes to the ticket object
         ticket.priority_label = priority_data['label']
         ticket.priority_color = priority_data['color']
         ticket.status_label = status_data['label']
         ticket.status_color = status_data['color']
         ticket.owner_avatar = 'https://placehold.co/24x24'
+        ticket.sla_progress_percent = sla_progress_percent
         
         # Add user-specific workflow permissions
         ticket.can_accept = False
@@ -1965,6 +1980,8 @@ def my_tickets(request):
         'priority_filter': priority_filter,
         'status_filter': status_filter,
         'search_query': search_query,
+        'notification_count': 3,  # This should be dynamic in a real implementation
+        'overdue_count': 0,  # This should be dynamic in a real implementation
     }
     return render(request, 'dashboard/my_tickets.html', context)
 
@@ -4019,21 +4036,29 @@ def accept_ticket_api(request, ticket_id):
             # Get the service request
             service_request = get_object_or_404(ServiceRequest, id=ticket_id)
             
+            # Check if the ticket is pending and in the user's department
+            # Users can accept pending tickets in their department
+            user_department = None
+            if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
+                user_department = request.user.userprofile.department
+            
+            if service_request.status != 'pending':
+                return JsonResponse({'error': 'Ticket is not in pending status'}, status=400)
+            
+            if service_request.department != user_department:
+                return JsonResponse({'error': 'You are not in the department for this ticket'}, status=403)
+            
             # Assign the ticket to the current user if not already assigned
             if not service_request.assignee_user:
                 service_request.assignee_user = request.user
                 service_request.save()
             
-            # Check if the current user is the assignee
-            elif service_request.assignee_user != request.user:
-                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
-            
-            # Accept the ticket
+            # Accept the ticket (change status to accepted)
             service_request.accept_task()
             
             return JsonResponse({
                 'success': True,
-                'message': f'Ticket #{service_request.id} accepted successfully',
+                'message': 'Ticket accepted successfully',
                 'ticket_id': service_request.id
             })
             
@@ -4720,9 +4745,22 @@ def accept_ticket_api(request, ticket_id):
             # Get the service request
             service_request = get_object_or_404(ServiceRequest, id=ticket_id)
             
-            # Check if the current user is the assignee
-            if service_request.assignee_user != request.user:
-                return JsonResponse({'error': 'You are not assigned to this ticket'}, status=403)
+            # Check if the ticket is pending and in the user's department
+            # Users can accept pending tickets in their department
+            user_department = None
+            if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
+                user_department = request.user.userprofile.department
+            
+            if service_request.status != 'pending':
+                return JsonResponse({'error': 'Ticket is not in pending status'}, status=400)
+            
+            if service_request.department != user_department:
+                return JsonResponse({'error': 'You are not in the department for this ticket'}, status=403)
+            
+            # Assign the ticket to the current user if not already assigned
+            if not service_request.assignee_user:
+                service_request.assignee_user = request.user
+                service_request.save()
             
             # Accept the ticket (change status to accepted)
             service_request.accept_task()
@@ -4760,3 +4798,131 @@ def performance_dashboard(request):
 def tailwind_test(request):
     """View for testing Tailwind CSS functionality."""
     return render(request, "dashboard/tailwind_test.html")
+
+
+@login_required
+def gym(request):
+    """Render the Gym Management page."""
+    # Sample gym member data - in a real implementation, this would come from the database
+    gym_members = [
+        {
+            'id': '001',
+            'name': 'John Smith',
+            'city': 'New York',
+            'phone': '+1 234 567 8900',
+            'email': 'john.smith@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '002',
+            'name': 'Sarah Johnson',
+            'city': 'Los Angeles',
+            'phone': '+1 234 567 8901',
+            'email': 'sarah.j@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '003',
+            'name': 'Mike Davis',
+            'city': 'Chicago',
+            'phone': '+1 234 567 8902',
+            'email': 'mike.davis@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '004',
+            'name': 'Emily Wilson',
+            'city': 'Miami',
+            'phone': '+1 234 567 8903',
+            'email': 'emily.w@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '005',
+            'name': 'David Brown',
+            'city': 'Boston',
+            'phone': '+1 234 567 8904',
+            'email': 'david.brown@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        }
+    ]
+    
+    context = {
+        'gym_members': gym_members,
+        'total_members': 250,  # Total number of gym members
+        'page_size': 10,       # Number of members per page
+        'current_page': 1      # Current page number
+    }
+    return render(request, 'dashboard/gym.html', context)
+
+
+@login_required
+def gym_report(request):
+    """Render the Gym Report page."""
+    # Sample gym visit data - in a real implementation, this would come from the database
+    gym_visits = [
+        {
+            'id': '001',
+            'customer_id': 'MEM001',
+            'name': 'John Smith',
+            'date_time': '2024-01-15 08:30 AM',
+            'admin': 'Admin A'
+        },
+        {
+            'id': '002',
+            'customer_id': 'MEM002',
+            'name': 'Sarah Johnson',
+            'date_time': '2024-01-15 09:15 AM',
+            'admin': 'Admin B'
+        },
+        {
+            'id': '003',
+            'customer_id': 'MEM003',
+            'name': 'Mike Davis',
+            'date_time': '2024-01-15 10:00 AM',
+            'admin': 'Admin A'
+        },
+        {
+            'id': '004',
+            'customer_id': 'MEM004',
+            'name': 'Emily Wilson',
+            'date_time': '2024-01-15 11:30 AM',
+            'admin': 'Admin C'
+        },
+        {
+            'id': '005',
+            'customer_id': 'MEM005',
+            'name': 'David Brown',
+            'date_time': '2024-01-15 02:15 PM',
+            'admin': 'Admin B'
+        },
+        {
+            'id': '006',
+            'customer_id': 'MEM006',
+            'name': 'Lisa Anderson',
+            'date_time': '2024-01-15 03:45 PM',
+            'admin': 'Admin A'
+        },
+        {
+            'id': '007',
+            'customer_id': 'MEM007',
+            'name': 'Robert Taylor',
+            'date_time': '2024-01-15 05:20 PM',
+            'admin': 'Admin C'
+        },
+        {
+            'id': '008',
+            'customer_id': 'MEM008',
+            'name': 'Jennifer Lee',
+            'date_time': '2024-01-15 06:00 PM',
+            'admin': 'Admin B'
+        }
+    ]
+    
+    context = {
+        'gym_visits': gym_visits,
+        'total_visits': 24,  # Total number of gym visits
+        'page_size': 10,     # Number of visits per page
+        'current_page': 1    # Current page number
+    }
+    return render(request, 'dashboard/gym_report.html', context)

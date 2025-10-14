@@ -102,4 +102,6 @@ urlpatterns = [
     path('integrations/', dashboard_views.integrations, name='integrations'),
     path('sla-escalations/', dashboard_views.sla_escalations, name='sla_escalations'),
     path('performance/', dashboard_views.performance_dashboard, name='performance'),
+    path('gym/', dashboard_views.gym, name='gym'),
+    path('gym/report/', dashboard_views.gym_report, name='gym_report'),
 ]
