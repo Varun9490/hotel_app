@@ -1775,8 +1775,160 @@ def gym(request):
     return render(request, 'dashboard/gym.html', context)
 
 
+def gym_test(request):
+    """Test view for Gym Management page without login requirement."""
+    print("Gym test view called")
+    from django.contrib import messages
+    
+    # Handle form submission
+    if request.method == 'POST':
+        form = GymMemberForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Gym member created successfully!')
+            return redirect('dashboard:gym')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+            # Print form errors for debugging
+            print("Form errors:", form.errors)
+    else:
+        form = GymMemberForm()
+    
+    # Get gym members from database with pagination
+    gym_members_list = GymMember.objects.all().order_by('-id')
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(gym_members_list, 10)  # Show 10 members per page
+    
+    try:
+        gym_members = paginator.page(page)
+    except PageNotAnInteger:
+        gym_members = paginator.page(1)
+    except EmptyPage:
+        gym_members = paginator.page(paginator.num_pages)
+    
+    # Convert to the format expected by the template
+    gym_members_data = []
+    for member in gym_members:
+        gym_members_data.append({
+            'id': member.id,
+            'name': member.full_name,
+            'city': member.city or '',
+            'phone': member.phone or '',
+            'email': member.email or '',
+            'start_date': member.start_date or '',
+            'end_date': member.end_date or '',
+            'qr_code': 'https://placehold.co/30x32'  # Placeholder QR code
+        })
+    
+    context = {
+        'gym_members': gym_members_data,
+        'total_members': gym_members_list.count(),
+        'page_size': 10,
+        'current_page': gym_members.number,
+        'paginator': gym_members,
+        'form': form
+    }
+    return render(request, 'dashboard/gym.html', context)
+
+
 def ticket_detail(request, ticket_id):
     """Render the Ticket Detail page."""
+            messages.error(request, 'Please correct the errors below.')
+            # Print form errors for debugging
+            print("Form errors:", form.errors)
+    else:
+        form = GymMemberForm()
+    
+    # Get gym members from database with pagination
+    gym_members_list = GymMember.objects.all().order_by('-id')
+    
+    # Debug output
+    print(f"Total gym members in database: {gym_members_list.count()}")
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    print(f"Requested page: {page}")
+    try:
+        page = int(page)
+    except (TypeError, ValueError):
+        page = 1
+    
+    paginator = Paginator(gym_members_list, 10)  # Show 10 members per page
+    print(f"Number of pages: {paginator.num_pages}")
+    
+    try:
+        gym_members = paginator.page(page)
+    except PageNotAnInteger:
+        gym_members = paginator.page(1)
+    except EmptyPage:
+        gym_members = paginator.page(paginator.num_pages)
+    
+    # Debug output
+    print(f"Current page: {gym_members.number}")
+    print(f"Members on current page: {len(gym_members.object_list)}")
+    
+    # Convert to the format expected by the template
+    gym_members_data = []
+    for member in gym_members:
+        gym_members_data.append({
+            'id': member.id,
+            'name': member.full_name,
+            'city': member.city or '',
+            'phone': member.phone or '',
+            'email': member.email or '',
+            'start_date': member.start_date or '',
+            'end_date': member.end_date or '',
+            'qr_code': 'https://placehold.co/30x32'  # Placeholder QR code
+        })
+    
+    # Debug output
+    print(f"Members data for template: {len(gym_members_data)}")
+    
+    context = {
+        'gym_members': gym_members_data,
+        'total_members': gym_members_list.count(),
+        'page_size': 10,
+        'current_page': gym_members.number,
+        'paginator': gym_members,
+        'form': form
+    }
+    return render(request, 'dashboard/gym.html', context)
+
+
+        gym_members = paginator.page(paginator.num_pages)
+    
+    # Debug output
+    print(f"Current page: {gym_members.number}")
+    print(f"Members on current page: {len(gym_members.object_list)}")
+    
+    # Convert to the format expected by the template
+    gym_members_data = []
+    for member in gym_members:
+        gym_members_data.append({
+            'id': member.id,
+            'name': member.full_name,
+            'city': member.city or '',
+            'phone': member.phone or '',
+            'email': member.email or '',
+            'start_date': member.start_date or '',
+            'end_date': member.end_date or '',
+            'qr_code': 'https://placehold.co/30x32'  # Placeholder QR code
+        })
+    
+    # Debug output
+    print(f"Members data for template: {len(gym_members_data)}")
+    
+    context = {
+        'gym_members': gym_members_data,
+        'total_members': gym_members_list.count(),
+        'page_size': 10,
+        'current_page': gym_members.number,
+        'paginator': gym_members,
+        'form': form
+    }
+    return render(request, 'dashboard/gym.html', context)
 
 
 def ticket_detail(request, ticket_id):
@@ -4816,72 +4968,73 @@ def get_guest_whatsapp_message(request, guest_id):
 @user_passes_test(is_staff)
 def feedback_inbox(request):
     """Feedback inbox view showing all guest feedback."""
-    from .models import Review, Guest
-    from .forms import FeedbackForm
-    
-    # Handle form submission for new feedback
-    if request.method == 'POST':
-        form = FeedbackForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Feedback added successfully!')
-            return redirect('dashboard:feedback_inbox')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = FeedbackForm()
-    
-    # Get all reviews with related guest information
-    reviews = Review.objects.select_related('guest').all().order_by('-created_at')
-    
-    # Convert to the format expected by the template
-    feedback_data = []
-    for review in reviews:
-        # Determine sentiment based on rating
-        if review.rating >= 4:
-            sentiment = 'Positive'
-        elif review.rating <= 2:
-            sentiment = 'Negative'
-        else:
-            sentiment = 'Neutral'
-            
-        # Extract keywords from comment (simple approach)
-        keywords = []
-        if review.comment:
-            # Simple keyword extraction - in a real implementation, you might use NLP
-            common_words = ['service', 'staff', 'room', 'food', 'clean', 'location', 'wifi', 'pool', 'spa', 'breakfast']
-            comment_lower = review.comment.lower()
-            keywords = [word for word in common_words if word in comment_lower]
-            # Limit to 3 keywords
-            keywords = keywords[:3]
-        
-        feedback_data.append({
-            'id': review.id,
-            'date': review.created_at.strftime('%b %d, %Y'),
-            'guest': review.guest.full_name if review.guest else 'Anonymous',
-            'room': getattr(review.guest, 'room_number', 'N/A') if review.guest else 'N/A',
-            'rating': float(review.rating),
-            'feedback': review.comment[:100] + '...' if review.comment and len(review.comment) > 100 else review.comment or '',
-            'keywords': keywords,
-            'sentiment': sentiment,
-            'status': 'responded' if review.updated_at else 'needs_attention'
-        })
-    
-    # Calculate statistics
-    total_feedback = reviews.count()
-    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-    needs_attention = reviews.filter(updated_at__isnull=True).count()
-    response_rate = int((needs_attention / total_feedback * 100)) if total_feedback > 0 else 0
+    # Sample feedback data - in a real implementation, this would come from the database
+    feedback_data = [
+        {
+            'id': 1,
+            'date': 'Dec 15, 2024',
+            'guest': 'Maria Rodriguez',
+            'room': 'Room 304',
+            'rating': 2.0,
+            'feedback': 'Room was not clean upon arrival, found hair in bathroom. AC was too noisy...',
+            'keywords': ['cleanliness', 'noise'],
+            'sentiment': 'Negative',
+            'status': 'needs_attention'
+        },
+        {
+            'id': 2,
+            'date': 'Dec 15, 2024',
+            'guest': 'John Smith',
+            'room': 'Room 218',
+            'rating': 4.0,
+            'feedback': 'Great location and friendly staff. Room was comfortable but breakfast could be improved...',
+            'keywords': ['staff', 'breakfast'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        },
+        {
+            'id': 3,
+            'date': 'Dec 14, 2024',
+            'guest': 'David Chen',
+            'room': 'Suite 405',
+            'rating': 5.0,
+            'feedback': 'Exceptional service throughout our stay! The concierge went above and beyond...',
+            'keywords': ['service', 'concierge'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        },
+        {
+            'id': 4,
+            'date': 'Dec 14, 2024',
+            'guest': 'Emma Thompson',
+            'room': 'Room 156',
+            'rating': 3.0,
+            'feedback': 'Average experience. WiFi was slow and pool was crowded. Food was decent...',
+            'keywords': ['wifi', 'pool'],
+            'sentiment': 'Neutral',
+            'status': 'needs_attention'
+        },
+        {
+            'id': 5,
+            'date': 'Dec 13, 2024',
+            'guest': 'Lisa Anderson',
+            'room': 'Room 289',
+            'rating': 5.0,
+            'feedback': 'Perfect getaway! Beautiful views, excellent spa services, and amazing breakfast buffet...',
+            'keywords': ['spa', 'breakfast', 'views'],
+            'sentiment': 'Positive',
+            'status': 'responded'
+        }
+    ]
     
     context = {
         'feedback_data': feedback_data,
         'stats': {
-            'total_feedback': total_feedback,
-            'avg_rating': round(avg_rating, 1),
-            'needs_attention': needs_attention,
-            'response_rate': 100 - response_rate
-        },
-        'form': form
+            'total_feedback': 1247,
+            'avg_rating': 4.6,
+            'needs_attention': 23,
+            'response_rate': 87
+        }
     }
     
     return render(request, 'dashboard/feedback_inbox.html', context)
@@ -4891,68 +5044,46 @@ def feedback_inbox(request):
 @user_passes_test(is_staff)
 def feedback_detail(request, feedback_id):
     """Feedback detail view showing detailed information about a specific feedback."""
-    from .models import Review, Guest
-    
-    # Get the review
-    try:
-        review = Review.objects.select_related('guest').get(id=feedback_id)
-    except Review.DoesNotExist:
-        # Handle the case where the review doesn't exist
-        from django.http import Http404
-        raise Http404("Review not found")
-    
-    # Determine sentiment based on rating
-    if review.rating >= 4:
-        sentiment = 'Positive'
-    elif review.rating <= 2:
-        sentiment = 'Negative'
-    else:
-        sentiment = 'Neutral'
-    
-    # Extract keywords from comment (simple approach)
-    keywords = []
-    if review.comment:
-        # Simple keyword extraction - in a real implementation, you might use NLP
-        common_words = ['service', 'staff', 'room', 'food', 'clean', 'location', 'wifi', 'pool', 'spa', 'breakfast', 'concierge', 'reception']
-        comment_lower = review.comment.lower()
-        keywords = [word for word in common_words if word in comment_lower]
-    
-    # Create feedback data structure
+    # Sample feedback data - in a real implementation, this would come from the database
     feedback = {
-        'id': review.id,
-        'date': review.created_at.strftime('%B %d, %Y'),
-        'time': review.created_at.strftime('%I:%M %p'),
-        'guest': review.guest.full_name if review.guest else 'Anonymous',
-        'room': getattr(review.guest, 'room_number', 'N/A') if review.guest else 'N/A',
-        'room_type': 'Standard Room',  # This would come from guest data in a real implementation
-        'rating': float(review.rating),
-        'sentiment': sentiment,
-        'title': f'{sentiment} Review - {review.rating} Stars',
-        'comment': review.comment or '',
-        'keywords': keywords,
+        'id': feedback_id,
+        'date': 'March 15, 2024',
+        'time': '2:30 PM',
+        'guest': 'Michael Johnson',
+        'room': 'Room 304',
+        'room_type': 'Premium Suite',
+        'rating': 4.0,
+        'sentiment': 'Positive',
+        'title': 'Great stay but room service was slow',
+        'comment': 'Overall, I had a wonderful stay at your hotel. The room was clean and comfortable, and the staff was very friendly and helpful. The location is perfect for exploring the city center.\n\nHowever, I did have some issues with room service. I ordered dinner on my second night, and it took over an hour to arrive. When it finally came, the food was lukewarm. This was disappointing, especially considering the premium I paid for the suite.\n\nDespite this issue, I would still recommend the hotel to others, but I hope you can improve the room service response times. The breakfast buffet was excellent, and the concierge was particularly helpful with restaurant recommendations.',
+        'keywords': ['Clean Room', 'Friendly Staff', 'Great Location', 'Room Service', 'Slow Response', 'Breakfast', 'Concierge'],
         'department_impact': [
-            {'department': 'Room Service', 'sentiment': 'Negative' if 'service' in keywords else 'Positive'},
-            {'department': 'Housekeeping', 'sentiment': 'Negative' if 'clean' in keywords else 'Positive'},
-            {'department': 'Front Desk', 'sentiment': 'Negative' if 'reception' in keywords else 'Positive'}
+            {'department': 'Room Service', 'sentiment': 'Negative'},
+            {'department': 'Housekeeping', 'sentiment': 'Positive'},
+            {'department': 'Front Desk', 'sentiment': 'Positive'}
         ],
         'activity_timeline': [
-            {'event': 'Feedback received', 'time': review.created_at.strftime('%B %d, %I:%M %p'), 'description': 'Guest submitted feedback', 'status': 'completed'},
-            {'event': 'Auto-tagged by AI', 'time': review.created_at.strftime('%B %d, %I:%M %p'), 'description': 'System identified keywords and sentiment', 'status': 'completed'},
+            {'event': 'Feedback received', 'time': 'March 15, 2:30 PM', 'description': 'Guest submitted feedback via email', 'status': 'completed'},
+            {'event': 'Auto-tagged by AI', 'time': 'March 15, 2:31 PM', 'description': 'System identified keywords and sentiment', 'status': 'completed'},
+            {'event': 'Assigned to manager', 'time': 'March 15, 3:15 PM', 'description': 'Escalated to Sarah Wilson for review', 'status': 'completed'},
             {'event': 'Pending action', 'time': 'Now', 'description': 'Awaiting manager response', 'status': 'pending'}
         ],
-        'attachments': [],  # This would be populated from actual attachments in a real implementation
+        'attachments': [
+            {'name': 'Room Service Receipt', 'type': 'PDF', 'size': '245 KB', 'color': 'red'},
+            {'name': 'Room Photo', 'type': 'JPG', 'size': '1.2 MB', 'color': 'blue'}
+        ],
         'guest_info': {
-            'name': review.guest.full_name if review.guest else 'Anonymous',
-            'loyalty_member': True,  # This would come from guest data in a real implementation
-            'check_in': review.guest.checkin_date.strftime('%B %d, %Y') if review.guest and review.guest.checkin_date else 'N/A',
-            'check_out': review.guest.checkout_date.strftime('%B %d, %Y') if review.guest and review.guest.checkout_date else 'N/A',
-            'stay_duration': '3 nights',  # This would be calculated in a real implementation
-            'previous_stays': 1  # This would come from guest data in a real implementation
+            'name': 'Michael Johnson',
+            'loyalty_member': True,
+            'check_in': 'March 13, 2024',
+            'check_out': 'March 16, 2024',
+            'stay_duration': '3 nights',
+            'previous_stays': 7
         },
         'response_status': {
-            'status': 'Responded' if review.updated_at else 'Pending Review',
-            'priority': 'High' if review.rating <= 2 else 'Normal',
-            'due_date': (review.created_at + timezone.timedelta(days=1)).strftime('%B %d, %Y')
+            'status': 'Pending Review',
+            'priority': 'High',
+            'due_date': 'March 17, 2024'
         }
     }
     
@@ -5325,44 +5456,56 @@ def tailwind_test(request):
 
 @login_required
 def gym(request):
-    """
-    Render the Gym Management page, handle member creation, and paginate results.
-    """
-    # Initialize the form for the modal. It will be empty on a GET request.
-    form = GymMemberForm()
-
-    # Handle the form submission (when you click "Create Member")
-    if request.method == 'POST':
-        form = GymMemberForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'New gym member has been added successfully!')
-            # Redirect to the same page to prevent re-submission on refresh
-            return redirect('dashboard:gym') 
-        else:
-            # If the form has errors, the page will re-render below,
-            # and the 'form' variable with errors will be passed to the template.
-            messages.error(request, 'Please correct the errors in the form.')
-
-    # Get all members from the database for the GET request
-    member_list = GymMember.objects.all().order_by('-id')
-    total_members = member_list.count()
-
-    # Set up Django's built-in Paginator
-    paginator = Paginator(member_list, 10) # Show 10 members per page
-    page_number = request.GET.get('page')
-
-    try:
-        page_obj = paginator.get_page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
+    """Render the Gym Management page."""
+    # Sample gym member data - in a real implementation, this would come from the database
+    gym_members = [
+        {
+            'id': '001',
+            'name': 'John Smith',
+            'city': 'New York',
+            'phone': '+1 234 567 8900',
+            'email': 'john.smith@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '002',
+            'name': 'Sarah Johnson',
+            'city': 'Los Angeles',
+            'phone': '+1 234 567 8901',
+            'email': 'sarah.j@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '003',
+            'name': 'Mike Davis',
+            'city': 'Chicago',
+            'phone': '+1 234 567 8902',
+            'email': 'mike.davis@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '004',
+            'name': 'Emily Wilson',
+            'city': 'Miami',
+            'phone': '+1 234 567 8903',
+            'email': 'emily.w@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        },
+        {
+            'id': '005',
+            'name': 'David Brown',
+            'city': 'Boston',
+            'phone': '+1 234 567 8904',
+            'email': 'david.brown@email.com',
+            'qr_code': 'https://placehold.co/30x32'
+        }
+    ]
+    
     context = {
-        'page_obj': page_obj,          # The template expects an object named 'page_obj'
-        'total_members': total_members,
-        'form': form,                  # Pass the form (empty or with errors) to the template
+        'gym_members': gym_members,
+        'total_members': 250,  # Total number of gym members
+        'page_size': 10,       # Number of members per page
+        'current_page': 1      # Current page number
     }
     return render(request, 'dashboard/gym.html', context)
 

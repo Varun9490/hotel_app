@@ -259,34 +259,110 @@ class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
         fields = ['guest', 'rating', 'comment']
+        widgets = {
+            'guest': forms.Select(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500'
+            }),
+            'rating': forms.Select(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500'
+            }),
+            'comment': forms.Textarea(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'rows': 4,
+                'placeholder': 'Share your experience with us...'
+            }),
+        }
 
+
+class FeedbackForm(forms.ModelForm):
+    """Form for adding new feedback/reviews"""
+    class Meta:
+        model = Review
+        fields = ['guest', 'rating', 'comment']
+        widgets = {
+            'guest': forms.Select(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'placeholder': 'Select guest'
+            }),
+            'rating': forms.Select(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500'
+            }),
+            'comment': forms.Textarea(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'rows': 4,
+                'placeholder': 'Share your experience with us...'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add empty choice for guest
+        self.fields['guest'].queryset = Guest.objects.all().order_by('full_name')
+        self.fields['guest'].empty_label = "Select a guest (optional)"
+        
+        # Customize rating choices to be more descriptive
+        self.fields['rating'].choices = [
+            (1, '1 Star - Poor'),
+            (2, '2 Stars - Fair'),
+            (3, '3 Stars - Average'),
+            (4, '4 Stars - Good'),
+            (5, '5 Stars - Excellent')
+        ]
+
+# dashboard/forms.py
+
+from django import forms
+from .models import GymMember
 
 class GymMemberForm(forms.ModelForm):
     class Meta:
         model = GymMember
-        fields = ['full_name', 'email', 'address', 'city', 'phone', 'start_date', 'end_date']
+        fields = ['full_name', 'email', 'phone', 'address', 'city', 'start_date', 'end_date']
+
+        # Add consistent styling to all form fields to match the template
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
+            'full_name': forms.TextInput(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'placeholder': 'e.g. John Doe'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'placeholder': 'e.g. john@example.com'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'placeholder': 'e.g. +1234567890'
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'rows': 3,
+                'placeholder': 'e.g. 123 Main St'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500',
+                'placeholder': 'e.g. New York'
+            }),
+            # Keep the type attribute for HTML5 date picker
+            'start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500'
+            }),
+            'end_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500'
+            }),
         }
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        start_date = cleaned_data.get('start_date')
-        end_date = cleaned_data.get('end_date')
-        
+
+    # IMPROVEMENT: Attach the validation error directly to the 'end_date' field
+    def clean_end_date(self):
+        start_date = self.cleaned_data.get('start_date')
+        end_date = self.cleaned_data.get('end_date')
+
+        # Ensure both dates are present before comparing
         if start_date and end_date and end_date < start_date:
-            raise forms.ValidationError('End date must be after start date.')
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        # Combine first and last names into full_name
-        first_name = self.cleaned_data.get('first_name', '')
-        last_name = self.cleaned_data.get('last_name', '')
-        instance.full_name = f"{first_name} {last_name}".strip()
-        
-        if commit:
-            instance.save()
-        return instance
+            raise forms.ValidationError("End date cannot be before the start date.")
+
+        return end_date
+
+    # The custom save() method was redundant and has been removed.
+    # The default ModelForm.save() will be used, which is correct.
