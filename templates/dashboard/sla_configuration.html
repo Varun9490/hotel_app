@@ -1,0 +1,511 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="w-full max-w-[1184px] mx-auto bg-gray-50 font-['Inter']">
+    <div class="w-full relative bg-transparent">
+        
+        <div class="w-full h-20 bg-white border-b border-gray-200">
+            <div class="w-full h-full max-w-[1136px] mx-auto flex justify-between items-center">
+                <div>
+                    <h1 class="text-gray-900 text-2xl font-bold font-['Inter']">SLA Configuration</h1>
+                    <p class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Configure default SLA times for different priority levels</p>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <img class="w-4 h-4" src="{% static 'images/sla/search.svg' %}" alt="Search">
+                        </div>
+                        <input type="text" placeholder="Search SLA rules..." class="w-64 h-10 bg-white rounded-lg border border-gray-200 pl-9 text-gray-900 placeholder-gray-400 text-base font-normal focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <button id="saveSLAConfig" class="w-40 h-10 bg-sky-600 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-sky-700 transition-colors">
+                        <img class="w-3.5 h-3.5" src="{% static 'images/sla/save.svg' %}" alt="Save">
+                        <div class="text-white text-base font-medium font-['Inter']">Save Changes</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full max-w-[1136px] mx-auto mt-6">
+            <div class="border-b border-gray-200">
+                <div class="inline-flex justify-start items-start gap-8">
+                    <div class="py-2 px-1 text-center text-sky-600 text-sm font-medium font-['Inter'] border-b-2 border-sky-600 cursor-pointer">SLA Configuration</div>
+                    <div class="py-2 px-1 text-center text-gray-600 text-sm font-medium font-['Inter'] border-b-2 border-transparent hover:text-gray-800 cursor-pointer escalation-tab">Escalation Rules</div>
+                    <div class="py-2 px-1 text-center text-gray-600 text-sm font-medium font-['Inter'] border-b-2 border-transparent hover:text-gray-800 cursor-pointer holiday-tab">Holiday Calendar</div>
+                </div>
+            </div>
+
+            <!-- Toast Notification Container -->
+            <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+            <div class="mt-6 space-y-6">
+                <!-- SLA Configuration Section -->
+                <div id="slaConfigSection" class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-sky-600/10 rounded-lg flex justify-center items-center">
+                                <img src="{% static 'images/sla/timer.svg' %}" class="w-4 h-4" alt="Timer">
+                            </div>
+                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Priority Level SLA Configuration</h2>
+                        </div>
+                        <div id="resetDefaultsBtn" class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Reset to Defaults</div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <div class="w-full">
+                            <div class="flex bg-gray-50 rounded-t-lg border-b border-gray-200 text-gray-900 text-sm font-semibold font-['Inter']">
+                                <div class="w-[236px] flex items-center px-4 py-3">Priority Level</div>
+                                <div class="w-[193px] flex items-center px-4 py-3">Response Time (Minutes)</div>
+                                <div class="w-[210px] flex items-center px-4 py-3">Resolution Time (Minutes)</div>
+                                <div class="w-[251px] flex items-center px-4 py-3">Example</div>
+                                <div class="w-[196px] flex items-center px-4 py-3">Status</div>
+                            </div>
+                            <div class="text-sm font-normal text-gray-600 font-['Inter']" id="slaConfigContainer">
+                                {% for config in sla_configs %}
+                                <div class="flex items-center border-b border-gray-200 sla-config-row" data-priority="{{ config.priority }}">
+                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
+                                        {% if config.priority == 'critical' %}
+                                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                        Critical
+                                        {% elif config.priority == 'high' %}
+                                        <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                                        High
+                                        {% elif config.priority == 'normal' %}
+                                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                                        Normal
+                                        {% elif config.priority == 'low' %}
+                                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                        Low
+                                        {% endif %}
+                                    </div>
+                                    <div class="w-[193px] px-4 py-3">
+                                        <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 response-time-input" value="{{ config.response_time_minutes }}" data-original-value="{{ config.response_time_minutes }}">
+                                    </div>
+                                    <div class="w-[210px] px-4 py-3">
+                                        <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resolution-time-input" value="{{ config.resolution_time_minutes }}" data-original-value="{{ config.resolution_time_minutes }}">
+                                    </div>
+                                    <div class="w-[251px] px-4 py-3">
+                                        <div class="text-gray-600 text-sm">Respond within {{ config.response_time_minutes }} min, resolve within {{ config.resolution_time_minutes }} min</div>
+                                    </div>
+                                    <div class="w-[196px] px-4 py-3">
+                                        <div class="px-2 py-1 bg-green-500/10 rounded-full text-green-600 text-xs font-medium font-['Inter'] status-indicator">Active</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escalation Rules Section (Hidden by default) -->
+                <div id="escalationRulesSection" class="hidden bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-fuchsia-700/10 rounded-lg flex justify-center items-center">
+                                <img src="{% static 'images/sla/matrix.svg' %}" class="w-4 h-4" alt="Matrix">
+                            </div>
+                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Multi-Level Escalation Matrix</h2>
+                        </div>
+                        <div class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Edit Matrix</div>
+                    </div>
+                    <div class="mt-6">
+                        <div class="w-full">
+                            <div class="flex bg-gray-50 rounded-t-lg border-b border-gray-200 text-gray-900 text-sm font-semibold font-['Inter']">
+                                <div class="w-[236px] flex items-center px-4 py-3">Request Type</div>
+                                <div class="w-[193px] flex items-center px-4 py-3">Level 1 (Owner)</div>
+                                <div class="w-[210px] flex items-center px-4 py-3">Level 2 (Lead)</div>
+                                <div class="w-[251px] flex items-center px-4 py-3">Level 3 (Manager)</div>
+                                <div class="w-[196px] flex items-center px-4 py-3">Level 4 (Admin)</div>
+                            </div>
+                            <div class="text-sm font-normal text-gray-600 font-['Inter']">
+                                <div class="flex items-center border-b border-gray-200">
+                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
+                                        <img src="{% static 'images/sla/housekeeping.svg' %}" class="w-4 h-4" alt="Housekeeping">Housekeeping
+                                    </div>
+                                    <div class="w-[193px] px-4 py-3">Assigned Staff</div>
+                                    <div class="w-[210px] px-4 py-3">Housekeeping Lead</div>
+                                    <div class="w-[251px] px-4 py-3">Operations Manager</div>
+                                    <div class="w-[196px] px-4 py-3">General Manager</div>
+                                </div>
+                                <div class="flex items-center border-b border-gray-200">
+                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
+                                        <img src="{% static 'images/sla/maintainence.svg' %}" class="w-4 h-4" alt="Maintenance">Maintenance
+                                    </div>
+                                    <div class="w-[193px] px-4 py-3">Technician</div>
+                                    <div class="w-[210px] px-4 py-3">Maintenance Lead</div>
+                                    <div class="w-[251px] px-4 py-3">Engineering Manager</div>
+                                    <div class="w-[196px] px-4 py-3">General Manager</div>
+                                </div>
+                                <div class="flex items-center border-b border-gray-200">
+                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
+                                        <img src="{% static 'images/sla/concierge.svg' %}" class="w-4 h-4" alt="Concierge">Concierge
+                                    </div>
+                                    <div class="w-[193px] px-4 py-3">Concierge Staff</div>
+                                    <div class="w-[210px] px-4 py-3">Concierge Lead</div>
+                                    <div class="w-[251px] px-4 py-3">Guest Services Manager</div>
+                                    <div class="w-[196px] px-4 py-3">General Manager</div>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
+                                        <img src="{% static 'images/sla/food_beverage.svg' %}" class="w-3.5 h-3.5" alt="Food & Beverage">Food & Beverage
+                                    </div>
+                                    <div class="w-[193px] px-4 py-3">F&B Staff</div>
+                                    <div class="w-[210px] px-4 py-3">F&B Supervisor</div>
+                                    <div class="w-[251px] px-4 py-3">F&B Manager</div>
+                                    <div class="w-[196px] px-4 py-3">General Manager</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Holiday Calendar Section (Hidden by default) -->
+                <div id="holidayCalendarSection" class="hidden bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-green-600/10 rounded-lg flex justify-center items-center">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Holiday Calendar</h2>
+                        </div>
+                        <div class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Add Holiday</div>
+                    </div>
+                    <div class="mt-6">
+                        <div class="text-gray-600 text-center py-12">
+                            <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="mt-4 text-gray-500">No holidays configured yet</p>
+                            <p class="mt-2 text-sm text-gray-400">Add holidays to adjust SLA calculations automatically</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-6 pb-12">
+                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                        <div class="flex justify-between items-center">
+                            <div class="text-gray-900 text-base font-semibold font-['Inter']">SLA Compliance Rate</div>
+                            <div class="px-2 py-1 bg-green-500/10 rounded-full text-green-600 text-xs font-medium font-['Inter']">94%</div>
+                        </div>
+                        <div class="mt-5">
+                            <div class="flex justify-between items-center">
+                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Tickets meeting SLA</div>
+                                <div class="text-green-600 text-lg font-bold font-['Inter']">94%</div>
+                            </div>
+                            <div class="w-full h-2 mt-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="w-[94%] h-2 bg-green-500"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                        <div class="flex justify-between items-center">
+                            <div class="text-gray-900 text-base font-semibold font-['Inter']">Average Response Time</div>
+                            <div class="px-2 py-1 bg-teal-500/10 rounded-full text-teal-600 text-xs font-medium font-['Inter']">18 min</div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <div class="flex justify-center items-baseline">
+                                <div class="text-teal-500 text-3xl font-bold font-['Inter']">18</div>
+                                <div class="ml-1.5 text-gray-600 text-base font-normal font-['Inter']">minutes</div>
+                            </div>
+                            <div class="mt-2 flex justify-center items-center text-gray-600 text-xs font-normal font-['Inter']">
+                                <svg class="w-3 h-3 text-green-500 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                                    <path d="M4 0L8 4H0L4 0Z" transform="translate(0 2)"/>
+                                </svg>
+                                3 min faster than yesterday
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
+                        <div class="flex justify-between items-center">
+                            <div class="text-gray-900 text-base font-semibold font-['Inter']">Active Breaches</div>
+                            <div class="px-2 py-1 bg-red-500/10 rounded-full text-red-500 text-xs font-medium font-['Inter']">3 Active</div>
+                        </div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Critical</div>
+                                <div class="text-red-500 text-lg font-bold font-['Inter']">1</div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Warning</div>
+                                <div class="text-yellow-500 text-lg font-bold font-['Inter']">2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching functionality
+    const escalationTab = document.querySelector('.escalation-tab');
+    const holidayTab = document.querySelector('.holiday-tab');
+    const slaConfigSection = document.getElementById('slaConfigSection');
+    const escalationRulesSection = document.getElementById('escalationRulesSection');
+    const holidayCalendarSection = document.getElementById('holidayCalendarSection');
+    const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
+
+    if (escalationTab) {
+        escalationTab.addEventListener('click', function() {
+            // Update tab styling
+            document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
+            this.classList.add('text-sky-600', 'border-sky-600');
+            
+            // Show escalation section, hide others
+            slaConfigSection.classList.add('hidden');
+            escalationRulesSection.classList.remove('hidden');
+            holidayCalendarSection.classList.add('hidden');
+        });
+    }
+
+    if (holidayTab) {
+        holidayTab.addEventListener('click', function() {
+            // Update tab styling
+            document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
+            this.classList.add('text-sky-600', 'border-sky-600');
+            
+            // Show holiday section, hide others
+            slaConfigSection.classList.add('hidden');
+            escalationRulesSection.classList.add('hidden');
+            holidayCalendarSection.classList.remove('hidden');
+        });
+    }
+
+    // SLA Configuration Tab (default active)
+    document.querySelector('.py-2.px-1.text-center.text-sky-600').addEventListener('click', function() {
+        // Update tab styling
+        document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
+        this.classList.add('text-sky-600', 'border-sky-600');
+        
+        // Show SLA config section, hide others
+        slaConfigSection.classList.remove('hidden');
+        escalationRulesSection.classList.add('hidden');
+        holidayCalendarSection.classList.add('hidden');
+    });
+
+    // Add event listeners to highlight modified fields
+    document.querySelectorAll('.response-time-input, .resolution-time-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const originalValue = parseInt(this.dataset.originalValue);
+            const currentValue = parseInt(this.value);
+            const row = this.closest('.sla-config-row');
+            const statusIndicator = row.querySelector('.status-indicator');
+            
+            if (originalValue !== currentValue) {
+                this.classList.add('border-yellow-500', 'ring-2', 'ring-yellow-200');
+                if (statusIndicator && statusIndicator.textContent === 'Active') {
+                    statusIndicator.textContent = 'Modified';
+                    statusIndicator.classList.remove('bg-green-500/10', 'text-green-600');
+                    statusIndicator.classList.add('bg-yellow-500/10', 'text-yellow-600');
+                }
+            } else {
+                this.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
+                if (statusIndicator && statusIndicator.textContent === 'Modified') {
+                    statusIndicator.textContent = 'Active';
+                    statusIndicator.classList.remove('bg-yellow-500/10', 'text-yellow-600');
+                    statusIndicator.classList.add('bg-green-500/10', 'text-green-600');
+                }
+            }
+        });
+    });
+    
+    // Save SLA configuration with toast notifications
+    document.getElementById('saveSLAConfig').addEventListener('click', function() {
+        const saveButton = this;
+        const originalText = saveButton.querySelector('.text-white.text-base.font-medium').textContent;
+        const configRows = document.querySelectorAll('.sla-config-row');
+        const configs = [];
+        let hasChanges = false;
+        
+        configRows.forEach(row => {
+            const priority = row.dataset.priority;
+            const responseTimeInput = row.querySelector('.response-time-input');
+            const resolutionTimeInput = row.querySelector('.resolution-time-input');
+            
+            // Check if values have changed
+            const originalResponse = parseInt(responseTimeInput.dataset.originalValue);
+            const originalResolution = parseInt(resolutionTimeInput.dataset.originalValue);
+            const currentResponse = parseInt(responseTimeInput.value);
+            const currentResolution = parseInt(resolutionTimeInput.value);
+            
+            if (originalResponse !== currentResponse || originalResolution !== currentResolution) {
+                hasChanges = true;
+            }
+            
+            configs.push({
+                priority: priority,
+                response_time_minutes: currentResponse,
+                resolution_time_minutes: currentResolution
+            });
+        });
+        
+        if (!hasChanges) {
+            showToast('No changes to save', 'info');
+            return;
+        }
+        
+        // Show loading state
+        saveButton.disabled = true;
+        saveButton.querySelector('.text-white.text-base.font-medium').textContent = 'Saving...';
+        
+        // Send data to server
+        fetch('{% url "dashboard:api_sla_configuration_update" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({configs: configs})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update original values to reflect saved changes
+                configRows.forEach(row => {
+                    const responseTimeInput = row.querySelector('.response-time-input');
+                    const resolutionTimeInput = row.querySelector('.resolution-time-input');
+                    const statusIndicator = row.querySelector('.status-indicator');
+                    
+                    responseTimeInput.dataset.originalValue = responseTimeInput.value;
+                    resolutionTimeInput.dataset.originalValue = resolutionTimeInput.value;
+                    
+                    // Reset styling
+                    responseTimeInput.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
+                    resolutionTimeInput.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
+                    
+                    // Update status indicator
+                    if (statusIndicator && statusIndicator.textContent === 'Modified') {
+                        statusIndicator.textContent = 'Active';
+                        statusIndicator.classList.remove('bg-yellow-500/10', 'text-yellow-600');
+                        statusIndicator.classList.add('bg-green-500/10', 'text-green-600');
+                    }
+                });
+                showToast('SLA configurations updated successfully!', 'success');
+            } else {
+                showToast('Error updating SLA configurations: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while updating SLA configurations.', 'error');
+        })
+        .finally(() => {
+            // Reset button state
+            saveButton.disabled = false;
+            saveButton.querySelector('.text-white.text-base.font-medium').textContent = originalText;
+        });
+    });
+    
+    // Reset to defaults functionality
+    if (resetDefaultsBtn) {
+        resetDefaultsBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset all SLA configurations to default values?')) {
+                // Reset input values to defaults based on priority
+                document.querySelectorAll('.sla-config-row').forEach(row => {
+                    const priority = row.dataset.priority;
+                    const responseInput = row.querySelector('.response-time-input');
+                    const resolutionInput = row.querySelector('.resolution-time-input');
+                    
+                    // Set default values based on priority
+                    switch (priority) {
+                        case 'critical':
+                            responseInput.value = 5;
+                            resolutionInput.value = 5;
+                            break;
+                        case 'high':
+                            responseInput.value = 10;
+                            resolutionInput.value = 10;
+                            break;
+                        case 'normal':
+                            responseInput.value = 15;
+                            resolutionInput.value = 15;
+                            break;
+                        case 'low':
+                            responseInput.value = 20;
+                            resolutionInput.value = 20;
+                            break;
+                    }
+                    
+                    // Trigger input event to update styling
+                    responseInput.dispatchEvent(new Event('input'));
+                    resolutionInput.dispatchEvent(new Event('input'));
+                });
+                
+                showToast('SLA configurations reset to defaults', 'info');
+            }
+        });
+    }
+    
+    // Toast notification function
+    function showToast(message, type) {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        
+        // Set toast styles based on type
+        let bgColor, textColor, icon;
+        switch (type) {
+            case 'success':
+                bgColor = 'bg-green-500';
+                textColor = 'text-white';
+                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                break;
+            case 'error':
+                bgColor = 'bg-red-500';
+                textColor = 'text-white';
+                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+                break;
+            case 'info':
+            default:
+                bgColor = 'bg-blue-500';
+                textColor = 'text-white';
+                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        }
+        
+        toast.className = `flex items-center gap-2 ${bgColor} ${textColor} px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300`;
+        toast.innerHTML = `
+            ${icon}
+            <span class="font-medium">${message}</span>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto remove toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-full');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

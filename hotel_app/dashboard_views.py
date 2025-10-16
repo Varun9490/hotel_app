@@ -27,7 +27,7 @@ from hotel_app.models import (
     Department, Location, RequestType, Checklist,
     Complaint, BreakfastVoucher, Review, Guest,
     Voucher, VoucherScan, ServiceRequest, UserProfile, UserGroup, UserGroupMembership,
-    Notification, GymMember  # Add Notification model and GymMember
+    Notification, GymMember, SLAConfiguration  # Add SLAConfiguration model
 )
 
 # Import all forms from the local forms.py
@@ -55,7 +55,7 @@ def _role_to_flags(role: str):
     r = (role or "").strip().lower()
     if r in ("admin", "admins", "administrator", "superuser"):
         return True, True
-    if r in ("staff",):
+    if r in ("staff", "front desk", "front desk team"):
         return True, False
     # default user
     return False, False
@@ -1777,19 +1777,34 @@ def gym(request):
 
 def ticket_detail(request, ticket_id):
     """Render the Ticket Detail page."""
-
-
-def ticket_detail(request, ticket_id):
-    """Render the Ticket Detail page."""
-    from hotel_app.models import ServiceRequest, User
+    from hotel_app.models import ServiceRequest, User, AuditLog
     from django.utils import timezone
+    from django.db.models import Q
     
     # Get the service request
     service_request = get_object_or_404(ServiceRequest, id=ticket_id)
     
+    # Check SLA breaches to ensure status is up to date
+    service_request.check_sla_breaches()
+    
+    # Calculate SLA progress percentage
+    sla_progress_percent = 0
+    if service_request.created_at and service_request.sla_hours > 0:
+        # Calculate time taken so far or total time if completed
+        if service_request.completed_at:
+            time_taken = service_request.completed_at - service_request.created_at
+        else:
+            time_taken = timezone.now() - service_request.created_at
+        
+        # Calculate SLA percentage (time taken / total allowed time)
+        total_allowed_time = service_request.sla_hours * 3600  # Convert hours to seconds
+        if total_allowed_time > 0:
+            sla_progress_percent = min(100, int((time_taken.total_seconds() / total_allowed_time) * 100))
+    
     # Map priority to display values
     priority_mapping = {
-        'high': {'label': 'High', 'color': 'red-500'},
+        'critical': {'label': 'Critical', 'color': 'red-500'},
+        'high': {'label': 'High', 'color': 'orange-500'},
         'normal': {'label': 'Normal', 'color': 'sky-600'},
         'low': {'label': 'Low', 'color': 'gray-100'},
     }
@@ -1865,6 +1880,114 @@ def ticket_detail(request, ticket_id):
     # In a real implementation, this would come from a notification model
     notification_count = 3  # This will be replaced with dynamic count
     
+    # Get activity log for this ticket
+    activity_log = []
+    
+    # Get audit logs for this ticket
+    ticket_audit_logs = AuditLog.objects.filter(
+        model_name='ServiceRequest',
+        object_pk=str(service_request.pk)
+    ).order_by('-created_at')
+    
+    # Convert audit logs to activity log format
+    for log in ticket_audit_logs:
+        # Format the timestamp
+        time_ago = ""
+        if log.created_at:
+            # Calculate time difference
+            diff = timezone.now() - log.created_at
+            if diff.days > 0:
+                time_ago = f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
+            elif diff.seconds > 3600:
+                hours = diff.seconds // 3600
+                time_ago = f"{hours} hour{'s' if hours != 1 else ''} ago"
+            elif diff.seconds > 60:
+                minutes = diff.seconds // 60
+                time_ago = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+            else:
+                time_ago = "Just now"
+        
+        # Determine action description
+        action_desc = ""
+        actor_name = "System"
+        if log.actor:
+            actor_name = log.actor.get_full_name() or log.actor.username
+        
+        if log.action == 'create':
+            action_desc = "Ticket created"
+        elif log.action == 'update':
+            # Check what was updated
+            if log.changes:
+                if 'status' in log.changes:
+                    old_status = log.changes['status'][0] if isinstance(log.changes['status'], list) else log.changes['status']
+                    new_status = log.changes['status'][1] if isinstance(log.changes['status'], list) else log.changes['status']
+                    # Map status codes to display names
+                    old_label = status_mapping.get(old_status, {'label': old_status})['label']
+                    new_label = status_mapping.get(new_status, {'label': new_status})['label']
+                    action_desc = f"Status changed from {old_label} to {new_label}"
+                elif 'priority' in log.changes:
+                    old_priority = log.changes['priority'][0] if isinstance(log.changes['priority'], list) else log.changes['priority']
+                    new_priority = log.changes['priority'][1] if isinstance(log.changes['priority'], list) else log.changes['priority']
+                    # Map priority codes to display names
+                    old_label = priority_mapping.get(old_priority, {'label': old_priority})['label']
+                    new_label = priority_mapping.get(new_priority, {'label': new_priority})['label']
+                    action_desc = f"Priority changed from {old_label} to {new_label}"
+                elif 'assignee_user' in log.changes:
+                    old_assignee = log.changes['assignee_user'][0] if isinstance(log.changes['assignee_user'], list) else log.changes['assignee_user']
+                    new_assignee = log.changes['assignee_user'][1] if isinstance(log.changes['assignee_user'], list) else log.changes['assignee_user']
+                    if old_assignee and new_assignee:
+                        action_desc = "Ticket reassigned"
+                    elif new_assignee:
+                        action_desc = "Ticket assigned"
+                    else:
+                        action_desc = "Ticket unassigned"
+                elif 'notes' in log.changes:
+                    action_desc = "Internal comment added"
+                else:
+                    action_desc = "Ticket updated"
+            else:
+                action_desc = "Ticket updated"
+        elif log.action == 'delete':
+            action_desc = "Ticket deleted"
+        else:
+            action_desc = f"{log.action.capitalize()} action performed"
+        
+        activity_log.append({
+            'description': action_desc,
+            'actor': actor_name,
+            'time_ago': time_ago,
+            'timestamp': log.created_at
+        })
+    
+    # Add the ticket creation event if not already in logs
+    if service_request.created_at and not any(log.get('timestamp') == service_request.created_at for log in activity_log):
+        # Format the creation time
+        time_ago = ""
+        diff = timezone.now() - service_request.created_at
+        if diff.days > 0:
+            time_ago = f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            time_ago = f"{hours} hour{'s' if hours != 1 else ''} ago"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            time_ago = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+        else:
+            time_ago = "Just now"
+            
+        activity_log.append({
+            'description': 'Ticket created',
+            'actor': requester_name,
+            'time_ago': time_ago,
+            'timestamp': service_request.created_at
+        })
+    
+    # Sort activity log by timestamp (newest first)
+    activity_log.sort(key=lambda x: x['timestamp'] if x['timestamp'] else timezone.datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    
+    # Limit to last 10 activities
+    activity_log = activity_log[:10]
+    
     context = {
         'ticket': service_request,
         'ticket_priority_label': priority_data['label'],
@@ -1884,6 +2007,8 @@ def ticket_detail(request, ticket_id):
         'department_name': department_name,
         'created_time': created_time,
         'notification_count': notification_count,
+        'activity_log': activity_log,
+        'sla_progress_percent': sla_progress_percent
     }
     
     return render(request, 'dashboard/ticket_detail.html', context)
@@ -3045,6 +3170,32 @@ def user_create(request):
                 profile.enabled = True
                 profile.save()
 
+            # Assign user to the appropriate Django group based on role
+            # First, remove user from all groups
+            user.groups.clear()
+            
+            # Then add to the appropriate group based on role
+            role_mapping = {
+                'admin': 'Admins',
+                'admins': 'Admins',
+                'administrator': 'Admins',
+                'superuser': 'Admins',
+                'staff': 'Staff',
+                'front desk': 'Staff',
+                'front desk team': 'Staff',
+                'user': 'Users',
+                'users': 'Users'
+            }
+            
+            group_name = role_mapping.get(role.lower(), 'Users')
+            try:
+                group = Group.objects.get(name=group_name)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                # If the group doesn't exist, create it
+                group = Group.objects.create(name=group_name)
+                user.groups.add(group)
+
             # OPTIONAL: Attach to an existing group if one matches role or department (do not create new groups)
             candidate_group_names = []
             if role:
@@ -3209,6 +3360,7 @@ def user_update(request, user_id):
         title = request.POST.get('title', '').strip()
         department_id = request.POST.get('department', '').strip()
         is_active = request.POST.get('is_active', '0') == '1'
+        role = request.POST.get('role', '').strip()
 
         # Update user fields
         if username:
@@ -3216,6 +3368,12 @@ def user_update(request, user_id):
         if email:
             user.email = email
         user.is_active = is_active
+        
+        # Update staff and superuser flags based on role
+        is_staff, is_superuser = _role_to_flags(role)
+        user.is_staff = is_staff
+        user.is_superuser = is_superuser
+        
         user.save()
 
         # Update or create user profile
@@ -3233,6 +3391,33 @@ def user_update(request, user_id):
                 pass
         else:
             profile.department = None
+
+        # Handle role assignment to Django groups
+        if role:
+            # First, remove user from all groups
+            user.groups.clear()
+            
+            # Then add to the appropriate group based on role
+            role_mapping = {
+                'admin': 'Admins',
+                'admins': 'Admins',
+                'administrator': 'Admins',
+                'superuser': 'Admins',
+                'staff': 'Staff',
+                'front desk': 'Staff',
+                'front desk team': 'Staff',
+                'user': 'Users',
+                'users': 'Users'
+            }
+            
+            group_name = role_mapping.get(role.lower(), 'Users')
+            try:
+                group = Group.objects.get(name=group_name)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                # If the group doesn't exist, create it
+                group = Group.objects.create(name=group_name)
+                user.groups.add(group)
 
         # Handle profile picture upload
         profile_picture = request.FILES.get('profile_picture') if hasattr(request, 'FILES') else None
@@ -3319,6 +3504,15 @@ def manage_user_detail(request, user_id):
     if profile and getattr(profile, 'avatar_url', None):
         avatar_url = profile.avatar_url
 
+    # Determine user role based on groups
+    user_role = "User"
+    if user.is_superuser:
+        user_role = "Admin"
+    elif user.is_staff and groups.filter(name="Staff").exists():
+        user_role = "Staff"
+    elif groups.filter(name="Users").exists():
+        user_role = "User"
+
     context = {
         'user': user,
         'profile': profile,
@@ -3329,6 +3523,7 @@ def manage_user_detail(request, user_id):
         'messages_sent': messages_sent,
         'avg_rating': round(avg_rating, 1) if avg_rating else 0,
         'response_rate': int(response_rate * 100) if isinstance(response_rate, float) else response_rate,
+        'user_role': user_role,
     }
     # Build a simple mapping of group name -> permission names to render in template
     try:
@@ -4267,10 +4462,10 @@ def analytics_dashboard(request):
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def create_ticket_api(request):
-    """API endpoint to create a new ticket."""
+    """API endpoint to create a new ticket with department routing."""
     if request.method == 'POST':
         try:
-            from hotel_app.models import ServiceRequest, RequestType, Location, User
+            from hotel_app.models import ServiceRequest, RequestType, Location, Department, User
             import json
             
             data = json.loads(request.body.decode('utf-8'))
@@ -4733,6 +4928,91 @@ def share_voucher_whatsapp(request, voucher_id):
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def guest_qr_codes(request):
     """Display all guest QR codes in a grid layout with filters."""
+
+
+# ---- SLA & Escalations ----
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def sla_escalations(request):
+    """SLA & Escalations dashboard."""
+    # Get current SLA configurations
+    sla_configs = SLAConfiguration.objects.all().order_by('priority')
+    
+    context = {
+        'active_tab': 'sla_escalations',
+        'title': 'SLA & Escalations',
+        'subtitle': 'Define service level agreements and escalation workflows for guest requests',
+        'sla_configs': sla_configs,
+    }
+    return render(request, 'dashboard/sla_escalations.html', context)
+
+
+@require_permission([ADMINS_GROUP])
+def sla_configuration(request):
+    """SLA Configuration page."""
+    sla_configs = SLAConfiguration.objects.all().order_by('priority')
+    
+    context = {
+        'active_tab': 'sla_configuration',
+        'title': 'SLA Configuration',
+        'subtitle': 'Configure default SLA times for different priority levels',
+        'sla_configs': sla_configs,
+    }
+    return render(request, 'dashboard/sla_configuration.html', context)
+
+
+@require_permission([ADMINS_GROUP])
+def api_sla_configuration_update(request):
+    """API endpoint to update SLA configurations."""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body.decode('utf-8'))
+            
+            # Update each SLA configuration
+            for config_data in data.get('configs', []):
+                priority = config_data.get('priority')
+                response_time = config_data.get('response_time_minutes')
+                resolution_time = config_data.get('resolution_time_minutes')
+                
+                if priority and response_time is not None and resolution_time is not None:
+                    SLAConfiguration.objects.update_or_create(
+                        priority=priority,
+                        defaults={
+                            'response_time_minutes': response_time,
+                            'resolution_time_minutes': resolution_time
+                        }
+                    )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'SLA configurations updated successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    elif request.method == 'GET':
+        # Return current SLA configurations
+        try:
+            configs = SLAConfiguration.objects.all().order_by('priority')
+            config_data = []
+            for config in configs:
+                config_data.append({
+                    'priority': config.priority,
+                    'response_time_minutes': config.response_time_minutes,
+                    'resolution_time_minutes': config.resolution_time_minutes
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'configs': config_data
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
     search = request.GET.get('search', '')
     filter_status = request.GET.get('filter', 'all')
     
@@ -4970,7 +5250,7 @@ def create_ticket_api(request):
     """API endpoint to create a new ticket with department routing."""
     if request.method == 'POST':
         try:
-            from hotel_app.models import ServiceRequest, RequestType, Location, Department, User
+            from hotel_app.models import ServiceRequest, RequestType, Location, Department, User, SLAConfiguration
             import json
             
             data = json.loads(request.body.decode('utf-8'))
@@ -5007,6 +5287,7 @@ def create_ticket_api(request):
             
             # Map priority to model values
             priority_mapping = {
+                'Critical': 'critical',
                 'High': 'high',
                 'Medium': 'normal',
                 'Normal': 'normal',
@@ -5014,21 +5295,7 @@ def create_ticket_api(request):
             }
             model_priority = priority_mapping.get(priority, 'normal')
             
-            # Set SLA hours based on priority
-            sla_hours = 24  # Default SLA
-            response_sla_hours = 1  # Default response SLA (1 hour)
-            
-            if model_priority == 'high':
-                sla_hours = 2  # 2 hours for high priority
-                response_sla_hours = 0.25  # 15 minutes for high priority
-            elif model_priority == 'normal':
-                sla_hours = 24  # 24 hours for normal priority
-                response_sla_hours = 1  # 1 hour for normal priority
-            elif model_priority == 'low':
-                sla_hours = 72  # 72 hours for low priority
-                response_sla_hours = 4  # 4 hours for low priority
-            
-            # Create service request
+            # Create service request (SLA times will be set automatically in the model's save method)
             service_request = ServiceRequest.objects.create(
                 request_type=request_type,
                 location=location,
@@ -5036,9 +5303,7 @@ def create_ticket_api(request):
                 department=department,
                 priority=model_priority,
                 status='pending',
-                notes=description,
-                sla_hours=sla_hours,
-                response_sla_hours=response_sla_hours
+                notes=description
             )
             
             # Notify department staff

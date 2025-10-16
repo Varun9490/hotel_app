@@ -827,10 +827,21 @@
           });
         }
         if (roleSelect) {
+          // Clear existing options
           roleSelect.innerHTML = '<option value="">Select Role</option>';
-          const roles = data.roles || ['Admins', 'Staff', 'Users'];
+          
+          // Add our predefined roles
+          const roles = [
+            { value: 'admin', text: 'Admin' },
+            { value: 'staff', text: 'Staff' },
+            { value: 'user', text: 'User' }
+          ];
+          
           roles.forEach(role => {
-            roleSelect.add(new Option(role, role));
+            const option = document.createElement('option');
+            option.value = role.value;
+            option.text = role.text;
+            roleSelect.add(option);
           });
         }
       })
