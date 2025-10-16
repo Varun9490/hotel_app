@@ -41,6 +41,8 @@
       </a>
     </div>
 
+    <!-- Management Section - Visible to Admins and Staff only -->
+    {% if request.user.userprofile.is_admin or request.user.userprofile.is_staff_member %}
     <div>
       <div
         class="px-3 py-1 text-gray-400 text-xs font-semibold tracking-tight"
@@ -152,7 +154,10 @@
         </a>
       </div>
     </div>
+    {% endif %}
 
+    <!-- Analytics Section - Visible to Admins and Staff only -->
+    {% if request.user.userprofile.is_admin or request.user.userprofile.is_staff_member %}
     <div>
       <div
         class="px-3 py-1 text-gray-400 text-xs font-semibold tracking-tight"
@@ -195,7 +200,31 @@
         </a>
       </div>
     </div>
+    {% endif %}
 
+    <!-- My Tickets Section - Visible to all users -->
+    {% if not request.user.userprofile.is_admin and not request.user.userprofile.is_staff_member %}
+    <div>
+      <div
+        class="px-3 py-1 text-gray-400 text-xs font-semibold tracking-tight"
+      >
+        My Tickets
+      </div>
+      <div class="space-y-1">
+        <a
+          href="{% url 'dashboard:my_tickets' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:my_tickets' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
+        >
+          <img
+            src="{% if request.resolver_match.view_name == 'dashboard:my_tickets' %}{% static 'images/sidebar/configure_requests_highlighted.svg' %}{% else %}{% static 'images/sidebar/configure_request.svg' %}{% endif %}"
+            alt="My Tickets Icon"
+            class="w-5 h-5"
+          />
+          <span class="font-medium">My Tickets</span>
+        </a>
+      </div>
+    </div>
+    {% endif %}
 
   </nav>
 

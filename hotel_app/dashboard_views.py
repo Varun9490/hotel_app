@@ -178,6 +178,29 @@ def require_permission(group_names):
     return decorator
 
 
+def require_role(roles):
+    """Decorator to require specific roles for a view."""
+    if not isinstance(roles, (list, tuple)):
+        roles = [roles]
+    
+    def decorator(view_func):
+        @login_required
+        def wrapper(request, *args, **kwargs):
+            # Check if user has the required role
+            if hasattr(request.user, 'userprofile'):
+                user_role = request.user.userprofile.role
+                if user_role in roles or request.user.is_superuser:
+                    return view_func(request, *args, **kwargs)
+            
+            # Fallback to group-based permissions for backward compatibility
+            if request.user.is_superuser or any(user_in_group(request.user, role) for role in roles):
+                return view_func(request, *args, **kwargs)
+                
+            raise PermissionDenied("You don't have permission to access this page.")
+        return wrapper
+    return decorator
+
+
 # ---- Notification Examples ----
 # These are examples of how notifications would be created in real scenarios
 
@@ -236,6 +259,7 @@ def create_service_request_notification(service_request):
 
 # ---- Dashboard Home ----
 @login_required
+@require_role(['admin', 'staff', 'user'])
 def dashboard_main(request):
     """Main dashboard view with key metrics."""
     total_users = User.objects.count()
@@ -723,6 +747,7 @@ def dashboard2_view(request):
 
 
 @login_required
+@require_role(['admin', 'staff'])
 def manage_users(request):
     """Render the Manage Users / User Groups screen on the right panel.
 
@@ -885,6 +910,7 @@ def dashboard_users(request):
     return render(request, "dashboard/users.html", context)
 
 @login_required
+@require_role(['admin', 'staff'])
 def manage_users_all(request):
     # Provide users queryset and related data to the template so the users table
     # can render real data server-side and be used by the client-side poller.
@@ -1531,13 +1557,12 @@ def api_reset_user_password(request, user_id):
         logger = logging.getLogger(__name__)
         logger.error(f"Error resetting password for user ID {user_id}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
-
-
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff'])
 def tickets(request):
     """Render the Tickets Management page."""
     from hotel_app.models import ServiceRequest, RequestType, Department, User
+
     from django.db.models import Count, Q
     from datetime import timedelta
     from django.utils import timezone
@@ -2015,6 +2040,7 @@ def ticket_detail(request, ticket_id):
 
 
 @login_required
+@require_role(['admin', 'staff', 'user'])
 def my_tickets(request):
     """Render the My Tickets page with dynamic status cards."""
     from django.db.models import Q, Count
@@ -4278,6 +4304,7 @@ def voucher_analytics(request):
 
 
 @login_required
+@require_role(['admin', 'staff'])
 def analytics_dashboard(request):
     from django.db.models import Avg, Count
     from datetime import datetime, timedelta
@@ -5420,6 +5447,7 @@ def integrations(request):
 
 
 @login_required
+@require_role(['admin', 'staff'])
 def performance_dashboard(request):
     """Render the Performance Dashboard page with dynamic data."""
     from django.db.models import Count, Avg, Q
