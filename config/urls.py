@@ -1,9 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
-from hotel_app import views
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
-from hotel_app.views import logout_view, signup_view  # custom logout view
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
@@ -11,24 +9,13 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
-
     
     path('api/', include('hotel_app.api_urls')),  # Updated API URL
     path('api/notification/', include('hotel_app.api_notification_urls')),  # Notification API URL
-  
-
-    # Screens
-    path('master-user/', views.MasterUserView.as_view(), name='master_user'),
-    path('master-location/', views.MasterLocationView.as_view(), name='master_location'),
-    path('hotel-dashboard/', views.HotelDashboardView.as_view(), name='hotel_dashboard'),
-    # path('breakfast-vouchers/', views.BreakfastVoucherView.as_view(), name='breakfast_vouchers'),
-    path('api/bulk-delete-users/', views.bulk_delete_users, name='bulk_delete_users'),
-    path('export-users/', views.export_users_csv, name='export_users'),
-
+    
     # Auth
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
-    path('logout/', logout_view, name='logout'),
-    path("signup/", signup_view, name="signup"),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     # Password Reset
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='auth/password_reset.html'), name='password_reset'),
@@ -38,6 +25,9 @@ urlpatterns = [
 
     # Dashboard
     path('dashboard/', include('hotel_app.dashboard_urls', namespace='dashboard')),
+    
+    # Public feedback form
+    path('', include('hotel_app.urls')),
 
 ]
 

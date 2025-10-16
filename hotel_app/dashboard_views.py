@@ -5128,13 +5128,54 @@ def feedback_inbox(request):
     
     # Handle form submission for new feedback
     if request.method == 'POST':
-        form = FeedbackForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Feedback added successfully!')
-            return redirect('dashboard:feedback_inbox')
+        # Get form data
+        guest_name = request.POST.get('guest_name', '')
+        room_number = request.POST.get('room_number', '')
+        overall_rating = request.POST.get('overall_rating', 0)
+        cleanliness_rating = request.POST.get('cleanliness_rating', 0)
+        staff_rating = request.POST.get('staff_rating', 0)
+        recommend = request.POST.get('recommend', '')
+        comment = request.POST.get('comment', '')
+        
+        # Validate required fields
+        if not guest_name or not room_number or not overall_rating:
+            messages.error(request, 'Please fill in all required fields.')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            try:
+                # Create or get guest
+                guest, created = Guest.objects.get_or_create(
+                    room_number=room_number,
+                    defaults={'full_name': guest_name}
+                )
+                
+                # If guest exists but name is different, update it
+                if not created and guest.full_name != guest_name:
+                    guest.full_name = guest_name
+                    guest.save()
+                
+                # Format comment with all ratings
+                full_comment = comment
+                if full_comment:
+                    full_comment += "\n\n"
+                else:
+                    full_comment = ""
+                
+                full_comment += f"Overall Rating: {overall_rating}/5\n"
+                full_comment += f"Cleanliness Rating: {cleanliness_rating}/5\n"
+                full_comment += f"Staff Service Rating: {staff_rating}/5\n"
+                full_comment += f"Recommendation: {recommend}"
+                
+                # Create review
+                Review.objects.create(
+                    guest=guest,
+                    rating=overall_rating,
+                    comment=full_comment
+                )
+                
+                messages.success(request, 'Feedback added successfully!')
+                return redirect('dashboard:feedback_inbox')
+            except Exception as e:
+                messages.error(request, f'Error saving feedback: {str(e)}')
     else:
         form = FeedbackForm()
     
