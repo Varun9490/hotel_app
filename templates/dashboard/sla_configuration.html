@@ -2,351 +2,709 @@
 {% load static %}
 
 {% block content %}
-<div class="w-full max-w-[1184px] mx-auto bg-gray-50 font-['Inter']">
-    <div class="w-full relative bg-transparent">
-        
-        <div class="w-full h-20 bg-white border-b border-gray-200">
-            <div class="w-full h-full max-w-[1136px] mx-auto flex justify-between items-center">
-                <div>
-                    <h1 class="text-gray-900 text-2xl font-bold font-['Inter']">SLA Configuration</h1>
-                    <p class="text-gray-600 text-sm font-normal font-['Inter'] mt-1">Configure default SLA times for different priority levels</p>
+<div class="max-w-[1184px] mx-auto">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">SLA Configuration</h1>
+        <p class="text-gray-600 mt-1">Configure default SLA times for different priority levels and departments</p>
+    </div>
+
+    <!-- Tabs -->
+    <div id="tabs" class="flex border-b border-gray-200 mb-6">
+        <a href="#generalSlaSection" class="tab-link active text-sky-600 border-sky-600 py-3 px-4 text-sm font-medium border-b-2">General SLA</a>
+        <a href="#departmentSlaSection" class="tab-link text-gray-600 border-transparent py-3 px-4 text-sm font-medium border-b-2 hover:text-gray-900 hover:border-gray-300">Department SLA</a>
+        <a href="#departmentTaskListsSection" class="tab-link text-gray-600 border-transparent py-3 px-4 text-sm font-medium border-b-2 hover:text-gray-900 hover:border-gray-300">Department Task Lists</a>
+        <a href="#escalationRulesSection" class="tab-link text-gray-600 border-transparent py-3 px-4 text-sm font-medium border-b-2 hover:text-gray-900 hover:border-gray-300">Escalation Rules</a>
+        <a href="#holidayCalendarSection" class="tab-link text-gray-600 border-transparent py-3 px-4 text-sm font-medium border-b-2 hover:text-gray-900 hover:border-gray-300">Holiday Calendar</a>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- General SLA Configuration Section -->
+    <div id="generalSlaSection" class="tab-content bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-sky-100 rounded-lg flex justify-center items-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
-                
-                <div class="flex items-center gap-4">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <img class="w-4 h-4" src="{% static 'images/sla/search.svg' %}" alt="Search">
-                        </div>
-                        <input type="text" placeholder="Search SLA rules..." class="w-64 h-10 bg-white rounded-lg border border-gray-200 pl-9 text-gray-900 placeholder-gray-400 text-base font-normal focus:ring-sky-500 focus:border-sky-500">
-                    </div>
-                    <button id="saveSLAConfig" class="w-40 h-10 bg-sky-600 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-sky-700 transition-colors">
-                        <img class="w-3.5 h-3.5" src="{% static 'images/sla/save.svg' %}" alt="Save">
-                        <div class="text-white text-base font-medium font-['Inter']">Save Changes</div>
+                <h2 class="text-gray-900 text-lg font-semibold">General SLA Configuration</h2>
+            </div>
+            <button id="saveSLAConfig" class="flex items-center gap-2 h-9 px-4 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-medium">
+                <span>Save Changes</span>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resolution Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for config in sla_configs %}
+                    <tr class="sla-config-row" data-priority="{{ config.priority }}">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-{{ config.priority }}">
+                                {{ config.get_priority_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 response-time-input" 
+                                   value="{{ config.response_time_minutes }}" 
+                                   data-original-value="{{ config.response_time_minutes }}">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resolution-time-input" 
+                                   value="{{ config.resolution_time_minutes }}" 
+                                   data-original-value="{{ config.resolution_time_minutes }}">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-500 example-text">
+                            Respond: {{ config.response_time_minutes }}m, Resolve: {{ config.resolution_time_minutes }}m
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="status-indicator px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button id="resetDefaultsBtn" class="text-sm text-gray-600 hover:text-gray-900 underline">
+                Reset to Default Values
+            </button>
+        </div>
+    </div>
+
+    <!-- Department SLA Configuration Section -->
+    <div id="departmentSlaSection" class="tab-content hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-purple-100 rounded-lg flex justify-center items-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <h2 class="text-gray-900 text-lg font-semibold">Department SLA Configuration</h2>
+            </div>
+            <button id="addDepartmentSlaBtn" class="flex items-center gap-2 h-9 px-4 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Add Configuration
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <input type="text" id="searchInput" value="{{ search_query }}" placeholder="Search departments or requests..." class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select id="departmentFilter" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.name }}" {% if department_filter == dept.name %}selected{% endif %}>{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select id="priorityFilter" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="">All Priorities</option>
+                        <option value="critical" {% if priority_filter == 'critical' %}selected{% endif %}>Critical</option>
+                        <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
+                        <option value="normal" {% if priority_filter == 'normal' %}selected{% endif %}>Normal</option>
+                        <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="applyFilters" class="w-full h-9 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors">
+                        Apply Filters
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="w-full max-w-[1136px] mx-auto mt-6">
-            <div class="border-b border-gray-200">
-                <div class="inline-flex justify-start items-start gap-8">
-                    <div class="py-2 px-1 text-center text-sky-600 text-sm font-medium font-['Inter'] border-b-2 border-sky-600 cursor-pointer">SLA Configuration</div>
-                    <div class="py-2 px-1 text-center text-gray-600 text-sm font-medium font-['Inter'] border-b-2 border-transparent hover:text-gray-800 cursor-pointer escalation-tab">Escalation Rules</div>
-                    <div class="py-2 px-1 text-center text-gray-600 text-sm font-medium font-['Inter'] border-b-2 border-transparent hover:text-gray-800 cursor-pointer holiday-tab">Holiday Calendar</div>
+        <!-- Department SLA Configurations Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resolution Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="departmentSlaConfigContainer" class="bg-white divide-y divide-gray-200">
+                    {% for config in department_sla_configs %}
+                    <tr class="department-sla-row" data-department-id="{{ config.department.id }}" data-request-type-id="{{ config.request_type.id }}" data-priority="{{ config.priority }}">
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">
+                            {{ config.department.name }}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800">
+                            {{ config.request_type.name }}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-{{ config.priority }}">
+                                {{ config.get_priority_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 department-response-time-input" 
+                                   value="{{ config.response_time_minutes }}" 
+                                   data-original-value="{{ config.response_time_minutes }}">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 department-resolution-time-input" 
+                                   value="{{ config.resolution_time_minutes }}" 
+                                   data-original-value="{{ config.resolution_time_minutes }}">
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-500 department-example-text">
+                            Respond: {{ config.response_time_minutes }}m, Resolve: {{ config.resolution_time_minutes }}m
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <button class="text-red-600 hover:text-red-800 delete-department-sla-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if paginator.num_pages > 1 %}
+        <div class="mt-6 flex justify-center">
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">Previous</a>
+                {% else %}
+                    <span class="disabled">&laquo; First</span>
+                    <span class="disabled">Previous</span>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="current">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">Next</a>
+                    <a href="?page={{ paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">Last &raquo;</a>
+                {% else %}
+                    <span class="disabled">Next</span>
+                    <span class="disabled">Last &raquo;</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Add new configuration form (hidden by default) -->
+        <div id="addDepartmentSlaForm" class="mt-6 bg-gray-50 rounded-lg p-4 hidden transition-all duration-300">
+            <h3 class="text-gray-900 font-medium mb-4">Add New Department SLA Configuration</h3>
+            <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select id="newDepartmentSelect" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="">Select Department</option>
+                        {% for department in departments %}
+                        <option value="{{ department.id }}">{{ department.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
+                    <select id="newRequestTypeSelect" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="">Select Request Type</option>
+                        {% for request_type in request_types %}
+                        <option value="{{ request_type.id }}">{{ request_type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select id="newPrioritySelect" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="">Select Priority</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="normal">Normal</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Response Time (Min)</label>
+                    <input type="number" min="1" id="newResponseTimeInput" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Minutes">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Resolution Time (Min)</label>
+                    <input type="number" min="1" id="newResolutionTimeInput" class="w-full h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Minutes">
+                </div>
+                <div class="flex items-end">
+                    <button id="saveNewDepartmentSlaBtn" class="w-full h-9 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors">
+                        Save
+                    </button>
+                </div>
+                <div class="flex items-end">
+                    <button id="cancelNewDepartmentSlaBtn" class="w-full h-9 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">
+                        Cancel
+                    </button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Toast Notification Container -->
-            <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
-
-            <div class="mt-6 space-y-6">
-                <!-- SLA Configuration Section -->
-                <div id="slaConfigSection" class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-sky-600/10 rounded-lg flex justify-center items-center">
-                                <img src="{% static 'images/sla/timer.svg' %}" class="w-4 h-4" alt="Timer">
-                            </div>
-                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Priority Level SLA Configuration</h2>
-                        </div>
-                        <div id="resetDefaultsBtn" class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Reset to Defaults</div>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <div class="w-full">
-                            <div class="flex bg-gray-50 rounded-t-lg border-b border-gray-200 text-gray-900 text-sm font-semibold font-['Inter']">
-                                <div class="w-[236px] flex items-center px-4 py-3">Priority Level</div>
-                                <div class="w-[193px] flex items-center px-4 py-3">Response Time (Minutes)</div>
-                                <div class="w-[210px] flex items-center px-4 py-3">Resolution Time (Minutes)</div>
-                                <div class="w-[251px] flex items-center px-4 py-3">Example</div>
-                                <div class="w-[196px] flex items-center px-4 py-3">Status</div>
-                            </div>
-                            <div class="text-sm font-normal text-gray-600 font-['Inter']" id="slaConfigContainer">
-                                {% for config in sla_configs %}
-                                <div class="flex items-center border-b border-gray-200 sla-config-row" data-priority="{{ config.priority }}">
-                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
-                                        {% if config.priority == 'critical' %}
-                                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                                        Critical
-                                        {% elif config.priority == 'high' %}
-                                        <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-                                        High
-                                        {% elif config.priority == 'normal' %}
-                                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                        Normal
-                                        {% elif config.priority == 'low' %}
-                                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                        Low
-                                        {% endif %}
-                                    </div>
-                                    <div class="w-[193px] px-4 py-3">
-                                        <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 response-time-input" value="{{ config.response_time_minutes }}" data-original-value="{{ config.response_time_minutes }}">
-                                    </div>
-                                    <div class="w-[210px] px-4 py-3">
-                                        <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 resolution-time-input" value="{{ config.resolution_time_minutes }}" data-original-value="{{ config.resolution_time_minutes }}">
-                                    </div>
-                                    <div class="w-[251px] px-4 py-3">
-                                        <div class="text-gray-600 text-sm">Respond within {{ config.response_time_minutes }} min, resolve within {{ config.resolution_time_minutes }} min</div>
-                                    </div>
-                                    <div class="w-[196px] px-4 py-3">
-                                        <div class="px-2 py-1 bg-green-500/10 rounded-full text-green-600 text-xs font-medium font-['Inter'] status-indicator">Active</div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
+    <!-- Department Task Lists Section -->
+    <div id="departmentTaskListsSection" class="tab-content hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-teal-100 rounded-lg flex justify-center items-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                 </div>
-
-                <!-- Escalation Rules Section (Hidden by default) -->
-                <div id="escalationRulesSection" class="hidden bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-fuchsia-700/10 rounded-lg flex justify-center items-center">
-                                <img src="{% static 'images/sla/matrix.svg' %}" class="w-4 h-4" alt="Matrix">
-                            </div>
-                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Multi-Level Escalation Matrix</h2>
-                        </div>
-                        <div class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Edit Matrix</div>
-                    </div>
-                    <div class="mt-6">
-                        <div class="w-full">
-                            <div class="flex bg-gray-50 rounded-t-lg border-b border-gray-200 text-gray-900 text-sm font-semibold font-['Inter']">
-                                <div class="w-[236px] flex items-center px-4 py-3">Request Type</div>
-                                <div class="w-[193px] flex items-center px-4 py-3">Level 1 (Owner)</div>
-                                <div class="w-[210px] flex items-center px-4 py-3">Level 2 (Lead)</div>
-                                <div class="w-[251px] flex items-center px-4 py-3">Level 3 (Manager)</div>
-                                <div class="w-[196px] flex items-center px-4 py-3">Level 4 (Admin)</div>
-                            </div>
-                            <div class="text-sm font-normal text-gray-600 font-['Inter']">
-                                <div class="flex items-center border-b border-gray-200">
-                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
-                                        <img src="{% static 'images/sla/housekeeping.svg' %}" class="w-4 h-4" alt="Housekeeping">Housekeeping
-                                    </div>
-                                    <div class="w-[193px] px-4 py-3">Assigned Staff</div>
-                                    <div class="w-[210px] px-4 py-3">Housekeeping Lead</div>
-                                    <div class="w-[251px] px-4 py-3">Operations Manager</div>
-                                    <div class="w-[196px] px-4 py-3">General Manager</div>
-                                </div>
-                                <div class="flex items-center border-b border-gray-200">
-                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
-                                        <img src="{% static 'images/sla/maintainence.svg' %}" class="w-4 h-4" alt="Maintenance">Maintenance
-                                    </div>
-                                    <div class="w-[193px] px-4 py-3">Technician</div>
-                                    <div class="w-[210px] px-4 py-3">Maintenance Lead</div>
-                                    <div class="w-[251px] px-4 py-3">Engineering Manager</div>
-                                    <div class="w-[196px] px-4 py-3">General Manager</div>
-                                </div>
-                                <div class="flex items-center border-b border-gray-200">
-                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
-                                        <img src="{% static 'images/sla/concierge.svg' %}" class="w-4 h-4" alt="Concierge">Concierge
-                                    </div>
-                                    <div class="w-[193px] px-4 py-3">Concierge Staff</div>
-                                    <div class="w-[210px] px-4 py-3">Concierge Lead</div>
-                                    <div class="w-[251px] px-4 py-3">Guest Services Manager</div>
-                                    <div class="w-[196px] px-4 py-3">General Manager</div>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-[236px] flex items-center px-4 py-3 gap-2 text-black font-medium text-base">
-                                        <img src="{% static 'images/sla/food_beverage.svg' %}" class="w-3.5 h-3.5" alt="Food & Beverage">Food & Beverage
-                                    </div>
-                                    <div class="w-[193px] px-4 py-3">F&B Staff</div>
-                                    <div class="w-[210px] px-4 py-3">F&B Supervisor</div>
-                                    <div class="w-[251px] px-4 py-3">F&B Manager</div>
-                                    <div class="w-[196px] px-4 py-3">General Manager</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Holiday Calendar Section (Hidden by default) -->
-                <div id="holidayCalendarSection" class="hidden bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-green-600/10 rounded-lg flex justify-center items-center">
-                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Holiday Calendar</h2>
-                        </div>
-                        <div class="text-sky-600 text-sm font-medium font-['Inter'] cursor-pointer hover:underline">Add Holiday</div>
-                    </div>
-                    <div class="mt-6">
-                        <div class="text-gray-600 text-center py-12">
-                            <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <p class="mt-4 text-gray-500">No holidays configured yet</p>
-                            <p class="mt-2 text-sm text-gray-400">Add holidays to adjust SLA calculations automatically</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex gap-6 pb-12">
-                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                        <div class="flex justify-between items-center">
-                            <div class="text-gray-900 text-base font-semibold font-['Inter']">SLA Compliance Rate</div>
-                            <div class="px-2 py-1 bg-green-500/10 rounded-full text-green-600 text-xs font-medium font-['Inter']">94%</div>
-                        </div>
-                        <div class="mt-5">
-                            <div class="flex justify-between items-center">
-                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Tickets meeting SLA</div>
-                                <div class="text-green-600 text-lg font-bold font-['Inter']">94%</div>
-                            </div>
-                            <div class="w-full h-2 mt-3 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="w-[94%] h-2 bg-green-500"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                        <div class="flex justify-between items-center">
-                            <div class="text-gray-900 text-base font-semibold font-['Inter']">Average Response Time</div>
-                            <div class="px-2 py-1 bg-teal-500/10 rounded-full text-teal-600 text-xs font-medium font-['Inter']">18 min</div>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <div class="flex justify-center items-baseline">
-                                <div class="text-teal-500 text-3xl font-bold font-['Inter']">18</div>
-                                <div class="ml-1.5 text-gray-600 text-base font-normal font-['Inter']">minutes</div>
-                            </div>
-                            <div class="mt-2 flex justify-center items-center text-gray-600 text-xs font-normal font-['Inter']">
-                                <svg class="w-3 h-3 text-green-500 mr-1" fill="currentColor" viewBox="0 0 8 8">
-                                    <path d="M4 0L8 4H0L4 0Z" transform="translate(0 2)"/>
-                                </svg>
-                                3 min faster than yesterday
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex-1 h-40 bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-gray-200 p-6">
-                        <div class="flex justify-between items-center">
-                            <div class="text-gray-900 text-base font-semibold font-['Inter']">Active Breaches</div>
-                            <div class="px-2 py-1 bg-red-500/10 rounded-full text-red-500 text-xs font-medium font-['Inter']">3 Active</div>
-                        </div>
-                        <div class="mt-4 space-y-3">
-                            <div class="flex justify-between items-center">
-                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Critical</div>
-                                <div class="text-red-500 text-lg font-bold font-['Inter']">1</div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <div class="text-gray-600 text-sm font-normal font-['Inter']">Warning</div>
-                                <div class="text-yellow-500 text-lg font-bold font-['Inter']">2</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
+                <h2 class="text-gray-900 text-lg font-semibold">Department Task Lists</h2>
+            </div>
+            <div class="flex gap-2">
+                <button id="refreshTaskListsBtn" class="flex items-center gap-2 h-9 px-4 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh
+                </button>
             </div>
         </div>
 
+        <!-- Department Task Lists Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tasks</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In Progress</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA Compliance</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Response Time</th>
+                    </tr>
+                </thead>
+                <tbody id="departmentTaskListsContainer" class="bg-white divide-y divide-gray-200">
+                    <!-- Task list data will be loaded dynamically -->
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                <p>Click "Refresh" to load department task lists</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Escalation Rules Section -->
+    <div id="escalationRulesSection" class="tab-content hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-fuchsia-100 rounded-lg flex justify-center items-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h2 class="text-gray-900 text-lg font-semibold">Multi-Level Escalation Matrix</h2>
+            </div>
+            <button id="editEscalationMatrixBtn" class="text-sky-600 text-sm font-medium hover:underline flex-shrink-0">Edit Matrix</button>
+        </div>
+        
+        <!-- Escalation Matrix Content -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level 1</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level 2</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level 3</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level 4</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-critical">Critical</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">5 min → Department Head</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">15 min → Manager</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">30 min → Director</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">1 hr → VP Operations</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-high">High</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">10 min → Supervisor</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">30 min → Department Head</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">1 hr → Manager</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">2 hrs → Director</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-normal">Normal</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">15 min → Team Lead</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">1 hr → Supervisor</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">2 hrs → Department Head</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">4 hrs → Manager</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="priority-badge priority-low">Low</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">30 min → Staff Member</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">2 hrs → Team Lead</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">4 hrs → Supervisor</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">8 hrs → Department Head</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-6 bg-gray-50 rounded-lg p-4">
+            <h3 class="font-semibold text-gray-900 mb-2">Escalation Rules</h3>
+            <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                <li>Escalation occurs automatically when SLA response or resolution time is breached</li>
+                <li>Each escalation level notifies the next level of management</li>
+                <li>Escalation notifications are sent via email and in-app alerts</li>
+                <li>Managers can manually escalate tickets at any time</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Holiday Calendar Section -->
+    <div id="holidayCalendarSection" class="tab-content hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex justify-center items-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <h2 class="text-gray-900 text-lg font-semibold">Holiday Calendar</h2>
+            </div>
+            <button id="addHolidayBtn" class="text-sky-600 text-sm font-medium hover:underline flex-shrink-0">Add Holiday</button>
+        </div>
+        
+        <!-- Holiday Calendar Content -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Holiday Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Affected SLAs</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">Jan 1, 2024</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">New Year's Day</td>
+                        <td class="px-4 py-3 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Public</span></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">All SLAs extended by 24h</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <button class="text-red-600 hover:text-red-800 delete-holiday-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">Jan 15, 2024</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">Company Holiday</td>
+                        <td class="px-4 py-3 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Company</span></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">All SLAs extended by 24h</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <button class="text-red-600 hover:text-red-800 delete-holiday-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">Dec 25, 2024</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">Christmas Day</td>
+                        <td class="px-4 py-3 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Public</span></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">All SLAs extended by 24h</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <button class="text-red-600 hover:text-red-800 delete-holiday-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-6 bg-gray-50 rounded-lg p-4">
+            <h3 class="font-semibold text-gray-900 mb-2">Holiday Calendar Rules</h3>
+            <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                <li>Holidays automatically pause all SLA timers during the holiday period</li>
+                <li>SLA deadlines are extended by the number of holiday days</li>
+                <li>Recurring holidays are automatically added each year</li>
+                <li>Custom holidays can be added for company-specific events</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-aos="fade-up" data-aos-delay="200"><div class="flex justify-between items-center"><div class="text-gray-900 text-base font-semibold">SLA Compliance Rate</div><div class="px-2 py-1 bg-green-100 rounded-full text-green-800 text-xs font-medium">94%</div></div><div class="mt-5"><div class="flex justify-between items-center"><div class="text-gray-600 text-sm">Tickets meeting SLA</div><div class="text-green-600 text-lg font-bold">94%</div></div><div class="w-full h-2 mt-3 bg-gray-200 rounded-full overflow-hidden"><div class="w-[94%] h-2 bg-green-500"></div></div></div></div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-aos="fade-up" data-aos-delay="300"><div class="flex justify-between items-center"><div class="text-gray-900 text-base font-semibold">Average Response Time</div><div class="px-2 py-1 bg-teal-100 rounded-full text-teal-800 text-xs font-medium">18 min</div></div><div class="mt-4 text-center"><div class="flex justify-center items-baseline"><div class="text-teal-500 text-3xl font-bold">18</div><div class="ml-1.5 text-gray-600 text-base">minutes</div></div><div class="mt-2 flex justify-center items-center text-gray-600 text-xs"><svg class="w-3 h-3 text-green-500 mr-1" fill="currentColor" viewBox="0 0 8 8"><path d="M4 0L8 4H0L4 0Z" transform="translate(0 2)"/></svg>3 min faster than yesterday</div></div></div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-aos="fade-up" data-aos-delay="400"><div class="flex justify-between items-center"><div class="text-gray-900 text-base font-semibold">Active Breaches</div><div class="px-2 py-1 bg-red-100 rounded-full text-red-800 text-xs font-medium">3 Active</div></div><div class="mt-4 space-y-3"><div class="flex justify-between items-center"><div class="text-gray-600 text-sm">Critical</div><div class="text-red-500 text-lg font-bold">1</div></div><div class="flex justify-between items-center"><div class="text-gray-600 text-sm">Warning</div><div class="text-yellow-500 text-lg font-bold">2</div></div></div></div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out forwards;
+    }
+    
+    .priority-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .priority-critical {
+        background-color: #FEE2E2;
+        color: #B91C1C;
+    }
+    
+    .priority-high {
+        background-color: #FEF3C7;
+        color: #D97706;
+    }
+    
+    .priority-normal {
+        background-color: #DBEAFE;
+        color: #1D4ED8;
+    }
+    
+    .priority-low {
+        background-color: #D1FAE5;
+        color: #047857;
+    }
+    
+    .tab-content.hidden {
+        display: none;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 6px 12px;
+        margin: 0 2px;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #4B5563;
+    }
+    
+    .pagination a:hover {
+        background-color: #F3F4F6;
+    }
+    
+    .pagination .current {
+        background-color: #3B82F6;
+        color: white;
+    }
+    
+    .pagination .disabled {
+        color: #D1D5DB;
+        cursor: not-allowed;
+    }
+    
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab switching functionality
-    const escalationTab = document.querySelector('.escalation-tab');
-    const holidayTab = document.querySelector('.holiday-tab');
-    const slaConfigSection = document.getElementById('slaConfigSection');
-    const escalationRulesSection = document.getElementById('escalationRulesSection');
-    const holidayCalendarSection = document.getElementById('holidayCalendarSection');
-    const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
+    
+    // --- TAB SWITCHING LOGIC ---
+    const tabsContainer = document.getElementById('tabs');
+    const tabLinks = tabsContainer.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
 
-    if (escalationTab) {
-        escalationTab.addEventListener('click', function() {
-            // Update tab styling
-            document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
-            this.classList.add('text-sky-600', 'border-sky-600');
-            
-            // Show escalation section, hide others
-            slaConfigSection.classList.add('hidden');
-            escalationRulesSection.classList.remove('hidden');
-            holidayCalendarSection.classList.add('hidden');
+    tabsContainer.addEventListener('click', function(e) {
+        e.preventDefault();
+        const clickedTab = e.target.closest('.tab-link');
+        if (!clickedTab) return;
+
+        // Update tab link styles
+        tabLinks.forEach(link => {
+            link.classList.remove('active', 'text-sky-600', 'border-sky-600');
+            link.classList.add('text-gray-600', 'border-transparent');
         });
-    }
+        clickedTab.classList.add('active', 'text-sky-600', 'border-sky-600');
+        clickedTab.classList.remove('text-gray-600', 'border-transparent');
 
-    if (holidayTab) {
-        holidayTab.addEventListener('click', function() {
-            // Update tab styling
-            document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
-            this.classList.add('text-sky-600', 'border-sky-600');
-            
-            // Show holiday section, hide others
-            slaConfigSection.classList.add('hidden');
-            escalationRulesSection.classList.add('hidden');
-            holidayCalendarSection.classList.remove('hidden');
-        });
-    }
-
-    // SLA Configuration Tab (default active)
-    document.querySelector('.py-2.px-1.text-center.text-sky-600').addEventListener('click', function() {
-        // Update tab styling
-        document.querySelector('.border-b-2.border-sky-600').classList.remove('text-sky-600', 'border-sky-600');
-        this.classList.add('text-sky-600', 'border-sky-600');
-        
-        // Show SLA config section, hide others
-        slaConfigSection.classList.remove('hidden');
-        escalationRulesSection.classList.add('hidden');
-        holidayCalendarSection.classList.add('hidden');
-    });
-
-    // Add event listeners to highlight modified fields
-    document.querySelectorAll('.response-time-input, .resolution-time-input').forEach(input => {
-        input.addEventListener('input', function() {
-            const originalValue = parseInt(this.dataset.originalValue);
-            const currentValue = parseInt(this.value);
-            const row = this.closest('.sla-config-row');
-            const statusIndicator = row.querySelector('.status-indicator');
-            
-            if (originalValue !== currentValue) {
-                this.classList.add('border-yellow-500', 'ring-2', 'ring-yellow-200');
-                if (statusIndicator && statusIndicator.textContent === 'Active') {
-                    statusIndicator.textContent = 'Modified';
-                    statusIndicator.classList.remove('bg-green-500/10', 'text-green-600');
-                    statusIndicator.classList.add('bg-yellow-500/10', 'text-yellow-600');
-                }
+        // Show/hide tab content with animation
+        const targetId = clickedTab.getAttribute('href').substring(1);
+        tabContents.forEach(content => {
+            if (content.id === targetId) {
+                content.classList.remove('hidden');
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
             } else {
-                this.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
-                if (statusIndicator && statusIndicator.textContent === 'Modified') {
-                    statusIndicator.textContent = 'Active';
-                    statusIndicator.classList.remove('bg-yellow-500/10', 'text-yellow-600');
-                    statusIndicator.classList.add('bg-green-500/10', 'text-green-600');
-                }
+                content.classList.add('hidden');
             }
         });
     });
+
+    // --- SLA INPUT CHANGE HANDLING ---
+    document.getElementById('generalSlaSection').addEventListener('input', function(e) {
+        if (e.target.matches('.response-time-input, .resolution-time-input')) {
+            const row = e.target.closest('.sla-config-row');
+            const responseInput = row.querySelector('.response-time-input');
+            const resolutionInput = row.querySelector('.resolution-time-input');
+            const statusIndicator = row.querySelector('.status-indicator');
+            const exampleText = row.querySelector('.example-text');
+            
+            const originalResponse = parseInt(responseInput.dataset.originalValue);
+            const originalResolution = parseInt(resolutionInput.dataset.originalValue);
+            const currentResponse = parseInt(responseInput.value) || 0;
+            const currentResolution = parseInt(resolutionInput.value) || 0;
+
+            // Update example text live
+            exampleText.textContent = `Respond: ${currentResponse}m, Resolve: ${currentResolution}m`;
+
+            const hasChanged = originalResponse !== currentResponse || originalResolution !== currentResolution;
+
+            // Toggle styles for both inputs based on change
+            [responseInput, resolutionInput].forEach(input => {
+                input.classList.toggle('border-yellow-400', hasChanged);
+                input.classList.toggle('ring-2', hasChanged);
+                input.classList.toggle('ring-yellow-100', hasChanged);
+            });
+
+            if (statusIndicator) {
+                if (hasChanged) {
+                    statusIndicator.textContent = 'Modified';
+                    statusIndicator.classList.remove('bg-green-100', 'text-green-800');
+                    statusIndicator.classList.add('bg-yellow-100', 'text-yellow-800');
+                } else {
+                    statusIndicator.textContent = 'Active';
+                    statusIndicator.classList.remove('bg-yellow-100', 'text-yellow-800');
+                    statusIndicator.classList.add('bg-green-100', 'text-green-800');
+                }
+            }
+        }
+    });
     
-    // Save SLA configuration with toast notifications
+    // --- DEPARTMENT SLA INPUT CHANGE HANDLING ---
+    document.getElementById('departmentSlaSection').addEventListener('input', function(e) {
+        if (e.target.matches('.department-response-time-input, .department-resolution-time-input')) {
+            const row = e.target.closest('.department-sla-row');
+            const responseInput = row.querySelector('.department-response-time-input');
+            const resolutionInput = row.querySelector('.department-resolution-time-input');
+            const exampleText = row.querySelector('.department-example-text');
+            
+            const originalResponse = parseInt(responseInput.dataset.originalValue);
+            const originalResolution = parseInt(resolutionInput.dataset.originalValue);
+            const currentResponse = parseInt(responseInput.value) || 0;
+            const currentResolution = parseInt(resolutionInput.value) || 0;
+
+            // Update example text live
+            exampleText.textContent = `Respond: ${currentResponse}m, Resolve: ${currentResolution}m`;
+
+            const hasChanged = originalResponse !== currentResponse || originalResolution !== currentResolution;
+
+            // Toggle styles for both inputs based on change
+            [responseInput, resolutionInput].forEach(input => {
+                input.classList.toggle('border-yellow-400', hasChanged);
+                input.classList.toggle('ring-2', hasChanged);
+                input.classList.toggle('ring-yellow-100', hasChanged);
+            });
+        }
+    });
+    
+    // --- SAVE SLA CONFIGURATION ---
     document.getElementById('saveSLAConfig').addEventListener('click', function() {
         const saveButton = this;
-        const originalText = saveButton.querySelector('.text-white.text-base.font-medium').textContent;
+        const originalText = saveButton.querySelector('span').textContent;
         const configRows = document.querySelectorAll('.sla-config-row');
+        const departmentConfigRows = document.querySelectorAll('.department-sla-row');
         const configs = [];
+        const departmentConfigs = [];
         let hasChanges = false;
         
+        // Process general SLA configurations
         configRows.forEach(row => {
-            const priority = row.dataset.priority;
             const responseTimeInput = row.querySelector('.response-time-input');
             const resolutionTimeInput = row.querySelector('.resolution-time-input');
             
-            // Check if values have changed
-            const originalResponse = parseInt(responseTimeInput.dataset.originalValue);
-            const originalResolution = parseInt(resolutionTimeInput.dataset.originalValue);
-            const currentResponse = parseInt(responseTimeInput.value);
-            const currentResolution = parseInt(resolutionTimeInput.value);
-            
-            if (originalResponse !== currentResponse || originalResolution !== currentResolution) {
+            // Check for negative values
+            if (parseInt(responseTimeInput.value) < 1 || parseInt(resolutionTimeInput.value) < 1) {
+                showToast('SLA times must be greater than 0.', 'error');
+                hasChanges = false; // Prevent saving
+                return;
+            }
+
+            if (responseTimeInput.dataset.originalValue !== responseTimeInput.value || resolutionTimeInput.dataset.originalValue !== resolutionTimeInput.value) {
                 hasChanges = true;
             }
-            
             configs.push({
-                priority: priority,
-                response_time_minutes: currentResponse,
-                resolution_time_minutes: currentResolution
+                priority: row.dataset.priority,
+                response_time_minutes: parseInt(responseTimeInput.value),
+                resolution_time_minutes: parseInt(resolutionTimeInput.value)
+            });
+        });
+        
+        // Process department/request-specific SLA configurations
+        departmentConfigRows.forEach(row => {
+            const responseTimeInput = row.querySelector('.department-response-time-input');
+            const resolutionTimeInput = row.querySelector('.department-resolution-time-input');
+            
+            // Check for negative values
+            if (parseInt(responseTimeInput.value) < 1 || parseInt(resolutionTimeInput.value) < 1) {
+                showToast('SLA times must be greater than 0.', 'error');
+                hasChanges = false; // Prevent saving
+                return;
+            }
+
+            if (responseTimeInput.dataset.originalValue !== responseTimeInput.value || resolutionTimeInput.dataset.originalValue !== resolutionTimeInput.value) {
+                hasChanges = true;
+            }
+            departmentConfigs.push({
+                department_id: parseInt(row.dataset.departmentId),
+                request_type_id: parseInt(row.dataset.requestTypeId),
+                priority: row.dataset.priority,
+                response_time_minutes: parseInt(responseTimeInput.value),
+                resolution_time_minutes: parseInt(resolutionTimeInput.value)
             });
         });
         
@@ -355,143 +713,386 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Show loading state
         saveButton.disabled = true;
-        saveButton.querySelector('.text-white.text-base.font-medium').textContent = 'Saving...';
+        saveButton.querySelector('span').textContent = 'Saving...';
         
-        // Send data to server
         fetch('{% url "dashboard:api_sla_configuration_update" %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({configs: configs})
+            body: JSON.stringify({
+                configs: configs,
+                department_configs: departmentConfigs
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Update original values to reflect saved changes
+                // Update original values for general configs
                 configRows.forEach(row => {
                     const responseTimeInput = row.querySelector('.response-time-input');
                     const resolutionTimeInput = row.querySelector('.resolution-time-input');
                     const statusIndicator = row.querySelector('.status-indicator');
                     
+                    // Update original value datasets
                     responseTimeInput.dataset.originalValue = responseTimeInput.value;
                     resolutionTimeInput.dataset.originalValue = resolutionTimeInput.value;
                     
-                    // Reset styling
-                    responseTimeInput.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
-                    resolutionTimeInput.classList.remove('border-yellow-500', 'ring-2', 'ring-yellow-200');
+                    // Reset input styles
+                    responseTimeInput.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-100');
+                    resolutionTimeInput.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-100');
                     
-                    // Update status indicator
-                    if (statusIndicator && statusIndicator.textContent === 'Modified') {
-                        statusIndicator.textContent = 'Active';
-                        statusIndicator.classList.remove('bg-yellow-500/10', 'text-yellow-600');
-                        statusIndicator.classList.add('bg-green-500/10', 'text-green-600');
-                    }
+                    // Reset status indicator
+                    statusIndicator.textContent = 'Active';
+                    statusIndicator.classList.remove('bg-yellow-100', 'text-yellow-800');
+                    statusIndicator.classList.add('bg-green-100', 'text-green-800');
                 });
+                
+                // Update original values for department configs
+                departmentConfigRows.forEach(row => {
+                    const responseTimeInput = row.querySelector('.department-response-time-input');
+                    const resolutionTimeInput = row.querySelector('.department-resolution-time-input');
+                    
+                    // Update original value datasets
+                    responseTimeInput.dataset.originalValue = responseTimeInput.value;
+                    resolutionTimeInput.dataset.originalValue = resolutionTimeInput.value;
+                    
+                    // Reset input styles
+                    responseTimeInput.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-100');
+                    resolutionTimeInput.classList.remove('border-yellow-400', 'ring-2', 'ring-yellow-100');
+                });
+                
                 showToast('SLA configurations updated successfully!', 'success');
             } else {
-                showToast('Error updating SLA configurations: ' + data.error, 'error');
+                showToast('Error updating configurations: ' + data.error, 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('An error occurred while updating SLA configurations.', 'error');
-        })
+        .catch(error => showToast('A network error occurred.', 'error'))
         .finally(() => {
-            // Reset button state
             saveButton.disabled = false;
-            saveButton.querySelector('.text-white.text-base.font-medium').textContent = originalText;
+            saveButton.querySelector('span').textContent = originalText;
         });
     });
     
-    // Reset to defaults functionality
-    if (resetDefaultsBtn) {
-        resetDefaultsBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to reset all SLA configurations to default values?')) {
-                // Reset input values to defaults based on priority
-                document.querySelectorAll('.sla-config-row').forEach(row => {
-                    const priority = row.dataset.priority;
-                    const responseInput = row.querySelector('.response-time-input');
-                    const resolutionInput = row.querySelector('.resolution-time-input');
-                    
-                    // Set default values based on priority
-                    switch (priority) {
-                        case 'critical':
-                            responseInput.value = 5;
-                            resolutionInput.value = 5;
-                            break;
-                        case 'high':
-                            responseInput.value = 10;
-                            resolutionInput.value = 10;
-                            break;
-                        case 'normal':
-                            responseInput.value = 15;
-                            resolutionInput.value = 15;
-                            break;
-                        case 'low':
-                            responseInput.value = 20;
-                            resolutionInput.value = 20;
-                            break;
-                    }
-                    
-                    // Trigger input event to update styling
-                    responseInput.dispatchEvent(new Event('input'));
-                    resolutionInput.dispatchEvent(new Event('input'));
-                });
-                
-                showToast('SLA configurations reset to defaults', 'info');
-            }
-        });
-    }
-    
-    // Toast notification function
-    function showToast(message, type) {
-        const toastContainer = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
+    // --- RESET TO DEFAULTS ---
+    document.getElementById('resetDefaultsBtn').addEventListener('click', function() {
+        if (!confirm('Are you sure you want to reset all SLA configurations to default values?')) return;
+
+        const defaultValues = { critical: [5, 15], high: [10, 30], normal: [15, 60], low: [20, 120] };
         
-        // Set toast styles based on type
-        let bgColor, textColor, icon;
-        switch (type) {
-            case 'success':
-                bgColor = 'bg-green-500';
-                textColor = 'text-white';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                break;
-            case 'error':
-                bgColor = 'bg-red-500';
-                textColor = 'text-white';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
-                break;
-            case 'info':
-            default:
-                bgColor = 'bg-blue-500';
-                textColor = 'text-white';
-                icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+        document.querySelectorAll('.sla-config-row').forEach(row => {
+            const priority = row.dataset.priority;
+            const [resp, resol] = defaultValues[priority];
+            
+            const responseInput = row.querySelector('.response-time-input');
+            const resolutionInput = row.querySelector('.resolution-time-input');
+            
+            responseInput.value = resp;
+            resolutionInput.value = resol;
+            
+            // Dispatch event to trigger the visual update
+            responseInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        showToast('SLA configurations reset to defaults. Click "Save Changes" to apply.', 'info');
+    });
+    
+    // --- DEPARTMENT SLA FUNCTIONALITY ---
+    // Show add form
+    document.getElementById('addDepartmentSlaBtn').addEventListener('click', function() {
+        const form = document.getElementById('addDepartmentSlaForm');
+        form.classList.remove('hidden');
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    
+    // Cancel add form
+    document.getElementById('cancelNewDepartmentSlaBtn').addEventListener('click', function() {
+        document.getElementById('addDepartmentSlaForm').classList.add('hidden');
+        // Reset form fields
+        document.getElementById('newDepartmentSelect').value = '';
+        document.getElementById('newRequestTypeSelect').value = '';
+        document.getElementById('newPrioritySelect').value = '';
+        document.getElementById('newResponseTimeInput').value = '';
+        document.getElementById('newResolutionTimeInput').value = '';
+    });
+    
+    // Save new department SLA configuration
+    document.getElementById('saveNewDepartmentSlaBtn').addEventListener('click', function() {
+        const departmentId = document.getElementById('newDepartmentSelect').value;
+        const requestTypeId = document.getElementById('newRequestTypeSelect').value;
+        const priority = document.getElementById('newPrioritySelect').value;
+        const responseTime = document.getElementById('newResponseTimeInput').value;
+        const resolutionTime = document.getElementById('newResolutionTimeInput').value;
+        
+        // Validation
+        if (!departmentId || !requestTypeId || !priority || !responseTime || !resolutionTime) {
+            showToast('Please fill in all fields.', 'error');
+            return;
         }
         
-        toast.className = `flex items-center gap-2 ${bgColor} ${textColor} px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300`;
-        toast.innerHTML = `
-            ${icon}
-            <span class="font-medium">${message}</span>
+        if (parseInt(responseTime) < 1 || parseInt(resolutionTime) < 1) {
+            showToast('SLA times must be greater than 0.', 'error');
+            return;
+        }
+        
+        // Add to the list
+        const container = document.getElementById('departmentSlaConfigContainer');
+        const newRow = document.createElement('tr');
+        newRow.className = 'department-sla-row hover:bg-gray-50 transition-colors';
+        newRow.dataset.departmentId = departmentId;
+        newRow.dataset.requestTypeId = requestTypeId;
+        newRow.dataset.priority = priority;
+        
+        // Get department and request type names for display
+        const departmentName = document.getElementById('newDepartmentSelect').selectedOptions[0].text;
+        const requestTypeName = document.getElementById('newRequestTypeSelect').selectedOptions[0].text;
+        const priorityName = document.getElementById('newPrioritySelect').selectedOptions[0].text;
+        
+        newRow.innerHTML = `
+            <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">
+                ${departmentName}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-gray-800">
+                ${requestTypeName}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="priority-badge priority-${priority}">
+                    ${priorityName}
+                </span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 department-response-time-input" 
+                       value="${responseTime}" 
+                       data-original-value="${responseTime}">
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <input type="number" min="1" class="w-24 h-9 px-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 department-resolution-time-input" 
+                       value="${resolutionTime}" 
+                       data-original-value="${resolutionTime}">
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-gray-500 department-example-text">
+                Respond: ${responseTime}m, Resolve: ${resolutionTime}m
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <button class="text-red-600 hover:text-red-800 delete-department-sla-btn">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </td>
         `;
         
-        toastContainer.appendChild(toast);
+        container.appendChild(newRow);
         
-        // Auto remove toast after 3 seconds
+        // Hide form and reset fields
+        document.getElementById('addDepartmentSlaForm').classList.add('hidden');
+        document.getElementById('newDepartmentSelect').value = '';
+        document.getElementById('newRequestTypeSelect').value = '';
+        document.getElementById('newPrioritySelect').value = '';
+        document.getElementById('newResponseTimeInput').value = '';
+        document.getElementById('newResolutionTimeInput').value = '';
+        
+        showToast('New SLA configuration added. Click "Save Changes" to apply.', 'success');
+    });
+    
+    // Delete department SLA configuration
+    document.getElementById('departmentSlaConfigContainer').addEventListener('click', function(e) {
+        if (e.target.closest('.delete-department-sla-btn')) {
+            const row = e.target.closest('.department-sla-row');
+            if (confirm('Are you sure you want to delete this SLA configuration?')) {
+                row.style.transition = 'opacity 0.3s ease';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                    showToast('SLA configuration deleted. Click "Save Changes" to apply.', 'info');
+                }, 300);
+            }
+        }
+    });
+    
+    // --- FILTER FUNCTIONALITY ---
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        const departmentFilter = document.getElementById('departmentFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const searchInput = document.getElementById('searchInput').value;
+        
+        // Build URL with filters
+        let url = new URL(window.location);
+        url.searchParams.set('page', 1); // Reset to first page when applying filters
+        
+        if (searchInput) {
+            url.searchParams.set('search', searchInput);
+        } else {
+            url.searchParams.delete('search');
+        }
+        
+        if (departmentFilter) {
+            url.searchParams.set('department', departmentFilter);
+        } else {
+            url.searchParams.delete('department');
+        }
+        
+        if (priorityFilter) {
+            url.searchParams.set('priority', priorityFilter);
+        } else {
+            url.searchParams.delete('priority');
+        }
+        
+        // Redirect to the new URL
+        window.location.href = url.toString();
+    });
+    
+    // --- DEPARTMENT TASK LISTS FUNCTIONALITY ---
+    document.getElementById('refreshTaskListsBtn').addEventListener('click', function() {
+        loadDepartmentTaskLists();
+    });
+    
+    function loadDepartmentTaskLists() {
+        const container = document.getElementById('departmentTaskListsContainer');
+        container.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-4 py-8 text-center">
+                    <div class="flex items-center justify-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Loading department task lists...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        // Simulate API call to fetch department task lists
         setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-x-full');
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
+            // In a real implementation, this would fetch actual data from the server
+            const sampleData = [
+                {
+                    department: 'Housekeeping',
+                    totalTasks: 42,
+                    pending: 12,
+                    inProgress: 8,
+                    completed: 22,
+                    slaCompliance: 92,
+                    avgResponseTime: '8 min'
+                },
+                {
+                    department: 'Maintenance',
+                    totalTasks: 28,
+                    pending: 5,
+                    inProgress: 10,
+                    completed: 13,
+                    slaCompliance: 87,
+                    avgResponseTime: '15 min'
+                },
+                {
+                    department: 'Guest Services',
+                    totalTasks: 35,
+                    pending: 7,
+                    inProgress: 12,
+                    completed: 16,
+                    slaCompliance: 95,
+                    avgResponseTime: '5 min'
+                },
+                {
+                    department: 'Security',
+                    totalTasks: 18,
+                    pending: 3,
+                    inProgress: 6,
+                    completed: 9,
+                    slaCompliance: 100,
+                    avgResponseTime: '3 min'
                 }
-            }, 300);
-        }, 3000);
+            ];
+            
+            let html = '';
+            sampleData.forEach(dept => {
+                html += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-800 font-medium">
+                            ${dept.department}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                            ${dept.totalTasks}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                            ${dept.pending}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                            ${dept.inProgress}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                            ${dept.completed}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${dept.slaCompliance >= 90 ? 'bg-green-100 text-green-800' : dept.slaCompliance >= 80 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                                ${dept.slaCompliance}%
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">
+                            ${dept.avgResponseTime}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }, 1000);
     }
     
-    // Helper function to get CSRF token
+    // --- ESCALATION RULES FUNCTIONALITY ---
+    document.getElementById('editEscalationMatrixBtn').addEventListener('click', function() {
+        showToast('Escalation matrix editing functionality would be implemented here.', 'info');
+    });
+    
+    // --- HOLIDAY CALENDAR FUNCTIONALITY ---
+    document.getElementById('addHolidayBtn').addEventListener('click', function() {
+        showToast('Add holiday functionality would be implemented here.', 'info');
+    });
+    
+    // Add event delegation for holiday delete buttons
+    document.getElementById('holidayCalendarSection').addEventListener('click', function(e) {
+        if (e.target.closest('.delete-holiday-btn')) {
+            const row = e.target.closest('tr');
+            if (confirm('Are you sure you want to delete this holiday?')) {
+                row.style.transition = 'opacity 0.3s ease';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                    showToast('Holiday deleted successfully.', 'success');
+                }, 300);
+            }
+        }
+    });
+    
+    // --- HELPER FUNCTIONS ---
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        const icons = {
+            success: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
+            error: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`,
+            info: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+        };
+        const colors = {
+            success: 'bg-green-500', error: 'bg-red-500', info: 'bg-sky-500'
+        };
+        
+        toast.className = `flex items-center gap-3 ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0`;
+        toast.innerHTML = `${icons[type]}<span class="font-medium text-sm">${message}</span>`;
+        toastContainer.appendChild(toast);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+        });
+
+        // Animate out
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, 4000);
+    }
+    
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

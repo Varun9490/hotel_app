@@ -339,6 +339,23 @@ class ServiceRequest(models.Model):
     def set_sla_times(self):
         """Set SLA times based on priority and configuration."""
         try:
+            # First, try to get department/request-specific SLA configuration
+            if self.department and self.request_type:
+                from .models import DepartmentRequestSLA
+                config = DepartmentRequestSLA.objects.get(
+                    department=self.department,
+                    request_type=self.request_type,
+                    priority=self.priority
+                )
+                # Convert minutes to hours for the existing fields
+                self.response_sla_hours = config.response_time_minutes / 60.0
+                self.sla_hours = config.resolution_time_minutes / 60.0
+                return
+        except DepartmentRequestSLA.DoesNotExist:
+            # If no department/request-specific config, continue to general config
+            pass
+        
+        try:
             from .models import SLAConfiguration
             config = SLAConfiguration.objects.get(priority=self.priority)
             
@@ -895,6 +912,34 @@ class SLAConfiguration(models.Model):
     class Meta:
         verbose_name = "SLA Configuration"
         verbose_name_plural = "SLA Configurations"
+
+
+class DepartmentRequestSLA(models.Model):
+    """Model to store configurable SLA times for specific department and request type combinations"""
+    department = models.ForeignKey('Department', on_delete=models.CASCADE, related_name='sla_configurations')
+    request_type = models.ForeignKey('RequestType', on_delete=models.CASCADE, related_name='sla_configurations')
+    priority = models.CharField(max_length=20, choices=[
+        ('critical', 'Critical'),
+        ('high', 'High'),
+        ('normal', 'Normal'),
+        ('low', 'Low'),
+    ])
+    response_time_minutes = models.PositiveIntegerField(
+        help_text="Response time in minutes"
+    )
+    resolution_time_minutes = models.PositiveIntegerField(
+        help_text="Resolution time in minutes"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('department', 'request_type', 'priority')
+        verbose_name = "Department Request SLA"
+        verbose_name_plural = "Department Request SLAs"
+
+    def __str__(self):
+        return f"{self.department.name} - {self.request_type.name} ({self.get_priority_display()})"
 
 
 # Legacy models for backward compatibility (will be deprecated)

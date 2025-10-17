@@ -98,7 +98,6 @@ urlpatterns = [
     path('feedback/', dashboard_views.feedback_inbox, name='feedback_inbox'),
     path('feedback/<int:feedback_id>/', dashboard_views.feedback_detail, name='feedback_detail'),
     path('integrations/', dashboard_views.integrations, name='integrations'),
-    path('sla-escalations/', dashboard_views.sla_escalations, name='sla_escalations'),
     path('sla-configuration/', dashboard_views.sla_configuration, name='sla_configuration'),
     path('api/sla-configuration/update/', dashboard_views.api_sla_configuration_update, name='api_sla_configuration_update'),
     path('analytics/', dashboard_views.analytics_dashboard, name='analytics'),

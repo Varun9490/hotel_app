@@ -27,7 +27,7 @@ from hotel_app.models import (
     Department, Location, RequestType, Checklist,
     Complaint, BreakfastVoucher, Review, Guest,
     Voucher, VoucherScan, ServiceRequest, UserProfile, UserGroup, UserGroupMembership,
-    Notification, GymMember, SLAConfiguration  # Add SLAConfiguration model
+    Notification, GymMember, SLAConfiguration, DepartmentRequestSLA  # Add SLAConfiguration and DepartmentRequestSLA models
 )
 
 # Import all forms from the local forms.py
@@ -40,6 +40,7 @@ from .forms import (
 # Import local utils and services
 from .utils import user_in_group, create_notification
 from hotel_app.whatsapp_service import WhatsAppService
+from .rbac_services import get_accessible_sections, can_access_section
 
 # ---- Constants ----
 ADMINS_GROUP = 'Admins'
@@ -1426,7 +1427,7 @@ def api_group_permissions_update(request, group_id):
         return JsonResponse({'error': 'POST required'}, status=405)
     
     try:
-        from django.contrib.auth.models import Group
+        from django.contrib.auth.models import Group, Permission
         group = get_object_or_404(Group, pk=group_id)
         
         # Parse JSON data
@@ -1438,12 +1439,18 @@ def api_group_permissions_update(request, group_id):
         # Get permissions from request
         permissions = data.get('permissions', [])
         
-        # In a real application, you would update the group's permissions here
-        # For now, we'll just return success since this is a simplified implementation
-        # In a real system, you would map these permission names to actual Django permissions
+        # Get permission objects from codenames
+        permission_objects = []
+        for codename in permissions:
+            try:
+                perm = Permission.objects.get(codename=codename)
+                permission_objects.append(perm)
+            except Permission.DoesNotExist:
+                # Skip permissions that don't exist
+                continue
         
-        # Log the permission update (in a real system, you would store this in a database)
-        print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+        # Update group permissions
+        group.permissions.set(permission_objects)
         
         return JsonResponse({'success': True, 'message': 'Permissions updated successfully'})
         
@@ -1460,7 +1467,7 @@ def api_bulk_permissions_update(request):
         return JsonResponse({'error': 'POST required'}, status=405)
     
     try:
-        from django.contrib.auth.models import Group
+        from django.contrib.auth.models import Group, Permission
         
         # Parse JSON data
         try:
@@ -1476,14 +1483,22 @@ def api_bulk_permissions_update(request):
         if not group_ids:
             return JsonResponse({'error': 'No groups specified'}, status=400)
         
+        # Get permission objects from codenames
+        permission_objects = []
+        for codename in permissions:
+            try:
+                perm = Permission.objects.get(codename=codename)
+                permission_objects.append(perm)
+            except Permission.DoesNotExist:
+                # Skip permissions that don't exist
+                continue
+        
         # Update permissions for each group
         updated_groups = []
         for group_id in group_ids:
             try:
                 group = Group.objects.get(pk=group_id)
-                # In a real application, you would update the group's permissions here
-                # For now, we'll just log the update
-                print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+                group.permissions.set(permission_objects)
                 updated_groups.append(group.name)
             except Group.DoesNotExist:
                 continue  # Skip non-existent groups
@@ -2957,7 +2972,7 @@ def api_bulk_permissions_update(request):
         return JsonResponse({'error': 'POST required'}, status=405)
     
     try:
-        from django.contrib.auth.models import Group
+        from django.contrib.auth.models import Group, Permission
         
         # Parse JSON data
         try:
@@ -2973,14 +2988,22 @@ def api_bulk_permissions_update(request):
         if not group_ids:
             return JsonResponse({'error': 'No groups specified'}, status=400)
         
+        # Get permission objects from codenames
+        permission_objects = []
+        for codename in permissions:
+            try:
+                perm = Permission.objects.get(codename=codename)
+                permission_objects.append(perm)
+            except Permission.DoesNotExist:
+                # Skip permissions that don't exist
+                continue
+        
         # Update permissions for each group
         updated_groups = []
         for group_id in group_ids:
             try:
                 group = Group.objects.get(pk=group_id)
-                # In a real application, you would update the group's permissions here
-                # For now, we'll just log the update
-                print(f"Updating permissions for group {group.name} ({group.id}): {permissions}")
+                group.permissions.set(permission_objects)
                 updated_groups.append(group.name)
             except Group.DoesNotExist:
                 continue  # Skip non-existent groups
@@ -4957,32 +4980,70 @@ def guest_qr_codes(request):
     """Display all guest QR codes in a grid layout with filters."""
 
 
-# ---- SLA & Escalations ----
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
-def sla_escalations(request):
-    """SLA & Escalations dashboard."""
-    # Get current SLA configurations
-    sla_configs = SLAConfiguration.objects.all().order_by('priority')
-    
-    context = {
-        'active_tab': 'sla_escalations',
-        'title': 'SLA & Escalations',
-        'subtitle': 'Define service level agreements and escalation workflows for guest requests',
-        'sla_configs': sla_configs,
-    }
-    return render(request, 'dashboard/sla_escalations.html', context)
-
-
 @require_permission([ADMINS_GROUP])
 def sla_configuration(request):
-    """SLA Configuration page."""
+    """SLA Configuration page with pagination and filtering."""
+    # Get page and page size from query parameters
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 20))
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '')
+    department_filter = request.GET.get('department', '')
+    priority_filter = request.GET.get('priority', '')
+    
+    # Get general SLA configurations (these are always shown)
     sla_configs = SLAConfiguration.objects.all().order_by('priority')
+    
+    # Get all departments and request types for the new configuration section
+    departments = Department.objects.all().order_by('name')
+    request_types = RequestType.objects.all().order_by('name')
+    
+    # Get department/request SLA configurations with filters
+    department_sla_configs = DepartmentRequestSLA.objects.select_related(
+        'department', 'request_type'
+    ).all().order_by('department__name', 'request_type__name', 'priority')
+    
+    # Apply filters
+    if search_query:
+        department_sla_configs = department_sla_configs.filter(
+            Q(department__name__icontains=search_query) |
+            Q(request_type__name__icontains=search_query)
+        )
+    
+    if department_filter:
+        department_sla_configs = department_sla_configs.filter(
+            department__name=department_filter
+        )
+    
+    if priority_filter:
+        department_sla_configs = department_sla_configs.filter(
+            priority=priority_filter
+        )
+    
+    # Apply pagination
+    paginator = Paginator(department_sla_configs, page_size)
+    try:
+        department_sla_page = paginator.page(page)
+    except PageNotAnInteger:
+        department_sla_page = paginator.page(1)
+    except EmptyPage:
+        department_sla_page = paginator.page(paginator.num_pages)
     
     context = {
         'active_tab': 'sla_configuration',
         'title': 'SLA Configuration',
         'subtitle': 'Configure default SLA times for different priority levels',
         'sla_configs': sla_configs,
+        'departments': departments,
+        'request_types': request_types,
+        'department_sla_configs': department_sla_page,  # Paginated results
+        'paginator': paginator,
+        'page_obj': department_sla_page,
+        # Filter values for the template
+        'search_query': search_query,
+        'department_filter': department_filter,
+        'priority_filter': priority_filter,
     }
     return render(request, 'dashboard/sla_configuration.html', context)
 
@@ -4995,7 +5056,7 @@ def api_sla_configuration_update(request):
             import json
             data = json.loads(request.body.decode('utf-8'))
             
-            # Update each SLA configuration
+            # Update general SLA configurations
             for config_data in data.get('configs', []):
                 priority = config_data.get('priority')
                 response_time = config_data.get('response_time_minutes')
@@ -5003,6 +5064,26 @@ def api_sla_configuration_update(request):
                 
                 if priority and response_time is not None and resolution_time is not None:
                     SLAConfiguration.objects.update_or_create(
+                        priority=priority,
+                        defaults={
+                            'response_time_minutes': response_time,
+                            'resolution_time_minutes': resolution_time
+                        }
+                    )
+            
+            # Update department/request-specific SLA configurations
+            for config_data in data.get('department_configs', []):
+                department_id = config_data.get('department_id')
+                request_type_id = config_data.get('request_type_id')
+                priority = config_data.get('priority')
+                response_time = config_data.get('response_time_minutes')
+                resolution_time = config_data.get('resolution_time_minutes')
+                
+                if (department_id and request_type_id and priority and 
+                    response_time is not None and resolution_time is not None):
+                    DepartmentRequestSLA.objects.update_or_create(
+                        department_id=department_id,
+                        request_type_id=request_type_id,
                         priority=priority,
                         defaults={
                             'response_time_minutes': response_time,
@@ -5021,10 +5102,25 @@ def api_sla_configuration_update(request):
     elif request.method == 'GET':
         # Return current SLA configurations
         try:
-            configs = SLAConfiguration.objects.all().order_by('priority')
-            config_data = []
-            for config in configs:
-                config_data.append({
+            # General SLA configurations
+            general_configs = SLAConfiguration.objects.all().order_by('priority')
+            general_config_data = []
+            for config in general_configs:
+                general_config_data.append({
+                    'priority': config.priority,
+                    'response_time_minutes': config.response_time_minutes,
+                    'resolution_time_minutes': config.resolution_time_minutes
+                })
+            
+            # Department/request-specific SLA configurations
+            department_configs = DepartmentRequestSLA.objects.select_related(
+                'department', 'request_type'
+            ).all().order_by('department_id', 'request_type_id', 'priority')
+            department_config_data = []
+            for config in department_configs:
+                department_config_data.append({
+                    'department_id': config.department_id,
+                    'request_type_id': config.request_type_id,
                     'priority': config.priority,
                     'response_time_minutes': config.response_time_minutes,
                     'resolution_time_minutes': config.resolution_time_minutes
@@ -5032,7 +5128,8 @@ def api_sla_configuration_update(request):
             
             return JsonResponse({
                 'success': True,
-                'configs': config_data
+                'configs': general_config_data,
+                'department_configs': department_config_data
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
