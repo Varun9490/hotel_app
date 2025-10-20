@@ -14,13 +14,18 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - hotel_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   web:
     build: .
     container_name: hotel_web
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-hx$$rau=sf86q@*-bu01+yzla%!b_*8g*pfddb3_mezm_h5ff(u}
       - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
@@ -30,15 +35,16 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-hotel_password}
       - DB_HOST=db
       - DB_PORT=3306
+      - TIME_ZONE=${TIME_ZONE:-Asia/Kolkata}
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     networks:
       - hotel_network
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi:application"
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput --verbosity=0 &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi:application"
 
   nginx:
     image: nginx:alpine

@@ -125,7 +125,7 @@ This creates the following groups:
 
 ## Docker Deployment
 
-This project includes Docker configuration for easy deployment. See [DOCKER_DEPLOYMENT_GUIDE.md](DOCKER_DEPLOYMENT_GUIDE.md) for detailed instructions.
+This project includes comprehensive Docker configuration for development and production environments.
 
 ### Quick Start with Docker
 
@@ -135,15 +135,31 @@ This project includes Docker configuration for easy deployment. See [DOCKER_DEPL
    cp .env.production .env
    # Edit .env file with your settings
    ```
-3. Start the application:
+3. Start the development environment:
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+   Or start the production environment:
    ```bash
    docker-compose -f docker-compose.prod.yml up -d
    ```
-4. Run initial setup:
+4. Create a superuser:
    ```bash
-   docker exec hotel_web python manage.py migrate
-   docker exec hotel_web python manage.py createsuperuser
+   docker exec -it hotel_web_dev python manage.py createsuperuser
    ```
+
+### Docker Environments
+
+- **Development**: `docker-compose.dev.yml` - Includes hot reloading and development server
+- **Production**: `docker-compose.prod.yml` - Includes Nginx reverse proxy and Gunicorn
+- **Simple**: `docker-compose.simple.yml` - Basic setup with MySQL and Gunicorn
+- **Full**: `docker-compose.yml` - Complete setup with Celery workers and Redis
+
+### Data Migration
+
+If you're migrating from an existing installation, see [DATA_MIGRATION_README.md](DATA_MIGRATION_README.md) for instructions on how to export your data and import it into the new Docker environment.
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed instructions on all deployment options.
 
 ## Testing
 

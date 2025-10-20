@@ -26,22 +26,27 @@ if [ -d ".git" ]; then
     git pull
 fi
 
+# Check if .env file exists, if not copy from .env.production
+if [ ! -f ".env" ]; then
+    echo "Creating .env file from .env.production template..."
+    cp .env.production .env
+    echo "Please update the .env file with your configuration and run this script again."
+    exit 1
+fi
+
 # Build and start services
 echo "Building and starting Docker containers..."
-docker-compose -f docker-compose.simple.yml up -d --build
+docker-compose -f docker-compose.prod.yml up -d --build
 
-# Wait for database to be ready
-echo "Waiting for database to be ready..."
-sleep 10
+# Wait for services to be healthy
+echo "Waiting for services to be healthy..."
+ sleep 15
 
-# Run migrations
-echo "Running database migrations..."
-docker exec hotel_web python manage.py migrate
-
-# Collect static files
-echo "Collecting static files..."
-docker exec hotel_web python manage.py collectstatic --noinput
+# Show status
+echo "Deployment status:"
+docker-compose -f docker-compose.prod.yml ps
 
 echo "Deployment completed successfully!"
-echo "Access the application at http://localhost:8000"
+echo "Access the application at http://localhost"
 echo "To create a superuser, run: docker exec -it hotel_web python manage.py createsuperuser"
+echo "To view logs, run: docker-compose -f docker-compose.prod.yml logs -f"

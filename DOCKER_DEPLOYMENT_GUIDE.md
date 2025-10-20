@@ -14,7 +14,52 @@ The project includes the following Docker-related files:
 - `Dockerfile`: Defines the application container
 - `docker-compose.yml`: Full deployment with MySQL, Redis, Celery workers
 - `docker-compose.simple.yml`: Simplified deployment with just MySQL
+- `docker-compose.prod.yml`: Production deployment with Nginx reverse proxy
 - `.dockerignore`: Specifies files to exclude from Docker builds
+- `.env`: Environment variables for local development
+- `.env.production`: Environment variables template for production
+
+## Environment Configuration
+
+### Local Development
+
+Create a `.env` file in the project root with your configuration:
+
+```bash
+# Django Settings
+DJANGO_SECRET_KEY=your-secret-key-here
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# Database Configuration
+DB_NAME=temp
+DB_USER=hotel_user
+DB_PASSWORD=hotel_password
+MYSQL_ROOT_PASSWORD=rootpassword
+
+# Timezone
+TIME_ZONE=Asia/Kolkata
+```
+
+### Production Deployment
+
+For production, use the `.env.production` file as a template and update it with secure values:
+
+```bash
+# Django Settings
+DJANGO_SECRET_KEY=your-very-long-secret-key-here
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+
+# Database Configuration
+DB_NAME=hotel_db
+DB_USER=hotel_user
+DB_PASSWORD=your-secure-db-password
+MYSQL_ROOT_PASSWORD=your-secure-root-password
+
+# Timezone
+TIME_ZONE=Asia/Kolkata
+```
 
 ## Dockerizing the Application
 
@@ -47,23 +92,30 @@ This will start:
 docker-compose -f docker-compose.simple.yml up -d
 ```
 
-### 3. Initial Setup
-
-After starting the containers, you need to run migrations and create a superuser:
+#### Production Deployment (with Nginx)
 
 ```bash
-# Run migrations
-docker exec -it hotel_web python manage.py migrate
+docker-compose -f docker-compose.prod.yml up -d
+```
 
+This will start:
+- MySQL database
+- Web application
+- Nginx reverse proxy
+
+### 3. Initial Setup
+
+After starting the containers, you need to create a superuser:
+
+```bash
 # Create superuser
 docker exec -it hotel_web python manage.py createsuperuser
-
-# Collect static files
-docker exec -it hotel_web python manage.py collectstatic --noinput
 
 # Load initial data (optional)
 docker exec -it hotel_web python manage.py loaddata initial_data.json
 ```
+
+Note: Migrations and static file collection are automatically handled during container startup.
 
 ## Deploying to Linux Server
 
@@ -91,28 +143,28 @@ sudo usermod -aG docker $USER
 git clone <your-repo-url>
 cd hotel_project
 
-# Start the application
-docker-compose up -d
+# Create .env file with production settings
+cp .env.production .env
+# Edit .env with your production values
+
+# Start the application with production configuration
+docker-compose -f docker-compose.prod.yml up -d
 
 # Check logs
-docker-compose logs -f
+docker-compose -f docker-compose.prod.yml logs -f
 ```
 
 ### 3. Production Considerations
 
-1. **Environment Variables**: Create a `.env` file with secure passwords:
-   ```
-   DJANGO_SECRET_KEY=your-very-long-secret-key
-   DJANGO_DEBUG=False
-   DB_PASSWORD=your-secure-db-password
-   ```
-
-2. **HTTPS**: Use a reverse proxy like Nginx with Let's Encrypt SSL certificates.
-
+1. **Environment Variables**: Always use a `.env` file with secure passwords.
+   
+   Note: If your secret key contains special characters like `$`, you may need to escape them with double dollar signs (`$$`) in the docker-compose files, but not in the [.env](file:///c%3A/Users/varun/Desktop/Victoireus%20internship/hotel_project/config/__init__.py) file.
+2. **HTTPS**: For production, configure SSL certificates with Let's Encrypt.
 3. **Backup**: Regularly backup your database volume:
    ```bash
    docker run --rm -v hotel_project_db_data:/data -v $(pwd):/backup ubuntu tar czf /backup/db_backup.tar.gz -C /data .
    ```
+4. **Monitoring**: Implement monitoring for your containers and application.
 
 ## Useful Docker Commands
 
@@ -122,7 +174,10 @@ docker-compose logs -f
 # View running containers
 docker-compose ps
 
-# View logs
+# View logs for all services
+docker-compose logs -f
+
+# View logs for specific service
 docker-compose logs -f web
 
 # Stop containers
@@ -139,7 +194,7 @@ docker exec -it hotel_web bash
 
 ```bash
 # Access MySQL shell
-docker exec -it hotel_db mysql -u hotel_user -p temp
+docker exec -it hotel_db mysql -u hotel_user -p
 
 # Backup database
 docker exec hotel_db mysqldump -u hotel_user -p temp > backup.sql
@@ -148,11 +203,12 @@ docker exec hotel_db mysqldump -u hotel_user -p temp > backup.sql
 docker exec -i hotel_db mysql -u hotel_user -p temp < backup.sql
 ```
 
-## Scaling the Application
+### Scaling the Application
 
 To scale the web application:
 
 ```bash
+# Scale web workers (for docker-compose.yml only)
 docker-compose up -d --scale web=3
 ```
 
@@ -163,6 +219,7 @@ docker-compose up -d --scale web=3
 1. **Permission denied errors**: Ensure Docker is running and your user has permissions.
 2. **Port conflicts**: Change exposed ports in docker-compose.yml if needed.
 3. **Database connection errors**: Check DB credentials and ensure the database container is running.
+4. **Health check failures**: Check logs for specific service errors.
 
 ### Checking Logs
 
@@ -173,6 +230,9 @@ docker-compose logs
 # View specific service logs
 docker-compose logs web
 docker-compose logs db
+
+# View real-time logs
+docker-compose logs -f
 ```
 
 ## Updating the Application
@@ -183,7 +243,16 @@ To deploy updates:
 # Pull latest code
 git pull origin main
 
-# Rebuild and restart
-docker-compose down
-docker-compose up -d --build
+# Rebuild and restart with production configuration
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
+
+## Health Checks
+
+All services now include health checks to ensure proper operation:
+- Database: MySQL ping
+- Redis: Redis ping
+- Web: Will be healthy when the application starts serving requests
+
+Health checks improve reliability by ensuring services are ready before dependent services start.
