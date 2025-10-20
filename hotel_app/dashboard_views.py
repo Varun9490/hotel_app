@@ -4990,39 +4990,48 @@ def sla_configuration(request):
     # Get filter parameters
     search_query = request.GET.get('search', '')
     department_filter = request.GET.get('department', '')
-    priority_filter = request.GET.get('priority', '')
     
     # Get general SLA configurations (these are always shown)
     sla_configs = SLAConfiguration.objects.all().order_by('priority')
     
-    # Get all departments and request types for the new configuration section
+    # Get all departments for the new configuration section
     departments = Department.objects.all().order_by('name')
-    request_types = RequestType.objects.all().order_by('name')
     
-    # Get department/request SLA configurations with filters
+    # Get distinct department/request combinations
+    # We need to get one entry per department/request_type combination
     department_sla_configs = DepartmentRequestSLA.objects.select_related(
         'department', 'request_type'
-    ).all().order_by('department__name', 'request_type__name', 'priority')
+    ).order_by('department__name', 'request_type__name')
+    
+    # Since we can't use distinct() with select_related in PostgreSQL, we'll handle this in Python
+    # Get all entries and then filter to unique combinations
+    all_configs = list(department_sla_configs)
+    unique_configs = []
+    seen_combinations = set()
+    
+    for config in all_configs:
+        combination = (config.department_id, config.request_type_id)
+        if combination not in seen_combinations:
+            unique_configs.append(config)
+            seen_combinations.add(combination)
+    
+    department_sla_configs = unique_configs
     
     # Apply filters
     if search_query:
-        department_sla_configs = department_sla_configs.filter(
-            Q(department__name__icontains=search_query) |
-            Q(request_type__name__icontains=search_query)
-        )
+        department_sla_configs = [config for config in department_sla_configs 
+                                 if search_query.lower() in config.department.name.lower() or 
+                                    search_query.lower() in config.request_type.name.lower()]
     
     if department_filter:
-        department_sla_configs = department_sla_configs.filter(
-            department__name=department_filter
-        )
+        department_sla_configs = [config for config in department_sla_configs 
+                                 if config.department.name == department_filter]
     
-    if priority_filter:
-        department_sla_configs = department_sla_configs.filter(
-            priority=priority_filter
-        )
+    # Convert to a format that can be paginated
+    # Since we're working with a list, we need to manually handle pagination
+    from django.core.paginator import Paginator as ListPaginator
     
-    # Apply pagination
-    paginator = Paginator(department_sla_configs, page_size)
+    paginator = ListPaginator(department_sla_configs, page_size)
     try:
         department_sla_page = paginator.page(page)
     except PageNotAnInteger:
@@ -5036,14 +5045,12 @@ def sla_configuration(request):
         'subtitle': 'Configure default SLA times for different priority levels',
         'sla_configs': sla_configs,
         'departments': departments,
-        'request_types': request_types,
         'department_sla_configs': department_sla_page,  # Paginated results
         'paginator': paginator,
         'page_obj': department_sla_page,
         # Filter values for the template
         'search_query': search_query,
         'department_filter': department_filter,
-        'priority_filter': priority_filter,
     }
     return render(request, 'dashboard/sla_configuration.html', context)
 
@@ -5056,8 +5063,126 @@ def api_sla_configuration_update(request):
             import json
             data = json.loads(request.body.decode('utf-8'))
             
+            # Handle clear all request
+            if data.get('clear_all'):
+                # Delete all department SLA configurations
+                DepartmentRequestSLA.objects.all().delete()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'All department SLA configurations cleared successfully'
+                })
+            
+            # Handle import data request
+            import_data = data.get('import_data', [])
+            if import_data:
+                imported_count = 0
+                for item in import_data:
+                    department_name = item.get('department')
+                    request_type_name = item.get('request_type')
+                    response_time = item.get('response_time', 30)
+                    resolution_time = item.get('resolution_time', 120)
+                    
+                    if department_name and request_type_name:
+                        # Get or create the department
+                        department, dept_created = Department.objects.get_or_create(
+                            name=department_name,
+                            defaults={'description': f'Department for {department_name}'}
+                        )
+                        
+                        # Get or create the request type
+                        request_type, req_created = RequestType.objects.get_or_create(
+                            name=request_type_name,
+                            defaults={'description': f'Request type for {request_type_name}'}
+                        )
+                        
+                        # For each priority level, create or update the SLA configuration
+                        for priority in ['critical', 'high', 'normal', 'low']:
+                            DepartmentRequestSLA.objects.update_or_create(
+                                department=department,
+                                request_type=request_type,
+                                priority=priority,
+                                defaults={
+                                    'response_time_minutes': response_time,
+                                    'resolution_time_minutes': resolution_time
+                                }
+                            )
+                        imported_count += 1
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Successfully imported {imported_count} SLA configurations'
+                })
+            
+            # Handle add department config request
+            add_config = data.get('add_department_config')
+            if add_config:
+                department_id = add_config.get('department_id')
+                request_type_name = add_config.get('request_type')
+                response_time = add_config.get('response_time_minutes')
+                resolution_time = add_config.get('resolution_time_minutes')
+                
+                if department_id and request_type_name and response_time and resolution_time:
+                    # Get the department
+                    try:
+                        department = Department.objects.get(id=department_id)
+                    except Department.DoesNotExist:
+                        return JsonResponse({'error': 'Department not found'}, status=400)
+                    
+                    # Get or create the request type
+                    request_type, created = RequestType.objects.get_or_create(
+                        name=request_type_name,
+                        defaults={'description': f'Request type for {request_type_name}'}
+                    )
+                    
+                    # For each priority level, create or update the SLA configuration
+                    for priority in ['critical', 'high', 'normal', 'low']:
+                        DepartmentRequestSLA.objects.update_or_create(
+                            department=department,
+                            request_type=request_type,
+                            priority=priority,
+                            defaults={
+                                'response_time_minutes': response_time,
+                                'resolution_time_minutes': resolution_time
+                            }
+                        )
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Department SLA configuration added successfully'
+                    })
+            
+            # Handle delete department config request
+            delete_config = data.get('delete_department_config')
+            if delete_config:
+                department_id = delete_config.get('department_id')
+                request_type_name = delete_config.get('request_type')
+                
+                if department_id and request_type_name:
+                    # Get the department
+                    try:
+                        department = Department.objects.get(id=department_id)
+                    except Department.DoesNotExist:
+                        return JsonResponse({'error': 'Department not found'}, status=400)
+                    
+                    # Get the request type
+                    try:
+                        request_type = RequestType.objects.get(name=request_type_name)
+                    except RequestType.DoesNotExist:
+                        return JsonResponse({'error': 'Request type not found'}, status=400)
+                    
+                    # Delete all SLA configurations for this department/request type combination
+                    DepartmentRequestSLA.objects.filter(
+                        department=department,
+                        request_type=request_type
+                    ).delete()
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Department SLA configuration removed successfully'
+                    })
+            
             # Update general SLA configurations
-            for config_data in data.get('configs', []):
+            for config_data in data.get('general_configs', []):
                 priority = config_data.get('priority')
                 response_time = config_data.get('response_time_minutes')
                 resolution_time = config_data.get('resolution_time_minutes')
@@ -5074,22 +5199,35 @@ def api_sla_configuration_update(request):
             # Update department/request-specific SLA configurations
             for config_data in data.get('department_configs', []):
                 department_id = config_data.get('department_id')
-                request_type_id = config_data.get('request_type_id')
-                priority = config_data.get('priority')
+                request_type_name = config_data.get('request_type')
                 response_time = config_data.get('response_time_minutes')
                 resolution_time = config_data.get('resolution_time_minutes')
                 
-                if (department_id and request_type_id and priority and 
+                if (department_id and request_type_name and 
                     response_time is not None and resolution_time is not None):
-                    DepartmentRequestSLA.objects.update_or_create(
-                        department_id=department_id,
-                        request_type_id=request_type_id,
-                        priority=priority,
-                        defaults={
-                            'response_time_minutes': response_time,
-                            'resolution_time_minutes': resolution_time
-                        }
+                    # Get or create the request type
+                    request_type, created = RequestType.objects.get_or_create(
+                        name=request_type_name,
+                        defaults={'description': f'Request type for {request_type_name}'}
                     )
+                    
+                    # Get the department
+                    try:
+                        department = Department.objects.get(id=department_id)
+                    except Department.DoesNotExist:
+                        continue  # Skip if department doesn't exist
+                        
+                    # For each priority level, create or update the SLA configuration
+                    for priority in ['critical', 'high', 'normal', 'low']:
+                        DepartmentRequestSLA.objects.update_or_create(
+                            department=department,
+                            request_type=request_type,
+                            priority=priority,
+                            defaults={
+                                'response_time_minutes': response_time,
+                                'resolution_time_minutes': resolution_time
+                            }
+                        )
             
             return JsonResponse({
                 'success': True,
@@ -5112,60 +5250,36 @@ def api_sla_configuration_update(request):
                     'resolution_time_minutes': config.resolution_time_minutes
                 })
             
-            # Department/request-specific SLA configurations
-            department_configs = DepartmentRequestSLA.objects.select_related(
+            # Department/request-specific SLA configurations (distinct combinations)
+            all_department_configs = DepartmentRequestSLA.objects.select_related(
                 'department', 'request_type'
-            ).all().order_by('department_id', 'request_type_id', 'priority')
-            department_config_data = []
-            for config in department_configs:
-                department_config_data.append({
-                    'department_id': config.department_id,
-                    'request_type_id': config.request_type_id,
-                    'priority': config.priority,
-                    'response_time_minutes': config.response_time_minutes,
-                    'resolution_time_minutes': config.resolution_time_minutes
-                })
+            ).order_by('department_id', 'request_type_id')
+            
+            # Get unique combinations
+            unique_department_configs = []
+            seen_combinations = set()
+            
+            for config in all_department_configs:
+                combination = (config.department_id, config.request_type_id)
+                if combination not in seen_combinations:
+                    unique_department_configs.append({
+                        'department_id': config.department_id,
+                        'request_type_id': config.request_type_id,
+                        'request_type_name': config.request_type.name,
+                        'response_time_minutes': config.response_time_minutes,
+                        'resolution_time_minutes': config.resolution_time_minutes
+                    })
+                    seen_combinations.add(combination)
             
             return JsonResponse({
                 'success': True,
-                'configs': general_config_data,
-                'department_configs': department_config_data
+                'general_configs': general_config_data,
+                'department_configs': unique_department_configs
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-    search = request.GET.get('search', '')
-    filter_status = request.GET.get('filter', 'all')
-    
-    guests = Guest.objects.all().order_by('-created_at')
-    
-    if search:
-        guests = guests.filter(
-            Q(full_name__icontains=search) | Q(guest_id__icontains=search) |
-            Q(room_number__icontains=search)
-        )
-    if filter_status == 'with_qr':
-        guests = guests.exclude(details_qr_code='')
-    elif filter_status == 'without_qr':
-        guests = guests.filter(details_qr_code='')
-    elif filter_status == 'current':
-        today = timezone.now().date()
-        guests = guests.filter(checkin_date__lte=today, checkout_date__gte=today)
-    
-    total_guests = Guest.objects.count()
-    context = {
-        'guests': guests,
-        'search': search,
-        'filter_status': filter_status,
-        'total_guests': total_guests,
-        'guests_with_qr': Guest.objects.exclude(Q(details_qr_code='') | Q(details_qr_code__isnull=True)).count(),
-        'guests_without_qr': Guest.objects.filter(Q(details_qr_code='') | Q(details_qr_code__isnull=True)).count(),
-        'title': 'Guest QR Codes'
-    }
-    return render(request, "dashboard/guest_qr_codes.html", context)
 
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def regenerate_guest_qr(request, guest_id):
@@ -5175,6 +5289,7 @@ def regenerate_guest_qr(request, guest_id):
         qr_size = request.POST.get('qr_size', 'xlarge')
         if guest.generate_details_qr_code(size=qr_size):
             messages.success(request, f'Guest QR code regenerated with size: {qr_size}!')
+
         else:
             messages.error(request, 'Failed to regenerate guest QR code.')
     return redirect('dashboard:guest_detail', guest_id=guest.id)

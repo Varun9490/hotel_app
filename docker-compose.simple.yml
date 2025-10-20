@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: hotel_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: temp
+      MYSQL_USER: hotel_user
+      MYSQL_PASSWORD: hotel_password
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - db_data:/var/lib/mysql
+
+  web:
+    build: .
+    container_name: hotel_web
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-hx$$rau=sf86q@*-bu01+yzla%!b_*8g*pfddb3_mezm_h5ff(u
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - DB_NAME=temp
+      - DB_USER=hotel_user
+      - DB_PASSWORD=hotel_password
+      - DB_HOST=db
+      - DB_PORT=3306
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
+  static_volume:
+  media_volume:

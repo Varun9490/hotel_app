@@ -123,16 +123,34 @@ This creates the following groups:
 - Staff
 - Users
 
+## Docker Deployment
+
+This project includes Docker configuration for easy deployment. See [DOCKER_DEPLOYMENT_GUIDE.md](DOCKER_DEPLOYMENT_GUIDE.md) for detailed instructions.
+
+### Quick Start with Docker
+
+1. Install Docker and Docker Compose
+2. Copy `.env.production` to `.env` and update values:
+   ```bash
+   cp .env.production .env
+   # Edit .env file with your settings
+   ```
+3. Start the application:
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+4. Run initial setup:
+   ```bash
+   docker exec hotel_web python manage.py migrate
+   docker exec hotel_web python manage.py createsuperuser
+   ```
+
 ## Testing
 
 Run the test suite:
 ```bash
 python manage.py test
 ```
-
-## Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 
 ## API Endpoints
 
