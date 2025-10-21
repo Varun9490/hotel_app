@@ -1,33 +1,44 @@
-.git
-.gitignore
-README.md
-.env
-.env.production
-.DS_Store
-*.pyc
-__pycache__
-db.sqlite3
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django stuff:
 *.log
 local_settings.py
+db.sqlite3
+
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
 
-# Data migration files
-data_migration_exports/
-export_data.py
-import_data.py
-data_migration_helper.py
-DATA_MIGRATION_README.md
-MIGRATION_SUMMARY.md
+# OS
+.DS_Store
+Thumbs.db
 
-# Deployment files
-deploy.ps1
-deploy.sh
-Makefile
-
-# Docker files
-docker-compose.*.yml
-docker-compose.override.yml
+# Environment files
+.env
+.env.local

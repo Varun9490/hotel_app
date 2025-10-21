@@ -112,7 +112,7 @@ docker-compose -f docker-compose.local-db.yml --env-file .env.local up -d
 This will start:
 - Web application (connected to your local database)
 
-See [LOCAL_DB_DOCKER_SETUP.md](LOCAL_DB_DOCKER_SETUP.md) for detailed instructions on configuring this setup.
+See [LOCAL_DB_SETUP.md](LOCAL_DB_SETUP.md) for detailed instructions on configuring this setup.
 
 ### 3. Initial Setup
 

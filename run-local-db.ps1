@@ -53,8 +53,6 @@ if (-not (Test-Path $EnvFile)) {
     exit 1
 }
 
-Write-Host "Using environment file: $EnvFile" -ForegroundColor Green
-
 # Display current database configuration
 Write-Host "Current database configuration:" -ForegroundColor Yellow
 $envContent = Get-Content $EnvFile
@@ -77,6 +75,10 @@ if ($confirmation -ne "y" -and $confirmation -ne "Y") {
     Write-Host "Operation cancelled." -ForegroundColor Yellow
     exit 0
 }
+
+# Stop any existing containers
+Write-Host "Stopping any existing containers..." -ForegroundColor Yellow
+docker-compose -f docker-compose.local-db.yml down
 
 # Start the containers
 Write-Host "Starting Django container..." -ForegroundColor Yellow
