@@ -9,9 +9,25 @@ __pycache__
 db.sqlite3
 *.log
 local_settings.py
-.DS_Store
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+
+# Data migration files
+data_migration_exports/
+export_data.py
+import_data.py
+data_migration_helper.py
+DATA_MIGRATION_README.md
+MIGRATION_SUMMARY.md
+
+# Deployment files
+deploy.ps1
+deploy.sh
+Makefile
+
+# Docker files
+docker-compose.*.yml
+docker-compose.override.yml
