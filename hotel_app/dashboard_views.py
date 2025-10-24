@@ -952,6 +952,10 @@ def manage_users_all(request):
     return render(request, 'dashboard/users.html', ctx)
 
 
+
+
+        
+
 @login_required
 def manage_users_api_users(request, user_id=None):
     """Return a JSON list of users for the Manage Users frontend poller.
@@ -1632,6 +1636,44 @@ def import_user_data(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Error importing user data: {str(e)}")
         return JsonResponse({'error': f'Failed to import data: {str(e)}'}, status=500)
+        
+@login_required       
+@require_role(['admin', 'staff'])
+def tickets(request):
+    """Render the Tickets Management page."""
+    from hotel_app.models import ServiceRequest, RequestType, Department, User
+    from django.db.models import Count, Q
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.core.paginator import Paginator
+    
+    # Get filter parameters from request
+    department_filter = request.GET.get('department', '')
+    priority_filter = request.GET.get('priority', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
+    # Get departments with active ticket counts
+    departments_data = []
+    departments = Department.objects.all()
+    for dept in departments:
+        # Count active tickets for this department
+        active_tickets_count = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name
+        ).exclude(
+            status__in=['completed', 'closed']
+        ).count()
+      # Calculate SLA compliance (simplified calculation)
+        total_tickets = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name
+        ).count()        
+        completed_tickets = ServiceRequest.objects.filter(
+            request_type__name__icontains=dept.name,
+            status='completed'
+        ).count()
+        sla_compliance = 0
+        if total_tickets > 0:
+            sla_compliance = int((completed_tickets / total_tickets) * 100)
         color_mapping = {
             'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
             'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
