@@ -81,7 +81,6 @@ urlpatterns = [
     path('api/groups/<int:group_id>/permissions/update/', dashboard_views.api_group_permissions_update, name='api_group_permissions_update'),
     path('api/groups/bulk-permissions/update/', dashboard_views.api_bulk_permissions_update, name='api_bulk_permissions_update'),
     path('manage-users/profiles/', dashboard_views.manage_users_profiles, name='manage_users_profiles'),
-    path('tickets/', dashboard_views.tickets, name='tickets'),
     path('my-tickets/', dashboard_views.my_tickets, name='my_tickets'),
     path('tickets/<int:ticket_id>/', dashboard_views.ticket_detail, name='ticket_detail'),
     path('api/tickets/create/', dashboard_views.create_ticket_api, name='api_create_ticket'),
@@ -104,4 +103,9 @@ urlpatterns = [
     path('performance/', dashboard_views.performance_dashboard, name='performance'),
     path('gym/', dashboard_views.gym, name='gym'),
     path('gym/report/', dashboard_views.gym_report, name='gym_report'),
+    
+        # Export/Import URLs
+    path('export/users/', dashboard_views.export_user_data, name='export_user_data'),
+    path('import/users/', dashboard_views.import_user_data, name='import_user_data'),
+    
 ]

@@ -15,12 +15,10 @@
         html{
             scroll-behavior: smooth;
         }
-        /* Sidebar transition styles */
-        .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
-        }
-        
-        /* Overlay for mobile and now desktop when sidebar is open */
+        /* Prevent horizontal scroll from accidental overflows */
+        body { overflow-x: hidden; }
+
+        /* Overlay for mobile when sidebar is open */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -32,9 +30,8 @@
             z-index: 998;
         }
 
-        /* Sidebar is positioned fixed and off-screen by default */
+        /* Sidebar is positioned fixed and off-screen by default for mobile */
         .sidebar {
-            transform: translateX(-100%);
             position: fixed;
             top: 0;
             left: 0;
@@ -42,6 +39,13 @@
             z-index: 999;
             width: 100%;
             max-width: 256px; /* w-64 */
+            transform: translateX(-100%);
+            background-color: white;
+            transition: transform 0.3s ease-in-out;
+            
+            /* --- THIS IS THE CHANGE --- */
+            /* Allow the sidebar itself to scroll if its content is too tall */
+            overflow-y: auto; 
         }
         
         .sidebar.open {
@@ -50,6 +54,39 @@
         
         .sidebar-overlay.open {
             display: block;
+        }
+
+        /* On large screens, sidebar is always visible and part of the flex layout */
+        @media (min-width: 1024px) {
+            .sidebar {
+                position: static; /* Let it be part of the document flow */
+                transform: translateX(0);
+                flex-shrink: 0; /* Prevent sidebar from shrinking */
+                width: 256px; /* Give it an explicit width */
+                /* It now inherits height: 100vh and overflow-y: auto from the base rule */
+            }
+            
+            .sidebar-overlay {
+                display: none !important; /* Overlay is not needed on desktop */
+            }
+
+            /* The main wrapper will automatically fill the remaining space due to flex-1 */
+            .main-wrapper {
+                min-width: 0; /* Prevents wide content from breaking the flex layout */
+            }
+
+            /* Hide the mobile hamburger button on large screens */
+            #hamburgerButton {
+                display: none;
+            }
+
+            /* Position the notification container in the top-right of the header */
+            #notificationContainer {
+                position: absolute;
+                right: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+            }
         }
 
         /* Notification dropdown animation */
@@ -67,6 +104,23 @@
             background-color: #f9fafb;
         }
 
+        /* Ensure main content takes full width without overflow */
+        .main-content {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        /* Header styling */
+        .dashboard-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     {% block extra_css %}{% endblock %}
@@ -74,20 +128,20 @@
 <body class="bg-gray-50 font-inter">
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
     
-    <div class="flex min-h-screen">
+    <div class="flex h-screen bg-gray-100">
         {% if request.user.is_authenticated %}
             {% include 'dashboard/components/sidebar.html' %}
         {% endif %}
 
-        <div class="flex-1 flex flex-col w-full">
-            <header class="relative p-4 bg-white border-b border-gray-200 z-50">
-                <div class="flex items-center justify-between">
-                    <button id="hamburgerButton" class="text-gray-500 focus:outline-none p-2 rounded hover:bg-gray-100 flex items-center gap-2" onclick="toggleSidebar()">
+        <div class="flex-1 flex flex-col w-full main-wrapper">
+            <header class="dashboard-header relative p-4 bg-white border-b border-gray-200">
+                <div class="flex items-center justify-between h-full">
+                    <button id="hamburgerButton" class="text-gray-500 focus:outline-none p-2 rounded hover:bg-gray-100 flex items-center gap-2 lg:hidden" onclick="toggleSidebar()">
                         <img src="{% static 'images/sidebar/hamburger.svg' %}" alt="Menu" class="w-6 h-6">
                         <span class="text-gray-700 font-medium">Menu</span>
                     </button>
                     
-                    <div class="relative" id="notificationContainer">
+                    <div class="relative ml-auto" id="notificationContainer">
                         <button id="notificationButton" class="p-2 rounded-full hover:bg-gray-100 relative">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -112,9 +166,9 @@
                 </div>
             </header>
             
-            <main class="flex-1 overflow-x-hidden overflow-y-auto">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto main-content">
                 {% block content %}
-                    {% endblock %}
+                {% endblock %}
             </main>
         </div>
     </div>
@@ -151,16 +205,19 @@
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         if (sidebar && overlay) {
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('open');
+            // Only toggle on mobile devices
+            if (window.innerWidth < 1024) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('open');
+            }
         }
     }
     
-    // Close sidebar when clicking outside
+    // Close sidebar when clicking outside (only on mobile)
     document.addEventListener('click', function(event) {
         const sidebar = document.getElementById('sidebar');
         const hamburgerButton = document.getElementById('hamburgerButton');
-        if (sidebar && sidebar.classList.contains('open') && !sidebar.contains(event.target) && !hamburgerButton.contains(event.target)) {
+        if (window.innerWidth < 1024 && sidebar && sidebar.classList.contains('open') && !sidebar.contains(event.target) && !hamburgerButton.contains(event.target)) {
             toggleSidebar();
         }
     });
@@ -295,7 +352,7 @@
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.id = 'toastNotification';
-            toastContainer.className = 'fixed top-4 right-4 z-50 hidden items-center rounded-lg px-4 py-2 text-white shadow-lg';
+            toastContainer.className = 'fixed top-4 right-4 z-[1000] hidden items-center rounded-lg px-4 py-2 text-white shadow-lg';
             toastContainer.innerHTML = '<span id="toastMessage"></span>';
             document.body.appendChild(toastContainer);
         }
@@ -303,15 +360,15 @@
         const toastMessage = document.getElementById('toastMessage');
         toastMessage.textContent = message;
         
+        // Reset classes
+        toastContainer.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500');
+
         // Set colors based on type
         if (type === 'error') {
-            toastContainer.classList.remove('bg-green-500');
             toastContainer.classList.add('bg-red-500');
         } else if (type === 'info') {
-            toastContainer.classList.remove('bg-green-500', 'bg-red-500');
             toastContainer.classList.add('bg-blue-500');
         } else {
-            toastContainer.classList.remove('bg-red-500', 'bg-blue-500');
             toastContainer.classList.add('bg-green-500');
         }
         

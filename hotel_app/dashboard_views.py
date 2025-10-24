@@ -10,17 +10,19 @@ from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncHour
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
-from django.http import JsonResponse
-from django.http import HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.db import connection, transaction
 from django.conf import settings
 from django.utils.text import slugify
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib.auth import get_user_model
 import os
 
 import os
+
+import os
+import logging
 
 # Import all models from hotel_app
 from hotel_app.models import (
@@ -41,6 +43,9 @@ from .forms import (
 from .utils import user_in_group, create_notification
 from hotel_app.whatsapp_service import WhatsAppService
 from .rbac_services import get_accessible_sections, can_access_section
+
+# Import export/import utilities
+from .export_import_utils import create_export_file, import_all_data, validate_import_data
 
 # ---- Constants ----
 ADMINS_GROUP = 'Admins'
@@ -1572,50 +1577,61 @@ def api_reset_user_password(request, user_id):
         logger = logging.getLogger(__name__)
         logger.error(f"Error resetting password for user ID {user_id}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
-@login_required
-@require_role(['admin', 'staff'])
-def tickets(request):
-    """Render the Tickets Management page."""
-    from hotel_app.models import ServiceRequest, RequestType, Department, User
 
-    from django.db.models import Count, Q
-    from datetime import timedelta
-    from django.utils import timezone
-    from django.core.paginator import Paginator
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def export_user_data(request):
+    """Export all user-related data (departments, users, groups, profiles)"""
+    try:
+        format = request.GET.get('format', 'json').lower()
+        response = create_export_file(format)
+        return response
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error exporting user data: {str(e)}")
+        return JsonResponse({'error': 'Failed to export data'}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+@csrf_exempt
+def import_user_data(request):
+    """Import user-related data from a JSON file"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
     
-    # Get filter parameters from request
-    department_filter = request.GET.get('department', '')
-    priority_filter = request.GET.get('priority', '')
-    status_filter = request.GET.get('status', '')
-    search_query = request.GET.get('search', '')
-    
-    # Get departments with active ticket counts
-    departments_data = []
-    departments = Department.objects.all()
-    
-    for dept in departments:
-        # Count active tickets for this department
-        active_tickets_count = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name
-        ).exclude(
-            status__in=['completed', 'closed']
-        ).count()
+    try:
+        # Get the uploaded file
+        if 'file' not in request.FILES:
+            return JsonResponse({'error': 'No file uploaded'}, status=400)
         
-        # Calculate SLA compliance (simplified calculation)
-        total_tickets = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name
-        ).count()
+        uploaded_file = request.FILES['file']
         
-        completed_tickets = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name,
-            status='completed'
-        ).count()
+        # Check file extension
+        if not uploaded_file.name.endswith('.json'):
+            return JsonResponse({'error': 'Only JSON files are supported'}, status=400)
         
-        sla_compliance = 0
-        if total_tickets > 0:
-            sla_compliance = int((completed_tickets / total_tickets) * 100)
+        # Read and parse the JSON data
+        try:
+            file_content = uploaded_file.read().decode('utf-8')
+            data = json.loads(file_content)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
         
-        # Determine colors based on department
+        # Import the data
+        result = import_all_data(data)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Data imported successfully',
+            'result': result
+        })
+        
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error importing user data: {str(e)}")
+        return JsonResponse({'error': f'Failed to import data: {str(e)}'}, status=500)
         color_mapping = {
             'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
             'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
@@ -5983,3 +5999,58 @@ def gym_report(request):
         'current_page': 1    # Current page number
     }
     return render(request, 'dashboard/gym_report.html', context)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+def export_user_data(request):
+    """Export all user-related data (departments, users, groups, profiles)"""
+    try:
+        format = request.GET.get('format', 'json').lower()
+        response = create_export_file(format)
+        return response
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error exporting user data: {str(e)}")
+        return JsonResponse({'error': 'Failed to export data'}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP])
+@csrf_exempt
+def import_user_data(request):
+    """Import user-related data from a JSON file"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        # Get the uploaded file
+        if 'file' not in request.FILES:
+            return JsonResponse({'error': 'No file uploaded'}, status=400)
+        
+        uploaded_file = request.FILES['file']
+        
+        # Check file extension
+        if not uploaded_file.name.endswith('.json'):
+            return JsonResponse({'error': 'Only JSON files are supported'}, status=400)
+        
+        # Read and parse the JSON data
+        try:
+            file_content = uploaded_file.read().decode('utf-8')
+            data = json.loads(file_content)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
+        
+        # Import the data
+        result = import_all_data(data)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Data imported successfully',
+            'result': result
+        })
+        
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error importing user data: {str(e)}")
+        return JsonResponse({'error': f'Failed to import data: {str(e)}'}, status=500)

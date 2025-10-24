@@ -79,11 +79,11 @@
         
         {% if perms.tickets.view_servicerequest %}
         <a
-          href="{% url 'dashboard:tickets' %}"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:tickets' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
+          href="{% url 'dashboard:my_tickets' %}"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg {% if request.resolver_match.view_name == 'dashboard:my_tickets' %} text-sky-600 bg-sky-100 {% else %} text-gray-700 hover:bg-gray-100 {% endif %}"
         >
           <img
-            src="{% if request.resolver_match.view_name == 'dashboard:tickets' %}{% static 'images/sidebar/configure_requests_highlighted.svg' %}{% else %}{% static 'images/sidebar/configure_request.svg' %}{% endif %}"
+            src="{% if request.resolver_match.view_name == 'dashboard:my_tickets' %}{% static 'images/sidebar/configure_requests_highlighted.svg' %}{% else %}{% static 'images/sidebar/configure_request.svg' %}{% endif %}"
             alt="Tickets Icon"
             class="w-5 h-5"
           />
