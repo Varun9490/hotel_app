@@ -576,7 +576,6 @@ def dashboard2_view(request):
         request_types = list(RequestType.objects.all())
         requests_labels = [rt.name for rt in request_types]
         try:
-            from hotel_app.models import ServiceRequest
             requests_values = [ServiceRequest.objects.filter(request_type=rt).count() for rt in request_types]
         except Exception:
             requests_values = [1 for _ in requests_labels]
@@ -631,43 +630,54 @@ def dashboard2_view(request):
 
     occupancy_data = {'occupied': occupancy_today, 'rate': round(occupancy_rate, 1)}
 
-    # Map the data to dashboard2 template variables
-    context = {
-        'user_name': request.user.get_full_name() or request.user.username,
-        # Stats data
-        'active_tickets': open_complaints,
-        'avg_review_rating': round(average_review_rating, 1) if average_review_rating else 0,
-        'sla_breaches': 0,  # This would need to be calculated from actual SLA breaches
-        'vouchers_redeemed': vouchers_redeemed,
-        'guest_satisfaction': round(average_review_rating * 20) if average_review_rating else 0,  # Convert 5-star to 100%
-        'avg_response_time': '12m',  # This would need to be calculated from actual response times
-        'staff_efficiency': 87,  # This would need to be calculated from actual metrics
-        'active_gym_members': 389,  # This would need to be fetched from actual data
-        'active_guests': occupancy_today,
-        # Chart data - simplified for dashboard2
-        'tickets_data': requests_values[:7] if len(requests_values) >= 7 else requests_values + [0] * (7 - len(requests_values)),
-        'feedback_data': feedback_data['positive'][:7] if len(feedback_data['positive']) >= 7 else feedback_data['positive'] + [0] * (7 - len(feedback_data['positive'])),
-        'peak_day_tickets': max(requests_values) if requests_values else 0,
-        'peak_day_feedback': max(feedback_data['positive']) if feedback_data['positive'] else 0,
-        'weekly_growth': 18,  # This would need to be calculated from actual data
-        # Sentiment data
-        'positive_reviews': sum(feedback_data['positive']),
-        'neutral_reviews': sum(feedback_data['neutral']),
-        'negative_reviews': sum(feedback_data['negative']),
-        'positive_count': sum(feedback_data['positive']),
-        'neutral_count': sum(feedback_data['neutral']),
-        'negative_count': sum(feedback_data['negative']),
-        # Department data - using real data where possible
-        'departments': [
-            {'name': 'Housekeeping', 'tickets': requests_values[0] if len(requests_values) > 0 else 15, 'color': 'sky-600'},
-            {'name': 'Maintenance', 'tickets': requests_values[1] if len(requests_values) > 1 else 12, 'color': 'yellow-400'},
-            {'name': 'Guest Services', 'tickets': requests_values[2] if len(requests_values) > 2 else 8, 'color': 'teal-500'},
-            {'name': 'Restaurant', 'tickets': requests_values[3] if len(requests_values) > 3 else 6, 'color': 'green-500'},
-            {'name': 'Front Desk', 'tickets': requests_values[4] if len(requests_values) > 4 else 4, 'color': 'fuchsia-700'},
-            {'name': 'Concierge', 'tickets': requests_values[5] if len(requests_values) > 5 else 2, 'color': 'red-500'},
-        ],
-        # Critical tickets - would need to fetch actual critical tickets
-        'critical_tickets': [
+    # Fetch actual critical tickets (high priority service requests)
+    try:
+        critical_tickets = ServiceRequest.objects.filter(
+            priority__in=['high', 'critical']
+        ).select_related('requester_user', 'department', 'location').order_by('-created_at')[:4]
+        
+        # Process tickets for display
+        critical_tickets_data = []
+        for ticket in critical_tickets:
+            # Calculate time left based on SLA
+            time_left = "Unknown"
+            progress = 0
+            if ticket.due_at and ticket.created_at:
+                total_time = (ticket.due_at - ticket.created_at).total_seconds()
+                elapsed_time = (timezone.now() - ticket.created_at).total_seconds()
+                if total_time > 0:
+                    progress = min(100, max(0, int((elapsed_time / total_time) * 100)))
+                    remaining_seconds = total_time - elapsed_time
+                    if remaining_seconds > 0:
+                        hours = int(remaining_seconds // 3600)
+                        if hours > 0:
+                            time_left = f"{hours}h left"
+                        else:
+                            minutes = int(remaining_seconds // 60)
+                            time_left = f"{minutes}m left"
+                    else:
+                        time_left = "Overdue"
+                else:
+                    time_left = "Completed"
+                    progress = 100
+            
+            critical_tickets_data.append({
+                'id': ticket.id,
+                'title': ticket.request_type.name if ticket.request_type else 'Unknown Request',
+                'location': str(ticket.location) if ticket.location else '',
+                'department': str(ticket.department) if ticket.department else 'Unknown Department',
+                'requester_user': ticket.requester_user,
+                'reported': ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else 'Unknown',
+                'priority': ticket.priority.upper() if ticket.priority else 'NORM',
+                'time_left': time_left,
+                'progress': progress,
+                'created_at': ticket.created_at,
+                'completed_at': ticket.completed_at,
+                'status': ticket.status,
+            })
+    except Exception as e:
+        # Fallback to dummy data if there's an error
+        critical_tickets_data = [
             {
                 'id': 2847,
                 'title': 'Room AC not working',
@@ -716,9 +726,35 @@ def dashboard2_view(request):
                 'color': 'green-500',
                 'progress': 100
             }
-        ],
-        # Guest feedback - would need to fetch actual feedback
-        'guest_feedback': [
+        ]
+
+    # Fetch actual guest feedback (recent reviews)
+    try:
+        recent_feedback = Review.objects.select_related('guest').order_by('-created_at')[:3]
+        
+        # Process feedback for display
+        feedback_data_list = []
+        for feedback in recent_feedback:
+            # Determine sentiment based on rating
+            if feedback.rating >= 4:
+                sentiment = 'POSITIVE'
+            elif feedback.rating == 3:
+                sentiment = 'NEUTRAL'
+            else:
+                sentiment = 'NEGATIVE'
+                
+            feedback_data_list.append({
+                'id': feedback.id,
+                'rating': feedback.rating,
+                'location': getattr(feedback.guest, 'room_number', '') if feedback.guest else '',
+                'created_at': feedback.created_at,
+                'comment': feedback.comment or 'No comment provided',
+                'guest': feedback.guest,
+                'sentiment': sentiment,
+            })
+    except Exception as e:
+        # Fallback to dummy data if there's an error
+        feedback_data_list = [
             {
                 'rating': 5,
                 'location': 'Room 405',
@@ -747,6 +783,46 @@ def dashboard2_view(request):
                 'color': 'red-500'
             }
         ]
+
+    # Map the data to dashboard2 template variables
+    context = {
+        'user_name': request.user.get_full_name() or request.user.username,
+        # Stats data
+        'active_tickets': open_complaints,
+        'avg_review_rating': round(average_review_rating, 1) if average_review_rating else 0,
+        'sla_breaches': 0,  # This would need to be calculated from actual SLA breaches
+        'vouchers_redeemed': vouchers_redeemed,
+        'guest_satisfaction': round(average_review_rating * 20) if average_review_rating else 0,  # Convert 5-star to 100%
+        'avg_response_time': '12m',  # This would need to be calculated from actual response times
+        'staff_efficiency': 87,  # This would need to be calculated from actual metrics
+        'active_gym_members': 389,  # This would need to be fetched from actual data
+        'active_guests': occupancy_today,
+        # Chart data - simplified for dashboard2
+        'tickets_data': requests_values[:7] if len(requests_values) >= 7 else requests_values + [0] * (7 - len(requests_values)),
+        'feedback_data': feedback_data['positive'][:7] if len(feedback_data['positive']) >= 7 else feedback_data['positive'] + [0] * (7 - len(feedback_data['positive'])),
+        'peak_day_tickets': max(requests_values) if requests_values else 0,
+        'peak_day_feedback': max(feedback_data['positive']) if feedback_data['positive'] else 0,
+        'weekly_growth': 18,  # This would need to be calculated from actual data
+        # Sentiment data
+        'positive_reviews': sum(feedback_data['positive']),
+        'neutral_reviews': sum(feedback_data['neutral']),
+        'negative_reviews': sum(feedback_data['negative']),
+        'positive_count': sum(feedback_data['positive']),
+        'neutral_count': sum(feedback_data['neutral']),
+        'negative_count': sum(feedback_data['negative']),
+        # Department data - using real data where possible
+        'departments': [
+            {'name': 'Housekeeping', 'tickets': requests_values[0] if len(requests_values) > 0 else 15, 'color': 'sky-600'},
+            {'name': 'Maintenance', 'tickets': requests_values[1] if len(requests_values) > 1 else 12, 'color': 'yellow-400'},
+            {'name': 'Guest Services', 'tickets': requests_values[2] if len(requests_values) > 2 else 8, 'color': 'teal-500'},
+            {'name': 'Restaurant', 'tickets': requests_values[3] if len(requests_values) > 3 else 6, 'color': 'green-500'},
+            {'name': 'Front Desk', 'tickets': requests_values[4] if len(requests_values) > 4 else 4, 'color': 'fuchsia-700'},
+            {'name': 'Concierge', 'tickets': requests_values[5] if len(requests_values) > 5 else 2, 'color': 'red-500'},
+        ],
+        # Critical tickets - now using actual data
+        'critical_tickets': critical_tickets_data,
+        # Guest feedback - now using actual data
+        'guest_feedback': feedback_data_list
     }
     
     return render(request, 'dashboard/dashboard.html', context)

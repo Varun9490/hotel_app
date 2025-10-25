@@ -140,17 +140,17 @@
 
 <!-- Import Data Modal -->
 <div id="importDataModal" role="dialog" aria-modal="true" aria-labelledby="importDataTitle"
-     class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"
+     class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 backdrop-blur-sm bg-black bg-opacity-30 transition-opacity duration-300 opacity-0"
      onclick="closeModal('importDataModal')">
-  <div data-modal-content class="w-full max-w-md rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0"
+  <div data-modal-content class="w-full max-w-md rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0 flex flex-col max-h-[95vh]"
        onclick="event.stopPropagation()">
-    <div class="flex items-start justify-between p-5 border-b">
+    <div class="flex items-start justify-between p-5 border-b flex-shrink-0">
       <h3 id="importDataTitle" class="text-lg font-semibold text-gray-900">Import User Data</h3>
       <button type="button" onclick="closeModal('importDataModal')" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 transition-colors" aria-label="Close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="importDataForm" class="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+    <form id="importDataForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data">
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Select Excel File</label>
@@ -159,7 +159,7 @@
       </div>
       <div id="importDataError" class="text-sm text-red-600 hidden"></div>
     </form>
-    <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg">
+    <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg flex-shrink-0">
       <button type="button" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50" onclick="closeModal('importDataModal')">Cancel</button>
       <button id="importDataSubmit" type="submit" form="importDataForm" class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">Import Data</button>
     </div>
@@ -1260,7 +1260,7 @@
     const form = e.target;
     const errorEl = document.getElementById('importDataError');
     const formData = new FormData(form);
-    
+
     // Check if file is selected
     const fileInput = document.getElementById('importFile');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
@@ -1270,7 +1270,7 @@
       }
       return;
     }
-    
+
     const file = fileInput.files[0];
     // Only allow Excel files for import
     if (!file.name.endsWith('.xlsx')) {
@@ -1280,15 +1280,16 @@
       }
       return;
     }
-    
+
     btn.disabled = true;
     btn.textContent = 'Importing...';
-    if (errorEl) errorEl.classList.add('hidden');
-    
+    errorEl.classList.add('hidden');
+
     fetch('{% url "dashboard:import_user_data" %}', {
       method: 'POST',
       headers: {
-        'X-CSRFToken': getCookie('csrftoken')
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json'
       },
       body: formData
     })
@@ -1304,7 +1305,7 @@
       closeModal('importDataModal');
       showToast('Data imported successfully!', 'success');
       // Reload the page to reflect changes
-      setTimeout(() => { window.location.reload(); }, 1500);
+      setTimeout(() => { window.location.reload(); }, 700);
     })
     .catch(err => {
       if (errorEl) {
