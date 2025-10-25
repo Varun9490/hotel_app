@@ -373,7 +373,7 @@
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.id = 'toastNotification';
-            toastContainer.className = 'fixed top-4 right-4 z-[1000] hidden items-center rounded-lg px-4 py-2 text-white shadow-lg';
+            toastContainer.className = 'fixed top-4 right-4 z-[1000] hidden items-center rounded-lg px-4 py-2 text-white shadow-lg transition-all duration-300 transform translate-x-full opacity-0';
             toastContainer.innerHTML = '<span id="toastMessage"></span>';
             document.body.appendChild(toastContainer);
         }
@@ -382,8 +382,7 @@
         toastMessage.textContent = message;
         
         // Reset classes
-        toastContainer.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500');
-
+        toastContainer.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500', 'translate-x-full', 'opacity-0');
 
         // Set colors based on type
         if (type === 'error') {
@@ -398,16 +397,105 @@
         toastContainer.classList.remove('hidden');
         toastContainer.classList.add('flex');
         
+        // Trigger reflow and start transition
+        requestAnimationFrame(() => {
+            toastContainer.classList.remove('translate-x-full', 'opacity-0');
+            toastContainer.classList.add('translate-x-0', 'opacity-100');
+        });
+        
         // Auto-hide after 3 seconds
         setTimeout(() => {
-            toastContainer.classList.add('hidden');
-            toastContainer.classList.remove('flex');
+            toastContainer.classList.remove('translate-x-0', 'opacity-100');
+            toastContainer.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => {
+                toastContainer.classList.add('hidden');
+                toastContainer.classList.remove('flex');
+            }, 300);
         }, 3000);
     }
     
-    // Make showToast globally available
+    // Custom confirmation modal functions
+    function showConfirmationModal(title, message, onConfirm) {
+        const modal = document.getElementById('confirmationModal');
+        const titleElement = document.getElementById('confirmationModalTitle');
+        const messageElement = document.getElementById('confirmationModalMessage');
+        const confirmButton = document.getElementById('confirmationModalConfirm');
+        
+        if (!modal || !titleElement || !messageElement || !confirmButton) return;
+        
+        // Set modal content
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        
+        // Set up confirm action
+        confirmButton.onclick = function() {
+            closeConfirmationModal();
+            if (onConfirm && typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        };
+        
+        // Show modal with animation
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            const dialog = modal.querySelector('div[onclick="event.stopPropagation()"]');
+            if (dialog) {
+                dialog.classList.remove('scale-95', 'opacity-0');
+                dialog.classList.add('scale-100', 'opacity-100');
+            }
+        });
+    }
+    
+    function closeConfirmationModal() {
+        const modal = document.getElementById('confirmationModal');
+        if (!modal) return;
+        
+        const dialog = modal.querySelector('div[onclick="event.stopPropagation()"]');
+        modal.classList.add('opacity-0');
+        if (dialog) {
+            dialog.classList.remove('scale-100', 'opacity-100');
+            dialog.classList.add('scale-95', 'opacity-0');
+        }
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+    
+    // Make functions globally available
     window.showToast = showToast;
+    window.showConfirmationModal = showConfirmationModal;
+    window.closeConfirmationModal = closeConfirmationModal;
     </script>
+    
+    <!-- Custom Confirmation Modal with Backdrop Blur -->
+    <div id="confirmationModal" class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 backdrop-blur-sm bg-black bg-opacity-30 transition-opacity duration-300 opacity-0" onclick="closeConfirmationModal()">
+        <div class="w-full max-w-md rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0" onclick="event.stopPropagation()">
+            <div class="p-6">
+                <div class="flex items-start justify-between">
+                    <h3 id="confirmationModalTitle" class="text-lg font-semibold text-gray-900">Confirm Action</h3>
+                    <button type="button" onclick="closeConfirmationModal()" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 transition-colors" aria-label="Close">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <p id="confirmationModalMessage" class="text-gray-600">Are you sure you want to proceed?</p>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="confirmationModalCancel" onclick="closeConfirmationModal()" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50">Cancel</button>
+                    <button type="button" id="confirmationModalConfirm" class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toastNotification" class="fixed top-4 right-4 z-[1000] hidden items-center rounded-lg px-4 py-2 text-white shadow-lg transition-all duration-300 transform translate-x-full opacity-0">
+        <span id="toastMessage"></span>
+    </div>
     
     {% block extra_js %}{% endblock %}
 </body>

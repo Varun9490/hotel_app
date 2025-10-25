@@ -311,16 +311,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let body = {};
         if (options.requiresNotes) {
+            // For notes, we still use prompt for now, but we could enhance this with a modal too
             const notes = prompt(options.notesPrompt);
             if (notes === null) return; 
             body[options.notesField] = notes;
         }
 
-        // Use a generic confirmation unless it's a note-taking action
-        if (!options.requiresNotes && !confirm(confirmationMessage)) {
+        // Use custom confirmation modal instead of browser confirm
+        if (!options.requiresNotes) {
+            showConfirmationModal('Confirm Action', confirmationMessage, function() {
+                performTicketAction(ticketId, url, body, options);
+            });
             return;
         }
 
+        // For actions that require notes, proceed directly
+        performTicketAction(ticketId, url, body, options);
+    }
+
+    function performTicketAction(ticketId, url, body, options) {
         fetch(url.replace('TICKET_ID', ticketId), {
             method: 'POST',
             headers: {
@@ -332,15 +341,18 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(options.successMessage || 'Action successful!');
+                // Use toast notification instead of alert
+                showToast(options.successMessage || 'Action successful!', 'success');
                 location.reload();
             } else {
-                alert('Error: ' + (data.error || 'An unknown error occurred.'));
+                // Use toast notification for errors
+                showToast('Error: ' + (data.error || 'An unknown error occurred.'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+            // Use toast notification for errors
+            showToast('An error occurred. Please try again.', 'error');
         });
     }
 

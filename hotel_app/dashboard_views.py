@@ -1965,11 +1965,12 @@ def ticket_detail(request, ticket_id):
         if service_request.location.type:
             room_type = service_request.location.type.name
     
-    # Get department info
+    # Get department info - Use the actual department from the service request
     department_name = 'Unknown Department'
-    # Since RequestType doesn't have a department field, we'll use work_family as a fallback
-    # or set it to Unknown if neither is available
-    if service_request.request_type:
+    if service_request.department:
+        department_name = service_request.department.name
+    elif service_request.request_type:
+        # Fallback to work_family or request_family if no department is assigned
         if hasattr(service_request.request_type, 'work_family') and service_request.request_type.work_family:
             department_name = service_request.request_type.work_family.name
         elif hasattr(service_request.request_type, 'request_family') and service_request.request_type.request_family:

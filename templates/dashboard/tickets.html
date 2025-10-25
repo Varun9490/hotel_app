@@ -601,30 +601,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 description: document.getElementById('description').value.trim() 
             }; 
             if (!ticketData.guest_name || !ticketData.room_number || !ticketData.department || !ticketData.category || !ticketData.priority) { 
-                alert('Please fill in all required fields: Guest Name, Room Number, Department, Request Type, and Priority.'); 
+                // Use toast notification instead of alert
+                showToast('Please fill in all required fields: Guest Name, Room Number, Department, Request Type, and Priority.', 'error');
                 return; 
             } 
-            fetch('{% url "dashboard:api_create_ticket" %}', { 
-                method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRFToken': getCookie('csrftoken') 
-                }, 
-                body: JSON.stringify(ticketData) 
-            })
-            .then(response => response.json())
-            .then(data => { 
-                if (data.success) { 
-                    alert('Ticket created successfully!'); 
-                    location.reload(); 
-                } else { 
-                    alert('Error creating ticket: ' + (data.error || 'Unknown error')); 
-                } 
-            })
-            .catch(error => { 
-                console.error('Error:', error); 
-                alert('An error occurred. Please try again.'); 
-            }); 
+            
+            // Show confirmation modal before creating ticket
+            showConfirmationModal('Create Ticket', 'Are you sure you want to create this ticket?', function() {
+                fetch('{% url "dashboard:api_create_ticket" %}', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRFToken': getCookie('csrftoken') 
+                    }, 
+                    body: JSON.stringify(ticketData) 
+                })
+                .then(response => response.json())
+                .then(data => { 
+                    if (data.success) { 
+                        // Use toast notification instead of alert
+                        showToast('Ticket created successfully!', 'success');
+                        // Close the modal and reset form
+                        closeModal(modal, modalContent);
+                        modalForm.reset();
+                        selectedPriority = '';
+                        selectedRequestType = null;
+                        document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500'));
+                        document.getElementById('requestType').value = '';
+                        document.getElementById('requestTypeSuggestions').innerHTML = '';
+                        document.getElementById('requestTypeSuggestions').classList.add('hidden');
+                        location.reload(); 
+                    } else { 
+                        // Use toast notification for errors
+                        showToast('Error creating ticket: ' + (data.error || 'Unknown error'), 'error');
+                    } 
+                })
+                .catch(error => { 
+                    console.error('Error:', error); 
+                    // Use toast notification for errors
+                    showToast('An error occurred. Please try again.', 'error');
+                });
+            });
         });
     }
 });

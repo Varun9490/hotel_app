@@ -32,20 +32,26 @@ const ModalManager = {
     }, 300);
   },
   toast: function(message, type = 'success') {
-    const toast = document.getElementById('toastNotification');
-    const toastMessage = document.getElementById('toastMessage');
-    if (!toast || !toastMessage) return;
-    toastMessage.textContent = message;
-    toast.classList.remove('bg-green-500', 'bg-red-500');
-    if (type === 'error') {
-      toast.classList.add('bg-red-500');
+    // Use the global showToast function if available, otherwise use the local implementation
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, type);
     } else {
-      toast.classList.add('bg-green-500');
+      // Fallback implementation
+      const toast = document.getElementById('toastNotification');
+      const toastMessage = document.getElementById('toastMessage');
+      if (!toast || !toastMessage) return;
+      toastMessage.textContent = message;
+      toast.classList.remove('bg-green-500', 'bg-red-500');
+      if (type === 'error') {
+        toast.classList.add('bg-red-500');
+      } else {
+        toast.classList.add('bg-green-500');
+      }
+      toast.classList.remove('translate-x-full', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+      }, 3000);
     }
-    toast.classList.remove('translate-x-full', 'opacity-0');
-    setTimeout(() => {
-      toast.classList.add('translate-x-full', 'opacity-0');
-    }, 3000);
   }
 };
 
