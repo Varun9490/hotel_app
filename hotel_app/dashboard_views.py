@@ -2217,11 +2217,11 @@ def gym_report(request):
 
 
 @login_required
+@require_role(['admin', 'staff', 'user'])
 def my_tickets(request):
-    """Render the My Tickets page - shows tickets assigned to the current user's department."""
-    from hotel_app.models import ServiceRequest, RequestType, Department, User
-    from django.db.models import Count, Q
-    from datetime import timedelta
+    """Render the My Tickets page with dynamic status cards."""
+    from django.db.models import Q, Count
+    from .models import ServiceRequest
     from django.utils import timezone
     from django.core.paginator import Paginator
     
@@ -2230,59 +2230,67 @@ def my_tickets(request):
     if hasattr(request.user, 'userprofile') and request.user.userprofile.department:
         user_department = request.user.userprofile.department
     
-    # Get filter parameters from request
+    # Get service requests assigned to the current user (either as assignee or requester)
+    # Also include pending tickets in the user's department that are not yet assigned
+    user_tickets = ServiceRequest.objects.filter(
+        Q(assignee_user=request.user) | 
+        Q(requester_user=request.user) |
+        (Q(department=user_department) & Q(status='pending') & Q(assignee_user=None))
+    ).select_related(
+        'request_type', 'location', 'requester_user', 'assignee_user', 'department'
+    ).order_by('-created_at')
+    
+    # Calculate status counts for the status cards
+    status_counts = user_tickets.aggregate(
+        pending=Count('id', filter=Q(status='pending')),
+        accepted=Count('id', filter=Q(status='accepted')),
+        in_progress=Count('id', filter=Q(status='in_progress')),
+        completed=Count('id', filter=Q(status='completed')),
+        closed=Count('id', filter=Q(status='closed')),
+        escalated=Count('id', filter=Q(status='escalated')),
+        rejected=Count('id', filter=Q(status='rejected'))
+    )
+    
+    # Calculate overdue count
+    overdue_count = user_tickets.filter(
+        due_at__lt=timezone.now(),
+        status__in=['pending', 'accepted', 'in_progress']
+    ).count()
+    
+    # Handle filtering
     priority_filter = request.GET.get('priority', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
     
-    # Get service requests assigned to the user's department
-    tickets_queryset = ServiceRequest.objects.select_related(
-        'request_type', 'location', 'requester_user', 'assignee_user', 'department'
-    ).order_by('-id')
+    # Convert display status values to database status values
+    status_mapping = {
+        'Pending': 'pending',
+        'Accepted': 'accepted',
+        'In Progress': 'in_progress',
+        'Completed': 'completed',
+        'Closed': 'closed',
+        'Escalated': 'escalated',
+        'Rejected': 'rejected'
+    }
     
-    # Filter by department if user has one
-    if user_department:
-        tickets_queryset = tickets_queryset.filter(department=user_department)
-    
-    # Apply priority filter
     if priority_filter:
-        # Map display values to model values
-        priority_mapping = {
-            'High': 'high',
-            'Medium': 'normal',
-            'Low': 'low'
-        }
-        model_priority = priority_mapping.get(priority_filter)
-        if model_priority:
-            tickets_queryset = tickets_queryset.filter(priority=model_priority)
+        user_tickets = user_tickets.filter(priority=priority_filter.lower())
     
-    # Apply status filter
     if status_filter:
-        # Map display values to model values
-        status_mapping = {
-            'Pending': 'pending',
-            'Assigned': 'assigned',
-            'Accepted': 'accepted',
-            'In Progress': 'in_progress',
-            'Completed': 'completed',
-            'Closed': 'closed',
-            'Escalated': 'escalated',
-            'Rejected': 'rejected'
-        }
-        model_status = status_mapping.get(status_filter)
-        if model_status:
-            tickets_queryset = tickets_queryset.filter(status=model_status)
+        # Convert display status to database status
+        db_status = status_mapping.get(status_filter, status_filter.lower())
+        user_tickets = user_tickets.filter(status=db_status)
     
     if search_query:
-        tickets_queryset = tickets_queryset.filter(
+        user_tickets = user_tickets.filter(
+            Q(notes__icontains=search_query) |
             Q(request_type__name__icontains=search_query) |
-            Q(location__name__icontains=search_query) |
-            Q(notes__icontains=search_query)
+            Q(location__name__icontains=search_query)
         )
     
     # Process tickets to add color attributes and workflow permissions
     processed_tickets = []
-    for ticket in tickets_queryset:
+    for ticket in user_tickets:
         # Map priority to display values
         priority_mapping = {
             'high': {'label': 'High', 'color': 'red'},
@@ -2338,9 +2346,11 @@ def my_tickets(request):
         ticket.can_close = False
         
         # Determine what actions the user can take based on workflow
-        # For pending tickets, any user in the department can accept (which will assign to them)
-        if ticket.status == 'pending' and ticket.department == user_department:
-            ticket.can_accept = True
+        # For pending tickets, any user can accept (which will assign to them)
+        if ticket.status == 'pending' and ticket.assignee_user is None:
+            # Unassigned ticket - user can accept if it's in their department or they're the requester
+            if ticket.department == user_department or ticket.requester_user == request.user:
+                ticket.can_accept = True
         elif ticket.status == 'accepted' and ticket.assignee_user == request.user:
             # Accepted by current user - can start work
             ticket.can_start = True
@@ -2363,18 +2373,22 @@ def my_tickets(request):
     page_obj = paginator.get_page(page_number)
     
     context = {
-        'tickets': page_obj,  # Pass the page_obj to the template
-        'page_obj': page_obj,  # Pass it again as page_obj for clarity
-        'total_tickets': tickets_queryset.count(),
-        'user_department': user_department,
-        # Pass filter values back to template
+        'tickets': page_obj,
+        'page_obj': page_obj,
+        'status_counts': status_counts,
+        'overdue_count': overdue_count,
         'priority_filter': priority_filter,
         'status_filter': status_filter,
         'search_query': search_query,
-        'notification_count': 3,  # This should be dynamic in a real implementation
-        'overdue_count': 0,  # This should be dynamic in a real implementation
+        'user_department': user_department,
     }
+    
     return render(request, 'dashboard/my_tickets.html', context)
+
+
+# Removed claim_ticket_api as we're removing the claim functionality
+# Tickets are now directly assigned when accepted
+    
 
 
 # Removed claim_ticket_api as we're removing the claim functionality
@@ -4675,6 +4689,12 @@ def create_ticket_api(request):
                 defaults={}
             )
             
+            # Get department
+            try:
+                department = Department.objects.get(name=department_name)
+            except Department.DoesNotExist:
+                return JsonResponse({'error': 'Department not found'}, status=400)
+            
             # Map priority to model values
             priority_mapping = {
                 'High': 'high',
@@ -4684,25 +4704,19 @@ def create_ticket_api(request):
             }
             model_priority = priority_mapping.get(priority, 'normal')
             
-            # Set SLA hours based on priority
-            sla_hours = 24  # Default SLA
-            if model_priority == 'high':
-                sla_hours = 4  # 4 hours for high priority
-            elif model_priority == 'normal':
-                sla_hours = 24  # 24 hours for normal priority
-            elif model_priority == 'low':
-                sla_hours = 72  # 72 hours for low priority
-            
             # Create service request
             service_request = ServiceRequest.objects.create(
                 request_type=request_type,
                 location=location,
                 requester_user=request.user,
+                department=department,
                 priority=model_priority,
                 status='pending',
-                notes=description,
-                sla_hours=sla_hours,
+                notes=description
             )
+            
+            # Notify department staff
+            service_request.notify_department_staff()
             
             return JsonResponse({
                 'success': True,

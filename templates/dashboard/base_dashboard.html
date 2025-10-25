@@ -18,6 +18,7 @@
         /* Prevent horizontal scroll from accidental overflows */
         body { overflow-x: hidden; }
 
+
         /* Overlay for mobile when sidebar is open */
         .sidebar-overlay {
             display: none;
@@ -29,6 +30,7 @@
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 998;
         }
+
 
         /* Sidebar is positioned fixed and off-screen by default for mobile */
         .sidebar {
@@ -43,7 +45,6 @@
             background-color: white;
             transition: transform 0.3s ease-in-out;
             
-            /* --- THIS IS THE CHANGE --- */
             /* Allow the sidebar itself to scroll if its content is too tall */
             overflow-y: auto; 
         }
@@ -55,6 +56,7 @@
         .sidebar-overlay.open {
             display: block;
         }
+
 
         /* On large screens, sidebar is always visible and part of the flex layout */
         @media (min-width: 1024px) {
@@ -70,24 +72,34 @@
                 display: none !important; /* Overlay is not needed on desktop */
             }
 
+
             /* The main wrapper will automatically fill the remaining space due to flex-1 */
             .main-wrapper {
                 min-width: 0; /* Prevents wide content from breaking the flex layout */
             }
+
 
             /* Hide the mobile hamburger button on large screens */
             #hamburgerButton {
                 display: none;
             }
 
-            /* Position the notification container in the top-right of the header */
+
+            /* Position the notification container properly on large screens */
             #notificationContainer {
-                position: absolute;
-                right: 1rem;
-                top: 50%;
-                transform: translateY(-50%);
+                position: static;
+                margin-left: auto;
+            }
+            
+            /* Adjust header flex behavior for large screens */
+            .header-inner {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                width: 100%;
             }
         }
+
 
         /* Notification dropdown animation */
         #notificationDropdown {
@@ -104,6 +116,7 @@
             background-color: #f9fafb;
         }
 
+
         /* Ensure main content takes full width without overflow */
         .main-content {
             width: 100%;
@@ -111,6 +124,7 @@
             overflow-x: hidden;
             min-height: 0;
         }
+
 
         /* Header styling */
         .dashboard-header {
@@ -120,6 +134,7 @@
             background-color: white;
             border-bottom: 1px solid #e5e7eb;
         }
+
 
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -133,33 +148,36 @@
             {% include 'dashboard/components/sidebar.html' %}
         {% endif %}
 
+
         <div class="flex-1 flex flex-col w-full main-wrapper">
-            <header class="dashboard-header relative p-4 bg-white border-b border-gray-200">
+            <header class="dashboard-header p-4 bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between h-full">
                     <button id="hamburgerButton" class="text-gray-500 focus:outline-none p-2 rounded hover:bg-gray-100 flex items-center gap-2 lg:hidden" onclick="toggleSidebar()">
                         <img src="{% static 'images/sidebar/hamburger.svg' %}" alt="Menu" class="w-6 h-6">
                         <span class="text-gray-700 font-medium">Menu</span>
                     </button>
                     
-                    <div class="relative ml-auto" id="notificationContainer">
-                        <button id="notificationButton" class="p-2 rounded-full hover:bg-gray-100 relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span id="notificationBadge" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full hidden">0</span>
-                        </button>
-                        
-                        <div id="notificationDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 hidden">
-                            <div class="p-4 border-b border-gray-200">
-                                <h3 class="font-semibold text-gray-800">Notifications</h3>
-                            </div>
-                            <div id="notificationList" class="max-h-96 overflow-y-auto">
-                                <div class="p-4 text-center text-gray-500" id="noNotificationsMessage">
-                                    No new notifications
+                    <div class="header-inner">
+                        <div class="relative" id="notificationContainer">
+                            <button id="notificationButton" class="p-2 rounded-full hover:bg-gray-100 relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <span id="notificationBadge" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full hidden">0</span>
+                            </button>
+                            
+                            <div id="notificationDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 hidden">
+                                <div class="p-4 border-b border-gray-200">
+                                    <h3 class="font-semibold text-gray-800">Notifications</h3>
                                 </div>
-                            </div>
-                            <div class="p-2 border-t border-gray-200 text-center">
-                                <a href="#" class="text-sm text-blue-500 hover:text-blue-700">View All</a>
+                                <div id="notificationList" class="max-h-96 overflow-y-auto">
+                                    <div class="p-4 text-center text-gray-500" id="noNotificationsMessage">
+                                        No new notifications
+                                    </div>
+                                </div>
+                                <div class="p-2 border-t border-gray-200 text-center">
+                                    <a href="#" class="text-sm text-blue-500 hover:text-blue-700">View All</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -172,6 +190,7 @@
             </main>
         </div>
     </div>
+
 
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
@@ -222,6 +241,7 @@
         }
     });
 
+
     // ----- Notification Functionality -----
     document.addEventListener('DOMContentLoaded', function() {
         const notificationButton = document.getElementById('notificationButton');
@@ -261,6 +281,7 @@
                 loadDummyNotifications(); // Fallback for demonstration
             });
     }
+
 
     function loadDummyNotifications() {
         const dummyNotifications = [
@@ -362,6 +383,7 @@
         
         // Reset classes
         toastContainer.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500');
+
 
         // Set colors based on type
         if (type === 'error') {

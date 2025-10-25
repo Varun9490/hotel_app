@@ -5,6 +5,12 @@ from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,7 +21,7 @@ urlpatterns = [
     
     # Auth
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', logout_view, name='logout'),
     
     # Password Reset
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='auth/password_reset.html'), name='password_reset'),
