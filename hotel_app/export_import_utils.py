@@ -7,6 +7,8 @@ from .models import Department, UserGroup, UserProfile, UserGroupMembership
 from django.core.exceptions import ValidationError
 import logging
 from django.db import transaction
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -71,6 +73,8 @@ def create_export_file(format='json'):
     
     if format.lower() == 'csv':
         return create_csv_export(data)
+    elif format.lower() == 'xlsx':
+        return create_xlsx_export(data)
     else:
         return create_json_export(data)
 
@@ -136,6 +140,72 @@ def create_csv_export(data):
     
     response = HttpResponse(csv_data, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="user_data_export.csv"'
+    return response
+
+
+def create_xlsx_export(data):
+    """Create an Excel (XLSX) export file with all data"""
+    wb = Workbook()
+    
+    # Remove the default sheet
+    wb.remove(wb.active)
+    
+    # Create departments sheet
+    ws_dept = wb.create_sheet("Departments")
+    ws_dept.append(['id', 'name', 'description'])
+    for dept in data['departments']:
+        ws_dept.append([dept['id'], dept['name'], dept['description']])
+    
+    # Create user groups sheet
+    ws_groups = wb.create_sheet("User Groups")
+    ws_groups.append(['id', 'name', 'description', 'department_id'])
+    for group in data['user_groups']:
+        ws_groups.append([group['id'], group['name'], group['description'], group['department_id']])
+    
+    # Create users sheet
+    ws_users = wb.create_sheet("Users")
+    ws_users.append(['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'date_joined'])
+    for user in data['users']:
+        ws_users.append([user['id'], user['username'], user['email'], user['first_name'], user['last_name'], 
+                         user['is_active'], user['is_staff'], user['is_superuser'], user['date_joined']])
+    
+    # Create user profiles sheet
+    ws_profiles = wb.create_sheet("User Profiles")
+    ws_profiles.append(['user_id', 'full_name', 'phone', 'title', 'department_id', 'avatar_url',
+                        'enabled', 'timezone', 'role', 'created_at', 'updated_at'])
+    for profile in data['user_profiles']:
+        ws_profiles.append([profile['user_id'], profile['full_name'], profile['phone'], profile['title'], 
+                            profile['department_id'], profile['avatar_url'], profile['enabled'], 
+                            profile['timezone'], profile['role'], profile['created_at'], profile['updated_at']])
+    
+    # Create user group memberships sheet
+    ws_memberships = wb.create_sheet("User Group Memberships")
+    ws_memberships.append(['user_id', 'group_id', 'joined_at'])
+    for membership in data['user_group_memberships']:
+        ws_memberships.append([membership['user_id'], membership['group_id'], membership['joined_at']])
+    
+    # Auto-adjust column widths
+    for ws in wb.worksheets:
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Save to response
+    from io import BytesIO
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="user_data_export.xlsx"'
     return response
 
 

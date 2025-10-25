@@ -1677,7 +1677,7 @@ def export_user_data(request):
 @require_permission([ADMINS_GROUP])
 @csrf_exempt
 def import_user_data(request):
-    """Import user-related data from a JSON file"""
+    """Import user-related data from a JSON or Excel file"""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
     
@@ -1688,16 +1688,107 @@ def import_user_data(request):
         
         uploaded_file = request.FILES['file']
         
-        # Check file extension
-        if not uploaded_file.name.endswith('.json'):
-            return JsonResponse({'error': 'Only JSON files are supported'}, status=400)
-        
-        # Read and parse the JSON data
-        try:
-            file_content = uploaded_file.read().decode('utf-8')
-            data = json.loads(file_content)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
+        # Check file extension and process accordingly
+        if uploaded_file.name.endswith('.json'):
+            # Handle JSON file
+            try:
+                file_content = uploaded_file.read().decode('utf-8')
+                data = json.loads(file_content)
+            except json.JSONDecodeError as e:
+                return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
+        elif uploaded_file.name.endswith('.xlsx'):
+            # Handle Excel file
+            try:
+                from openpyxl import load_workbook
+                from io import BytesIO
+                
+                # Load the workbook from the uploaded file
+                file_content = uploaded_file.read()
+                workbook = load_workbook(BytesIO(file_content), read_only=True)
+                
+                # Convert Excel data to the expected JSON structure
+                data = {
+                    'departments': [],
+                    'user_groups': [],
+                    'users': [],
+                    'user_profiles': [],
+                    'user_group_memberships': []
+                }
+                
+                # Process departments sheet
+                if 'Departments' in workbook.sheetnames:
+                    ws = workbook['Departments']
+                    rows = list(ws.iter_rows(values_only=True))
+                    if len(rows) > 1:  # Header + data rows
+                        headers = rows[0]
+                        for row in rows[1:]:
+                            if any(cell is not None for cell in row):  # Skip empty rows
+                                dept_data = {}
+                                for i, header in enumerate(headers):
+                                    if header and i < len(row):
+                                        dept_data[header] = row[i]
+                                data['departments'].append(dept_data)
+                
+                # Process user groups sheet
+                if 'User Groups' in workbook.sheetnames:
+                    ws = workbook['User Groups']
+                    rows = list(ws.iter_rows(values_only=True))
+                    if len(rows) > 1:  # Header + data rows
+                        headers = rows[0]
+                        for row in rows[1:]:
+                            if any(cell is not None for cell in row):  # Skip empty rows
+                                group_data = {}
+                                for i, header in enumerate(headers):
+                                    if header and i < len(row):
+                                        group_data[header] = row[i]
+                                data['user_groups'].append(group_data)
+                
+                # Process users sheet
+                if 'Users' in workbook.sheetnames:
+                    ws = workbook['Users']
+                    rows = list(ws.iter_rows(values_only=True))
+                    if len(rows) > 1:  # Header + data rows
+                        headers = rows[0]
+                        for row in rows[1:]:
+                            if any(cell is not None for cell in row):  # Skip empty rows
+                                user_data = {}
+                                for i, header in enumerate(headers):
+                                    if header and i < len(row):
+                                        user_data[header] = row[i]
+                                data['users'].append(user_data)
+                
+                # Process user profiles sheet
+                if 'User Profiles' in workbook.sheetnames:
+                    ws = workbook['User Profiles']
+                    rows = list(ws.iter_rows(values_only=True))
+                    if len(rows) > 1:  # Header + data rows
+                        headers = rows[0]
+                        for row in rows[1:]:
+                            if any(cell is not None for cell in row):  # Skip empty rows
+                                profile_data = {}
+                                for i, header in enumerate(headers):
+                                    if header and i < len(row):
+                                        profile_data[header] = row[i]
+                                data['user_profiles'].append(profile_data)
+                
+                # Process user group memberships sheet
+                if 'User Group Memberships' in workbook.sheetnames:
+                    ws = workbook['User Group Memberships']
+                    rows = list(ws.iter_rows(values_only=True))
+                    if len(rows) > 1:  # Header + data rows
+                        headers = rows[0]
+                        for row in rows[1:]:
+                            if any(cell is not None for cell in row):  # Skip empty rows
+                                membership_data = {}
+                                for i, header in enumerate(headers):
+                                    if header and i < len(row):
+                                        membership_data[header] = row[i]
+                                data['user_group_memberships'].append(membership_data)
+                
+            except Exception as e:
+                return JsonResponse({'error': f'Invalid Excel format: {str(e)}'}, status=400)
+        else:
+            return JsonResponse({'error': 'Only JSON (.json) or Excel (.xlsx) files are supported'}, status=400)
         
         # Import the data
         result = import_all_data(data)

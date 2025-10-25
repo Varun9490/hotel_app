@@ -153,9 +153,9 @@
     <form id="importDataForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data">
       {% csrf_token %}
       <div>
-        <label class="block text-sm font-medium text-gray-700">Select Excel File</label>
-        <input type="file" id="importFile" name="file" accept=".xlsx" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" required />
-        <p class="mt-1 text-xs text-gray-500">Only Excel files (.xlsx) are supported</p>
+        <label class="block text-sm font-medium text-gray-700">Select File</label>
+        <input type="file" id="importFile" name="file" accept=".xlsx,.json" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" required />
+        <p class="mt-1 text-xs text-gray-500">Supports Excel (.xlsx) or JSON (.json) files</p>
       </div>
       <div id="importDataError" class="text-sm text-red-600 hidden"></div>
     </form>
@@ -1273,9 +1273,9 @@
 
     const file = fileInput.files[0];
     // Only allow Excel files for import
-    if (!file.name.endsWith('.xlsx')) {
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.json')) {
       if (errorEl) {
-        errorEl.textContent = 'Only Excel files (.xlsx) are supported for import.';
+        errorEl.textContent = 'Only Excel (.xlsx) or JSON (.json) files are supported for import.';
         errorEl.classList.remove('hidden');
       }
       return;
