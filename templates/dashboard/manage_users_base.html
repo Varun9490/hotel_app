@@ -226,19 +226,17 @@
 </div>
 
 <div id="addDepartmentModal" role="dialog" aria-modal="true" aria-labelledby="addDepartmentTitle"
-     class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"
+     class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 backdrop-blur-sm bg-black bg-opacity-30 transition-opacity duration-300 opacity-0"
      onclick="closeModal('addDepartmentModal')">
-    <div data-modal-content class="w-full max-w-lg rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0"
-</div>
-
+    <div data-modal-content class="w-full max-w-lg rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0 flex flex-col max-h-[95vh]"
          onclick="event.stopPropagation()">
-        <div class="flex items-start justify-between p-5 border-b">
+        <div class="flex items-start justify-between p-5 border-b flex-shrink-0">
             <h3 id="addDepartmentTitle" class="text-lg font-semibold text-gray-900">Add Department</h3>
             <button type="button" onclick="closeModal('addDepartmentModal')" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 transition-colors" aria-label="Close">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form id="addDepartmentForm" onsubmit="submitAddDepartment(event)" class="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+        <form id="addDepartmentForm" onsubmit="submitAddDepartment(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
             {% csrf_token %}
             <div>
                 <label for="departmentName" class="block text-sm font-medium text-gray-700">Department Name</label>
@@ -274,7 +272,7 @@
             </div>
             <div id="addDepartmentError" class="hidden text-sm text-red-600"></div>
         </form>
-        <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg">
+        <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg flex-shrink-0">
             <button type="button" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50" onclick="closeModal('addDepartmentModal')">Cancel</button>
             <button id="addDepartmentSubmit" type="submit" form="addDepartmentForm" class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">Add Department</button>
         </div>
