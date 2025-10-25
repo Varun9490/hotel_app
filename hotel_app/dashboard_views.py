@@ -5481,14 +5481,6 @@ def get_guest_whatsapp_message(request, guest_id):
     })
 
 
-# ---- Feedback View ----
-@login_required
-@user_passes_test(is_staff)
-def feedback_inbox(request):
-    """Feedback inbox view showing all guest feedback."""
-    from .models import Review, Guest
-    from .forms import FeedbackForm
-    
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])
 def get_ticket_suggestions_api(request):
@@ -5552,6 +5544,17 @@ def get_ticket_suggestions_api(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+
+# ---- Feedback View ----
+@login_required
+@user_passes_test(is_staff)
+def feedback_inbox(request):
+    """Feedback inbox view showing all guest feedback."""
+    from .models import Review, Guest
+    from .forms import FeedbackForm
+    
 
     # Handle form submission for new feedback
     if request.method == 'POST':
