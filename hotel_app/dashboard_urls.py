@@ -105,8 +105,10 @@ urlpatterns = [
     path('gym/', dashboard_views.gym, name='gym'),
     path('gym/report/', dashboard_views.gym_report, name='gym_report'),
     
-        # Export/Import URLs
+    # Export/Import URLs
     path('export/users/', dashboard_views.export_user_data, name='export_user_data'),
     path('import/users/', dashboard_views.import_user_data, name='import_user_data'),
     
+    # Ticket suggestions API
+    path('api/tickets/suggestions/', dashboard_views.get_ticket_suggestions_api, name='api_ticket_suggestions'),
 ]

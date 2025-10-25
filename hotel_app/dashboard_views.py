@@ -2494,46 +2494,119 @@ def my_tickets(request):
 @require_permission([ADMINS_GROUP])
 def configure_requests(request):
     """Render the Predefined / Configure Requests page.
-    Uses a mostly-static template for now; dynamic values can be added to context later.
+    Uses actual department data from the database.
     """
-    # Sample data to render cards. In production replace with real queryset.
-    requests_list = [
-        {
-            'title': 'Extra Housekeeping',
-            'department': 'Housekeeping',
-            'description': 'Request additional cleaning services for your room including towel refresh, bed making, and bathroom cleaning.',
-            'fields': 4,
-            'exposed': True,
-            'icon': 'images/manage_users/house_keeping.svg',
-            'icon_bg': 'bg-green-500/10',
-            'tag_bg': 'bg-green-500/10',
-        },
-        {
-            'title': 'Room Maintenance',
-            'department': 'Maintenance',
-            'description': 'Report issues with room fixtures, appliances, or general maintenance needs requiring attention.',
-            'fields': 6,
-            'exposed': True,
-            'icon': 'images/manage_users/maintainence.svg',
-            'icon_bg': 'bg-yellow-400/10',
-            'tag_bg': 'bg-yellow-400/10',
-        },
-        {
-            'title': 'Concierge Services',
-            'department': 'Concierge',
-            'description': 'Request assistance with reservations, recommendations, transportation, and local information.',
-            'fields': 5,
-            'exposed': True,
-            'icon': 'images/manage_users/concierge.svg',
-            'icon_bg': 'bg-fuchsia-700/10',
-            'tag_bg': 'bg-fuchsia-700/10',
-        },
-    ]
-
+    # Get all departments from the database
+    departments = Department.objects.all().order_by('name')
+    
+    # Get all request types and associate them with departments
+    request_types = RequestType.objects.select_related('work_family').all()
+    
+    # Create requests list with actual department data
+    requests_list = []
+    
+    # First, add request types that have a work_family (department association)
+    for request_type in request_types:
+        department_name = 'General'
+        icon = 'images/manage_users/general.svg'
+        icon_bg = 'bg-gray-500/10'
+        tag_bg = 'bg-gray-500/10'
+        
+        if request_type.work_family:
+            department_name = request_type.work_family.name
+            # Map department names to appropriate icons
+            department_lower = department_name.lower()
+            if 'housekeeping' in department_lower:
+                icon = 'images/manage_users/house_keeping.svg'
+                icon_bg = 'bg-green-500/10'
+                tag_bg = 'bg-green-500/10'
+            elif 'maintenance' in department_lower:
+                icon = 'images/manage_users/maintainence.svg'
+                icon_bg = 'bg-yellow-400/10'
+                tag_bg = 'bg-yellow-400/10'
+            elif 'concierge' in department_lower:
+                icon = 'images/manage_users/concierge.svg'
+                icon_bg = 'bg-fuchsia-700/10'
+                tag_bg = 'bg-fuchsia-700/10'
+            elif 'food' in department_lower or 'restaurant' in department_lower:
+                icon = 'images/manage_users/food_beverage.svg'
+                icon_bg = 'bg-red-500/10'
+                tag_bg = 'bg-red-500/10'
+            elif 'front' in department_lower or 'desk' in department_lower:
+                icon = 'images/manage_users/front_office.svg'
+                icon_bg = 'bg-sky-500/10'
+                tag_bg = 'bg-sky-500/10'
+            else:
+                # Default icon for other departments
+                icon = f'images/manage_users/{department_lower.replace(" ", "_")}.svg'
+                icon_bg = 'bg-blue-500/10'
+                tag_bg = 'bg-blue-500/10'
+        
+        requests_list.append({
+            'title': request_type.name,
+            'department': department_name,
+            'description': request_type.description or f'Request type for {department_name}',
+            'fields': 4,  # This would need to be calculated based on actual fields
+            'exposed': request_type.active,
+            'icon': icon,
+            'icon_bg': icon_bg,
+            'tag_bg': tag_bg,
+        })
+    
+    # Add departments that don't have request types yet as placeholders
+    for department in departments:
+        # Check if we already have requests for this department
+        has_requests = any(req['department'] == department.name for req in requests_list)
+        
+        if not has_requests:
+            # Add a placeholder request for the department
+            department_lower = department.name.lower()
+            icon = 'images/manage_users/general.svg'
+            icon_bg = 'bg-gray-500/10'
+            tag_bg = 'bg-gray-500/10'
+            
+            # Map department names to appropriate icons
+            if 'housekeeping' in department_lower:
+                icon = 'images/manage_users/house_keeping.svg'
+                icon_bg = 'bg-green-500/10'
+                tag_bg = 'bg-green-500/10'
+            elif 'maintenance' in department_lower:
+                icon = 'images/manage_users/maintainence.svg'
+                icon_bg = 'bg-yellow-400/10'
+                tag_bg = 'bg-yellow-400/10'
+            elif 'concierge' in department_lower:
+                icon = 'images/manage_users/concierge.svg'
+                icon_bg = 'bg-fuchsia-700/10'
+                tag_bg = 'bg-fuchsia-700/10'
+            elif 'food' in department_lower or 'restaurant' in department_lower:
+                icon = 'images/manage_users/food_beverage.svg'
+                icon_bg = 'bg-red-500/10'
+                tag_bg = 'bg-red-500/10'
+            elif 'front' in department_lower or 'desk' in department_lower:
+                icon = 'images/manage_users/front_office.svg'
+                icon_bg = 'bg-sky-500/10'
+                tag_bg = 'bg-sky-500/10'
+            else:
+                # Default icon for other departments
+                icon = f'images/manage_users/{department_lower.replace(" ", "_")}.svg'
+                icon_bg = 'bg-blue-500/10'
+                tag_bg = 'bg-blue-500/10'
+            
+            requests_list.append({
+                'title': f'{department.name} Request',
+                'department': department.name,
+                'description': f'Request services from the {department.name} department',
+                'fields': 3,
+                'exposed': True,
+                'icon': icon,
+                'icon_bg': icon_bg,
+                'tag_bg': tag_bg,
+            })
+    
     counts = {
-        'all': 24,
-        'portal': 18,
-        'internal': 6,
+        'all': len(requests_list),
+        'portal': len([r for r in requests_list if r['exposed']]),
+        'internal': len([r for r in requests_list if not r['exposed']]),
     }
 
     context = {
@@ -5396,6 +5469,70 @@ def feedback_inbox(request):
     from .models import Review, Guest
     from .forms import FeedbackForm
     
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def get_ticket_suggestions_api(request):
+    """API endpoint to get ticket suggestions based on department and SLA configurations."""
+    if request.method == 'GET':
+        try:
+            from hotel_app.models import DepartmentRequestSLA, RequestType, Department
+            
+            department_name = request.GET.get('department_name')
+            search_term = request.GET.get('search_term', '').lower()
+            
+            # Get all department SLA configurations
+            if department_name:
+                try:
+                    department = Department.objects.get(name=department_name)
+                    department_configs = DepartmentRequestSLA.objects.select_related(
+                        'department', 'request_type'
+                    ).filter(department=department)
+                except Department.DoesNotExist:
+                    department_configs = DepartmentRequestSLA.objects.select_related(
+                        'department', 'request_type'
+                    ).none()
+            else:
+                department_configs = DepartmentRequestSLA.objects.select_related(
+                    'department', 'request_type'
+                ).all()
+            
+            # Extract unique request types and their descriptions
+            suggestions = []
+            seen_request_types = set()
+            
+            for config in department_configs:
+                request_type = config.request_type
+                if request_type.id not in seen_request_types:
+                    # Create suggestion text based on request type and department
+                    suggestion_text = f"{request_type.name} - {config.department.name}"
+                    if request_type.description:
+                        suggestion_text += f": {request_type.description[:100]}"
+                    
+                    # Only include suggestions that match the search term
+                    if search_term in request_type.name.lower() or search_term in suggestion_text.lower():
+                        suggestions.append({
+                            'id': request_type.id,
+                            'name': request_type.name,
+                            'description': request_type.description or '',
+                            'department': config.department.name,
+                            'suggestion_text': suggestion_text
+                        })
+                    
+                    seen_request_types.add(request_type.id)
+            
+            # Limit to 10 suggestions
+            suggestions = suggestions[:10]
+            
+            return JsonResponse({
+                'success': True,
+                'suggestions': suggestions
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
     # Handle form submission for new feedback
     if request.method == 'POST':
         # Get form data
