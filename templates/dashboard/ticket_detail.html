@@ -58,6 +58,15 @@
                             <p class="mt-2 text-base text-gray-700 leading-relaxed">
                                 {{ ticket.notes|default:"No description provided." }}
                             </p>
+                            <!-- Resolution notes section -->
+                            {% if ticket.resolution_notes %}
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <h4 class="text-sm font-semibold text-gray-900">Resolution Notes</h4>
+                                <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                                    {{ ticket.resolution_notes }}
+                                </p>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -73,6 +82,15 @@
                          <p class="text-sm text-gray-700 leading-relaxed">
                             {{ ticket.notes|default:"No description provided." }}
                          </p>
+                         <!-- Resolution notes section -->
+                         {% if ticket.resolution_notes %}
+                         <div class="mt-4 pt-4 border-t border-gray-200">
+                             <h4 class="text-sm font-semibold text-gray-900">Resolution Notes</h4>
+                             <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                                 {{ ticket.resolution_notes }}
+                             </p>
+                         </div>
+                         {% endif %}
                      </div>
                 </div>
             </section>
@@ -142,7 +160,8 @@
                         <button id="closeBtn" class="w-full py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800" data-ticket-id="{{ ticket.id }}">Close Ticket</button>
                     {% endif %}
                     
-                    {% if ticket.status != 'closed' and ticket.status != 'rejected' %}
+                    <!-- Only show escalate and reject buttons for non-completed tickets -->
+                    {% if ticket.status != 'completed' and ticket.status != 'closed' and ticket.status != 'rejected' %}
                         <button id="escalateBtn" class="w-full py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600" data-ticket-id="{{ ticket.id }}">Escalate Ticket</button>
                         {% if ticket.assignee_user == user or user.is_superuser %}
                             <button id="rejectBtn" class="w-full py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" data-ticket-id="{{ ticket.id }}">Reject Ticket</button>
@@ -154,7 +173,15 @@
             <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">SLA Status</h3>
                 <div class="flex flex-col items-center gap-4">
-                    
+                    <!-- SLA Progress Circle - Show as completed when ticket is completed -->
+                    {% if ticket.status == 'completed' or ticket.status == 'closed' %}
+                    <div class="relative w-40 h-40 rounded-full flex items-center justify-center" 
+                         style="background: conic-gradient(#22c55e 100%, #e5e7eb 0);">
+                        <div class="absolute w-32 h-32 bg-white rounded-full flex items-center justify-center">
+                            <span class="text-3xl font-bold text-green-500">100%</span>
+                        </div>
+                    </div>
+                    {% else %}
                     <div class="relative w-40 h-40 rounded-full flex items-center justify-center" 
                          style="background: conic-gradient(
                              {% if ticket.sla_breached %}#ef4444{% elif ticket.get_sla_status == 'On Track' %}#22c55e{% else %}#f59e0b{% endif %} {{ sla_progress_percent }}%, 
@@ -166,13 +193,14 @@
                             </span>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="text-center">
-                        <p class="font-semibold {% if ticket.sla_breached %}text-red-500{% else %}text-gray-900{% endif %}">
-                            {% if ticket.sla_breached %}OVERDUE{% else %}IN PROGRESS{% endif %}
+                        <p class="font-semibold {% if ticket.sla_breached %}text-red-500{% elif ticket.status == 'completed' or ticket.status == 'closed' %}text-green-500{% else %}text-gray-900{% endif %}">
+                            {% if ticket.status == 'completed' or ticket.status == 'closed' %}COMPLETED{% elif ticket.sla_breached %}OVERDUE{% else %}IN PROGRESS{% endif %}
                         </p>
                         <p class="text-sm text-gray-500">
-                            {% if ticket.sla_breached %}{{ ticket.get_time_left }} past due{% else %}{{ ticket.get_time_left }} remaining{% endif %}
+                            {% if ticket.status == 'completed' or ticket.status == 'closed' %}Ticket resolved{% elif ticket.sla_breached %}{{ ticket.get_time_left }} past due{% else %}{{ ticket.get_time_left }} remaining{% endif %}
                         </p>
                     </div>
 
@@ -223,7 +251,8 @@
                  <button id="closeBtn_mobile" class="col-span-3 w-full py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800" data-ticket-id="{{ ticket.id }}">Close Ticket</button>
             {% endif %}
         </div>
-        {% if ticket.status != 'closed' and ticket.status != 'rejected' %}
+        <!-- Only show escalate and reject buttons for non-completed tickets -->
+        {% if ticket.status != 'completed' and ticket.status != 'closed' and ticket.status != 'rejected' %}
         <div class="grid grid-cols-2 gap-2 mt-2">
             <button id="escalateBtn_mobile" class="w-full py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600" data-ticket-id="{{ ticket.id }}">Escalate</button>
             

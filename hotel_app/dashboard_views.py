@@ -1888,16 +1888,20 @@ def ticket_detail(request, ticket_id):
     # Calculate SLA progress percentage
     sla_progress_percent = 0
     if service_request.created_at and service_request.sla_hours > 0:
-        # Calculate time taken so far or total time if completed
-        if service_request.completed_at:
-            time_taken = service_request.completed_at - service_request.created_at
+        # For completed/closed tickets, show 100% progress
+        if service_request.status in ['completed', 'closed']:
+            sla_progress_percent = 100
         else:
-            time_taken = timezone.now() - service_request.created_at
-        
-        # Calculate SLA percentage (time taken / total allowed time)
-        total_allowed_time = service_request.sla_hours * 3600  # Convert hours to seconds
-        if total_allowed_time > 0:
-            sla_progress_percent = min(100, int((time_taken.total_seconds() / total_allowed_time) * 100))
+            # Calculate time taken so far or total time if completed
+            if service_request.completed_at:
+                time_taken = service_request.completed_at - service_request.created_at
+            else:
+                time_taken = timezone.now() - service_request.created_at
+            
+            # Calculate SLA percentage (time taken / total allowed time)
+            total_allowed_time = service_request.sla_hours * 3600  # Convert hours to seconds
+            if total_allowed_time > 0:
+                sla_progress_percent = min(100, int((time_taken.total_seconds() / total_allowed_time) * 100))
     
     # Map priority to display values
     priority_mapping = {
@@ -2106,7 +2110,8 @@ def ticket_detail(request, ticket_id):
         'created_time': created_time,
         'notification_count': notification_count,
         'activity_log': activity_log,
-        'sla_progress_percent': sla_progress_percent
+        'sla_progress_percent': sla_progress_percent,
+        'resolution_notes': service_request.resolution_notes  # Pass resolution notes to template
     }
     
     return render(request, 'dashboard/ticket_detail.html', context)
