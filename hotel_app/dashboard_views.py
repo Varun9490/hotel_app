@@ -4981,7 +4981,7 @@ def accept_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def start_ticket_api(request, ticket_id):
     """API endpoint to start working on a ticket."""
     if request.method == 'POST':
@@ -5011,7 +5011,7 @@ def start_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def complete_ticket_api(request, ticket_id):
     """API endpoint to mark a ticket as completed."""
     if request.method == 'POST':
@@ -5045,7 +5045,7 @@ def complete_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def close_ticket_api(request, ticket_id):
     """API endpoint to close a ticket."""
     if request.method == 'POST':
@@ -5080,7 +5080,7 @@ def close_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def escalate_ticket_api(request, ticket_id):
     """API endpoint to escalate a ticket."""
     if request.method == 'POST':
@@ -5106,7 +5106,7 @@ def escalate_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def reject_ticket_api(request, ticket_id):
     """API endpoint to reject a ticket."""
     if request.method == 'POST':
@@ -6035,7 +6035,7 @@ def assign_ticket_api(request, ticket_id):
 
 
 @login_required
-@require_permission([ADMINS_GROUP, STAFF_GROUP])
+@require_role(['admin', 'staff', 'user'])
 def accept_ticket_api(request, ticket_id):
     """API endpoint for a user to accept a ticket."""
     if request.method == 'POST':
@@ -6054,8 +6054,9 @@ def accept_ticket_api(request, ticket_id):
             if service_request.status != 'pending':
                 return JsonResponse({'error': 'Ticket is not in pending status'}, status=400)
             
-            if service_request.department != user_department:
-                return JsonResponse({'error': 'You are not in the department for this ticket'}, status=403)
+            # Check if user can accept the ticket (either in same department or is the requester)
+            if not (service_request.department == user_department or service_request.requester_user == request.user):
+                return JsonResponse({'error': 'You do not have permission to accept this ticket'}, status=403)
             
             # Assign the ticket to the current user if not already assigned
             if not service_request.assignee_user:
