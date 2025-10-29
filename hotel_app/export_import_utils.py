@@ -9,6 +9,7 @@ import logging
 from django.db import transaction
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -35,6 +36,12 @@ def export_users():
     users = User.objects.all().values(
         'id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'date_joined'
     )
+    # Convert datetime objects to timezone-naive format for Excel compatibility
+    for user in users:
+        if user.get('date_joined') and hasattr(user['date_joined'], 'replace'):
+            # Handle timezone-aware datetime objects
+            if hasattr(user['date_joined'], 'tzinfo') and user['date_joined'].tzinfo is not None:
+                user['date_joined'] = user['date_joined'].replace(tzinfo=None)
     return list(users)
 
 
@@ -44,6 +51,16 @@ def export_user_profiles():
         'user_id', 'full_name', 'phone', 'title', 'department_id', 'avatar_url',
         'enabled', 'timezone', 'preferences', 'role', 'created_at', 'updated_at'
     )
+    # Convert datetime objects to timezone-naive format for Excel compatibility
+    for profile in profiles:
+        if profile.get('created_at') and hasattr(profile['created_at'], 'replace'):
+            # Handle timezone-aware datetime objects
+            if hasattr(profile['created_at'], 'tzinfo') and profile['created_at'].tzinfo is not None:
+                profile['created_at'] = profile['created_at'].replace(tzinfo=None)
+        if profile.get('updated_at') and hasattr(profile['updated_at'], 'replace'):
+            # Handle timezone-aware datetime objects
+            if hasattr(profile['updated_at'], 'tzinfo') and profile['updated_at'].tzinfo is not None:
+                profile['updated_at'] = profile['updated_at'].replace(tzinfo=None)
     return list(profiles)
 
 
@@ -52,6 +69,12 @@ def export_user_group_memberships():
     memberships = UserGroupMembership.objects.all().values(
         'user_id', 'group_id', 'joined_at'
     )
+    # Convert datetime objects to timezone-naive format for Excel compatibility
+    for membership in memberships:
+        if membership.get('joined_at') and hasattr(membership['joined_at'], 'replace'):
+            # Handle timezone-aware datetime objects
+            if hasattr(membership['joined_at'], 'tzinfo') and membership['joined_at'].tzinfo is not None:
+                membership['joined_at'] = membership['joined_at'].replace(tzinfo=None)
     return list(memberships)
 
 
@@ -148,7 +171,8 @@ def create_xlsx_export(data):
     wb = Workbook()
     
     # Remove the default sheet
-    wb.remove(wb.active)
+    if wb.active:
+        wb.remove(wb.active)
     
     # Create departments sheet
     ws_dept = wb.create_sheet("Departments")
@@ -188,15 +212,16 @@ def create_xlsx_export(data):
     for ws in wb.worksheets:
         for column in ws.columns:
             max_length = 0
-            column_letter = get_column_letter(column[0].column)
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2)
-            ws.column_dimensions[column_letter].width = adjusted_width
+            if column and column[0]:
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = (max_length + 2)
+                ws.column_dimensions[column_letter].width = adjusted_width
     
     # Save to response
     from io import BytesIO

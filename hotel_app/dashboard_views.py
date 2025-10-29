@@ -6380,9 +6380,11 @@ def export_user_data(request):
         response = create_export_file(format)
         return response
     except Exception as e:
+        import traceback
         logger = logging.getLogger(__name__)
         logger.error(f"Error exporting user data: {str(e)}")
-        return JsonResponse({'error': 'Failed to export data'}, status=500)
+        logger.error(traceback.format_exc())
+        return JsonResponse({'error': f'Failed to export data: {str(e)}'}, status=500)
 
 
 @login_required
