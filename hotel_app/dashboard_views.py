@@ -1071,9 +1071,9 @@ def manage_users_api_users(request, user_id=None):
         qs = qs.filter(userprofile__department__name__iexact=department)
     if status:
         if status == 'active':
-            qs = qs.filter(is_active=True)
+            qs = qs.filter(userprofile__enabled=True)
         elif status == 'inactive':
-            qs = qs.filter(is_active=False)
+            qs = qs.filter(userprofile__enabled=False)
     if enabled is not None:
         if enabled.lower() in ('1', 'true', 'yes'):
             qs = qs.filter(userprofile__enabled=True)
@@ -1127,7 +1127,7 @@ def manage_users_api_users(request, user_id=None):
             'avatar_url': avatar,
             'roles': roles,
             'department': dept,
-            'is_active': bool(u.is_active),
+            'is_active': bool(getattr(profile, 'enabled', True)),  # Use UserProfile.enabled instead of User.is_active
             'enabled': bool(getattr(profile, 'enabled', True)),
             'last_login_iso': last_login.isoformat() if last_login else None,
             'last_active_human': human,
