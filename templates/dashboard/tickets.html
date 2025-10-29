@@ -22,6 +22,8 @@
 
     /* This class will be added by JS to trigger the animation */
     .animate-slide-in-up {
+        /* Set initial state to invisible before animation */
+        opacity: 0;
         animation: slideInUp 0.6s ease-out forwards;
     }
 
@@ -67,11 +69,11 @@
                 <h2 class="text-gray-900 text-lg font-semibold font-['Inter']">Department Statistics</h2>
                 <button id="expandDepartmentsBtn" class="text-sky-600 text-sm font-medium flex items-center gap-1 hover:text-sky-800 transition-colors">
                     <span>View All</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
             </div>
             
-            <div id="sliderWrapper" class="relative">
+            <div id="sliderWrapper" class="relative transition-all duration-500 ease-in-out">
                 <div class="overflow-hidden">
                     <div id="departmentSlider" class="flex transition-transform duration-500 ease-in-out">
                         {% for dept in departments %}
@@ -113,7 +115,7 @@
             </div>
         </div>
 
-        <div id="expandedDepartments" class="hidden">
+        <div id="expandedDepartments" class="hidden transition-all duration-500 ease-in-out">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for dept in departments %}
                 <div class="dept-card-expanded bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -179,12 +181,7 @@
                     </select>
                 </form>
                 <div class="flex gap-2">
-                    <button id="showSLABtn" class="h-10 px-4 rounded-lg bg-sky-600 text-white flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-                        </svg>
-                        <span>SLA</span>
-                    </button>
+                    <!-- SLA Button Removed -->
                     <button class="h-10 w-40 rounded-lg border border-sky-600 text-sky-600 flex items-center justify-center gap-2 hover:bg-sky-50 transition-colors">
                         <img src="{% static 'images/tickets/export.svg' %}" alt="Export Icon"/>
                         <span>Export</span>
@@ -338,74 +335,8 @@
         </div>
     </div>
 
-    <div id="slaModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col max-h-[95vh] transform transition-all duration-300 ease-out opacity-0 scale-95">
-            <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-900">Current SLA Timings</h2>
-                <button id="closeSLAModal" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="p-6 space-y-6 overflow-y-auto">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                            <h3 class="font-semibold text-gray-900">Critical Tickets</h3>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            <p>Response Time: <span class="font-medium response-time-critical">5</span> minutes</p>
-                            <p>Resolution Time: <span class="font-medium resolution-time-critical">5</span> minutes</p>
-                        </div>
-                    </div>
-                    <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-                            <h3 class="font-semibold text-gray-900">High Priority Tickets</h3>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            <p>Response Time: <span class="font-medium response-time-high">10</span> minutes</p>
-                            <p>Resolution Time: <span class="font-medium resolution-time-high">10</span> minutes</p>
-                        </div>
-                    </div>
-                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                            <h3 class="font-semibold text-gray-900">Normal Priority Tickets</h3>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            <p>Response Time: <span class="font-medium response-time-normal">15</span> minutes</p>
-                            <p>Resolution Time: <span class="font-medium resolution-time-normal">15</span> minutes</p>
-                        </div>
-                    </div>
-                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                            <h3 class="font-semibold text-gray-900">Low Priority Tickets</h3>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            <p>Response Time: <span class="font-medium response-time-low">20</span> minutes</p>
-                            <p>Resolution Time: <span class="font-medium resolution-time-low">20</span> minutes</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="font-semibold text-gray-900 mb-2">How SLA Works</h3>
-                    <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
-                        <li>Response time is the time allowed to acknowledge a ticket</li>
-                        <li>Resolution time is the time allowed to fully resolve a ticket</li>
-                        <li>Breaching SLA will trigger escalation procedures</li>
-                        <li>SLA times can be configured in the SLA Configuration section</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="flex justify-end items-center gap-4 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                <a href="{% url 'dashboard:sla_configuration' %}" class="px-4 py-2 text-sm font-medium text-sky-600 bg-white border border-sky-600 rounded-lg hover:bg-sky-50">Configure SLA</a>
-                <button id="closeSLAModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700">Close</button>
-            </div>
-        </div>
-    </div>
+    <!-- SLA Modal Removed -->
+    
 </div>
 {% endblock content %}
 
@@ -419,77 +350,154 @@ document.addEventListener('DOMContentLoaded', function() {
         el.classList.add('animate-slide-in-up');
     });
 
-    // --- SLA MODAL SCRIPT ---
-    const showSLABtn = document.getElementById('showSLABtn');
-    const closeSLAModal = document.getElementById('closeSLAModal');
-    const closeSLAModalBtn = document.getElementById('closeSLAModalBtn');
-    const slaModal = document.getElementById('slaModal');
-    const slaModalContent = slaModal ? slaModal.querySelector('div') : null;
+    // --- EXPAND/COLLAPSE DEPARTMENTS ---
+    const expandBtn = document.getElementById('expandDepartmentsBtn');
+    const sliderWrapper = document.getElementById('sliderWrapper');
+    const expandedWrapper = document.getElementById('expandedDepartments');
+
+    if (expandBtn && sliderWrapper && expandedWrapper) {
+        const expandedCards = expandedWrapper.querySelectorAll('.dept-card-expanded');
+        
+        const iconUp = `<svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`;
+        const iconDown = `<svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+
+        expandBtn.addEventListener('click', () => {
+            const isExpanded = !expandedWrapper.classList.contains('hidden');
+
+            if (isExpanded) {
+                // --- COLLAPSE ---
+                sliderWrapper.classList.remove('hidden');
+                expandedWrapper.classList.add('hidden');
+                
+                // Reset button
+                expandBtn.innerHTML = `<span>View All</span>${iconDown}`;
+                
+                // Hide all cards immediately for next animation
+                expandedCards.forEach(card => {
+                    card.classList.remove('animate-slide-in-up');
+                    card.style.opacity = 0; // Reset opacity
+                });
+                
+                // Scroll back to the slider
+                sliderWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                // --- EXPAND ---
+                sliderWrapper.classList.add('hidden');
+                expandedWrapper.classList.remove('hidden');
+                
+                // Update button
+                expandBtn.innerHTML = `<span>Collapse</span>${iconUp}`;
+                
+                // Staggered animation for cards
+                expandedCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.opacity = 1; // Make visible before animation
+                        card.classList.add('animate-slide-in-up');
+                    }, index * 100); // 100ms delay between each card
+                });
+                
+                // Scroll to the expanded section
+                expandedWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    }
+
+
+    // --- DEPARTMENT SLIDER SCRIPT ---
+    const slider = document.getElementById('departmentSlider');
+    const prevBtn = document.getElementById('prevSlide');
+    const nextBtn = document.getElementById('nextSlide');
+    const dotsContainer = document.getElementById('sliderDots');
     
-    // Fetch SLA data from the server and populate the modal
-    if (showSLABtn) {
-        showSLABtn.addEventListener('click', function() {
-            // Fetch SLA configuration data
-            fetch('/dashboard/api/sla-configuration/update/')
-            .then(response => response.json())
-            .then(data => {
-                // Populate the modal with SLA data
-                if (data.configs) {
-                    data.configs.forEach(config => {
-                        const priority = config.priority;
-                        const responseTime = config.response_time_minutes;
-                        const resolutionTime = config.resolution_time_minutes;
-                        
-                        // Update the modal content
-                        const responseTimeElement = document.querySelector(`.response-time-${priority}`);
-                        const resolutionTimeElement = document.querySelector(`.resolution-time-${priority}`);
-                        
-                        if (responseTimeElement) {
-                            responseTimeElement.textContent = responseTime;
-                        }
-                        if (resolutionTimeElement) {
-                            resolutionTimeElement.textContent = resolutionTime;
-                        }
-                    });
+    if (slider && prevBtn && nextBtn && dotsContainer) {
+        const slides = slider.querySelectorAll('.flex-shrink-0');
+        const dots = dotsContainer.querySelectorAll('.department-dot');
+        const totalSlides = slides.length;
+        
+        if (totalSlides === 0) {
+            // Hide slider controls if no slides
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+            dotsContainer.style.display = 'none';
+        } else {
+            let currentIndex = 0;
+
+            function getSlidesToShow() {
+                if (window.innerWidth >= 1024) return 3; // lg (lg:w-1/3)
+                if (window.innerWidth >= 768) return 2; // md (md:w-1/2)
+                return 1; // sm (w-full)
+            }
+
+            function updateSlider() {
+                const slidesToShow = getSlidesToShow();
+                // maxIndex is the total slides minus the number visible
+                const maxIndex = Math.max(0, totalSlides - slidesToShow);
+
+                // Clamp currentIndex to valid range
+                if (currentIndex > maxIndex) {
+                    currentIndex = maxIndex;
+                }
+                if (currentIndex < 0) {
+                    currentIndex = 0;
                 }
                 
-                // Show the modal
-                if (slaModal) {
-                    slaModal.classList.remove('hidden');
-                    setTimeout(() => {
-                        slaModalContent.classList.remove('opacity-0', 'scale-95');
-                        slaModalContent.classList.add('opacity-100', 'scale-100');
-                    }, 10);
+                let itemWidthPercent;
+                if (slidesToShow === 3) {
+                    itemWidthPercent = 100 / 3;
+                } else if (slidesToShow === 2) {
+                    itemWidthPercent = 50;
+                } else {
+                    itemWidthPercent = 100;
                 }
-            })
-            .catch(error => {
-                console.error('Error fetching SLA data:', error);
-                // Show the modal with default values if there's an error
-                if (slaModal) {
-                    slaModal.classList.remove('hidden');
-                    setTimeout(() => {
-                        slaModalContent.classList.remove('opacity-0', 'scale-95');
-                        slaModalContent.classList.add('opacity-100', 'scale-100');
-                    }, 10);
-                }
+                
+                const offset = -currentIndex * itemWidthPercent;
+                slider.style.transform = `translateX(${offset}%)`;
+                
+                // Update dots
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('bg-sky-600', index === currentIndex);
+                    dot.classList.toggle('bg-gray-300', index !== currentIndex);
+                });
+                
+                // Update buttons
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === maxIndex;
+            }
+
+            // --- Event Listeners ---
+            prevBtn.addEventListener('click', () => {
+                currentIndex--;
+                updateSlider();
             });
-        });
+
+            nextBtn.addEventListener('click', () => {
+                currentIndex++;
+                updateSlider();
+            });
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    // When a dot is clicked, we set the index
+                    // But we must also clamp it to the max possible index
+                    const slidesToShow = getSlidesToShow();
+                    const maxIndex = Math.max(0, totalSlides - slidesToShow);
+                    currentIndex = Math.min(index, maxIndex);
+                    updateSlider();
+                });
+            });
+
+            window.addEventListener('resize', updateSlider);
+
+            // Initial call to set up slider
+            updateSlider();
+        }
     }
-    
-    if (closeSLAModal && slaModal) {
-        closeSLAModal.addEventListener('click', () => {
-            closeModal(slaModal, slaModalContent);
-        });
-    }
-    
-    if (closeSLAModalBtn && slaModal) {
-        closeSLAModalBtn.addEventListener('click', () => {
-            closeModal(slaModal, slaModalContent);
-        });
-    }
+
+    // --- SLA MODAL SCRIPT (REMOVED) ---
     
     // Generic close modal function
     function closeModal(modal, modalContent) {
+        if (!modal) return;
         modal.classList.add('opacity-0');
         if (modalContent) {
             modalContent.classList.remove('scale-100', 'opacity-100');
@@ -647,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         showToast('Ticket created successfully!', 'success');
                         // Close the modal and reset form
                         closeModal(modal, modalContent);
-                        modalForm.reset();
+                        if (modalForm) modalForm.reset();
                         selectedPriority = '';
                         selectedRequestType = null;
                         document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-offset-2', 'ring-sky-500'));
