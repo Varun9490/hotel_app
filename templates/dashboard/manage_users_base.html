@@ -53,6 +53,9 @@
               <button id="importDataButton" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
                 Import Data
               </button>
+              <button id="clearDataButton" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-900" role="menuitem">
+                Clear All Data
+              </button>
             </div>
           </div>
         </div>
@@ -162,6 +165,39 @@
     <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg flex-shrink-0">
       <button type="button" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50" onclick="closeModal('importDataModal')">Cancel</button>
       <button id="importDataSubmit" type="submit" form="importDataForm" class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">Import Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear Data Confirmation Modal -->
+<div id="clearDataModal" role="dialog" aria-modal="true" aria-labelledby="clearDataTitle"
+     class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 backdrop-blur-sm bg-black bg-opacity-30 transition-opacity duration-300 opacity-0"
+     onclick="closeModal('clearDataModal')">
+  <div data-modal-content class="w-full max-w-md rounded-lg bg-white shadow-xl transform transition-all duration-300 scale-95 opacity-0 flex flex-col max-h-[95vh]"
+       onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between p-5 border-b flex-shrink-0">
+      <h3 id="clearDataTitle" class="text-lg font-semibold text-gray-900">Confirm Data Clear</h3>
+      <button type="button" onclick="closeModal('clearDataModal')" class="rounded-full p-1 text-gray-500 hover:bg-gray-100 transition-colors" aria-label="Close">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 overflow-y-auto flex-grow">
+      <div class="text-sm text-gray-700">
+        <p class="mb-3">Are you sure you want to clear all user data?</p>
+        <p class="mb-3 font-medium text-red-600">Warning: This action cannot be undone and all data will be permanently deleted.</p>
+        <p>This will remove:</p>
+        <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+          <li>All departments</li>
+          <li>All user groups</li>
+          <li>All user profiles</li>
+          <li>All group memberships</li>
+        </ul>
+      </div>
+      <div id="clearDataError" class="text-sm text-red-600 hidden"></div>
+    </div>
+    <div class="flex items-center justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-lg flex-shrink-0">
+      <button type="button" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50" onclick="closeModal('clearDataModal')">Cancel</button>
+      <button id="clearDataConfirm" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Clear All Data</button>
     </div>
   </div>
 </div>
@@ -1234,12 +1270,31 @@
       });
     }
     
+    // Clear data button
+    const clearDataButton = document.getElementById('clearDataButton');
+    if (clearDataButton) {
+      clearDataButton.addEventListener('click', function() {
+        if (exportImportMenu) {
+          exportImportMenu.classList.add('hidden');
+        }
+        openClearDataModal();
+      });
+    }
+    
     // Import form submission
     const importDataForm = document.getElementById('importDataForm');
     if (importDataForm) {
       importDataForm.addEventListener('submit', function(e) {
         e.preventDefault();
         submitImportData(e);
+      });
+    }
+    
+    // Clear data confirmation
+    const clearDataConfirm = document.getElementById('clearDataConfirm');
+    if (clearDataConfirm) {
+      clearDataConfirm.addEventListener('click', function() {
+        submitClearData();
       });
     }
   });
@@ -1252,6 +1307,13 @@
     if (errorEl) errorEl.classList.add('hidden');
     
     showModal('importDataModal');
+  }
+  
+  function openClearDataModal() {
+    const errorEl = document.getElementById('clearDataError');
+    if (errorEl) errorEl.classList.add('hidden');
+    
+    showModal('clearDataModal');
   }
   
   function submitImportData(e) {
@@ -1318,6 +1380,47 @@
       btn.textContent = 'Import Data';
     });
   }
-</script>
+  
+  function submitClearData() {
+    const btn = document.getElementById('clearDataConfirm');
+    const errorEl = document.getElementById('clearDataError');
+    
+    btn.disabled = true;
+    btn.textContent = 'Clearing...';
+    errorEl.classList.add('hidden');
 
+    fetch('{% url "dashboard:clear_user_data" %}', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Accept': 'application/json'
+      }
+    })
+    .then(async response => {
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const msg = payload.error || 'Failed to clear data.';
+        throw new Error(msg);
+      }
+      return payload;
+    })
+    .then(data => {
+      closeModal('clearDataModal');
+      showToast('All user data cleared successfully!', 'success');
+      // Reload the page to reflect changes
+      setTimeout(() => { window.location.reload(); }, 700);
+    })
+    .catch(err => {
+      if (errorEl) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Clear All Data';
+    });
+  }
+  
+</script>
 {% endblock extra_js %}
