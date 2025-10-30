@@ -3942,6 +3942,15 @@ def dashboard_departments(request):
     # Simple pagination
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     page = request.GET.get('page', 1)
+    
+    # Validate page parameter to prevent EmptyPage exceptions
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+    
     paginator = Paginator(depts_qs, 10)  # 10 departments per page
     try:
         depts_page = paginator.page(page)
@@ -3949,6 +3958,7 @@ def dashboard_departments(request):
         depts_page = paginator.page(1)
     except EmptyPage:
         depts_page = paginator.page(paginator.num_pages)
+
     form = DepartmentForm()
 
     # Build a serializable list for the template with featured_group (matching the template expectations)
@@ -4110,6 +4120,7 @@ def dashboard_departments(request):
         "departments": departments,
         "page_obj": depts_page,
         "paginator": paginator,
+        "is_paginated": depts_page.has_other_pages(),
         "total_departments": depts_qs.count(),
         "form": form,
         "active_tab": 'departments',
@@ -4119,6 +4130,7 @@ def dashboard_departments(request):
         "subtitle": 'Manage hotel departments, heads, and staff assignments',
         "primary_label": "Add Department",
     }
+    
     return render(request, "dashboard/manage_users_base.html", context)
 
 
