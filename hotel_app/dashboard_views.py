@@ -1795,27 +1795,42 @@ def tickets(request):
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
     
-    # Get departments with active ticket counts
+    # Get departments with active ticket counts and dynamic SLA compliance
     departments_data = []
     departments = Department.objects.all()
     for dept in departments:
         # Count active tickets for this department
         active_tickets_count = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name
+            department=dept
         ).exclude(
             status__in=['completed', 'closed']
         ).count()
-      # Calculate SLA compliance (simplified calculation)
-        total_tickets = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name
-        ).count()        
-        completed_tickets = ServiceRequest.objects.filter(
-            request_type__name__icontains=dept.name,
-            status='completed'
-        ).count()
-        sla_compliance = 0
+        
+        # Calculate SLA compliance: (tickets that have NOT breached SLA) / (total tickets) * 100
+        # If no tickets, SLA compliance is 100%
+        total_tickets = ServiceRequest.objects.filter(department=dept).count()
+        
         if total_tickets > 0:
-            sla_compliance = int((completed_tickets / total_tickets) * 100)
+            # Count tickets that have breached SLA
+            breached_tickets = ServiceRequest.objects.filter(
+                department=dept,
+                sla_breached=True
+            ).count()
+            
+            # SLA compliance = (total - breached) / total * 100
+            sla_compliance = int(((total_tickets - breached_tickets) / total_tickets) * 100)
+        else:
+            # If no tickets, 100% SLA compliance
+            sla_compliance = 100
+            
+        # Determine color based on SLA compliance percentage
+        if sla_compliance >= 90:
+            sla_color = '#22c55e'  # green-500
+        elif sla_compliance >= 70:
+            sla_color = '#facc15'  # yellow-400
+        else:
+            sla_color = '#ef4444'  # red-500
+            
         color_mapping = {
             'Housekeeping': {'color': 'sky-600', 'icon_color': 'sky-600'},
             'Maintenance': {'color': 'yellow-400', 'icon_color': 'sky-600'},
@@ -1830,26 +1845,30 @@ def tickets(request):
         departments_data.append({
             'id': dept.id,
             'name': dept.name,
-            'active_tickets': active_tickets_count,
+            'active_tickets_count': active_tickets_count,
             'sla_compliance': sla_compliance,
-            'sla_color': dept_colors['color'],
+            'sla_color': sla_color,  # Using hex values for CSS compatibility
             'icon_url': logo_url,
         })
     
     # Get all service requests with filters applied
     tickets_queryset = ServiceRequest.objects.select_related(
-        'request_type', 'location', 'requester_user', 'assignee_user'
+        'request_type', 'location', 'requester_user', 'assignee_user', 'department'
     ).all().order_by('-id')
     
     # Apply filters
     if department_filter and department_filter != 'All Departments':
-        tickets_queryset = tickets_queryset.filter(
-            request_type__name__icontains=department_filter
-        )
+        # Find department by name
+        try:
+            dept = Department.objects.get(name=department_filter)
+            tickets_queryset = tickets_queryset.filter(department=dept)
+        except Department.DoesNotExist:
+            pass
     
     if priority_filter and priority_filter != 'All Priorities':
         # Map display values to model values
         priority_mapping = {
+            'Critical': 'critical',
             'High': 'high',
             'Medium': 'normal',
             'Low': 'low'
@@ -1885,6 +1904,7 @@ def tickets(request):
     for ticket in tickets_queryset:
         # Map priority to display values
         priority_mapping = {
+            'critical': {'label': 'Critical', 'color': 'red'},
             'high': {'label': 'High', 'color': 'red'},
             'normal': {'label': 'Medium', 'color': 'sky'},
             'low': {'label': 'Low', 'color': 'gray'},
@@ -1908,7 +1928,7 @@ def tickets(request):
         
         # Calculate SLA percentage
         sla_percentage = 0
-        sla_color = 'green-500'
+        sla_color = '#22c55e'  # green-500
         if ticket.created_at and ticket.due_at:
             # Calculate time taken so far or total time if completed
             if ticket.completed_at:
@@ -1923,11 +1943,11 @@ def tickets(request):
             
             # Determine color based on SLA
             if sla_percentage > 90:
-                sla_color = 'red-500'
+                sla_color = '#ef4444'  # red-500
             elif sla_percentage > 70:
-                sla_color = 'yellow-400'
+                sla_color = '#facc15'  # yellow-400
             else:
-                sla_color = 'green-500'
+                sla_color = '#22c55e'  # green-500
         
         # Add attributes to the ticket object
         ticket.priority_label = priority_data['label']

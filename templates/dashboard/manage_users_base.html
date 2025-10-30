@@ -27,7 +27,7 @@
 
       <div class="flex items-center gap-4">
         <div class="relative">
-          <input id="quick-search" type="text" name="q" placeholder="{{ search_placeholder|default:'Search users...' }}"
+          <input autocomplete="off" id="quick-search" type="text" name="q" placeholder="{{ search_placeholder|default:'Search users...' }}"
                  autocomplete="off"
                  class="w-64 h-10 pl-10 pr-3 rounded-lg border border-gray-200 bg-white text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-['Inter']" />
           <div class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -120,7 +120,7 @@
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Group Name</label>
-        <input type="text" id="createGroupName" name="name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. Floor Supervisors" required />
+        <input autocomplete="off" type="text" id="createGroupName" name="name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. Floor Supervisors" required />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Description</label>
@@ -157,7 +157,7 @@
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Select File</label>
-        <input type="file" id="importFile" name="file" accept=".xlsx,.json" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" required />
+        <input autocomplete="off" type="file" id="importFile" name="file" accept=".xlsx,.json" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" required />
         <p class="mt-1 text-xs text-gray-500">Supports Excel (.xlsx) or JSON (.json) files</p>
       </div>
       <div id="importDataError" class="text-sm text-red-600 hidden"></div>
@@ -217,28 +217,28 @@
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Full Name</label>
-        <input type="text" id="inviteUserName" name="full_name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. John Doe" required autocomplete="name" />
+        <input autocomplete="off" type="text" id="inviteUserName" name="full_name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. John Doe" required autocomplete="name" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Email</label>
-        <input type="email" id="inviteUserEmail" name="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. john@example.com" required autocomplete="email" />
+        <input autocomplete="off" type="email" id="inviteUserEmail" name="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. john@example.com" required autocomplete="email" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Username</label>
-        <input type="text" id="inviteUserUsername" name="username" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. johndoe" required autocomplete="username" />
+        <input autocomplete="off" type="text" id="inviteUserUsername" name="username" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. johndoe" required autocomplete="username" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Password</label>
-        <input type="password" id="inviteUserPassword" name="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Enter password" autocomplete="new-password" />
+        <input autocomplete="off" type="password" id="inviteUserPassword" name="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Enter password" autocomplete="new-password" />
         <p class="mt-1 text-xs text-gray-500">Leave blank to auto-generate a password</p>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-        <input type="text" id="inviteUserPhone" name="phone" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. +1234567890" autocomplete="tel" />
+        <input autocomplete="off" type="text" id="inviteUserPhone" name="phone" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g. +1234567890" autocomplete="tel" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Profile Picture</label>
-        <input type="file" id="inviteUserProfilePicture" name="profile_picture" accept="image/*" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+        <input autocomplete="off" type="file" id="inviteUserProfilePicture" name="profile_picture" accept="image/*" class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">Department</label>
@@ -276,7 +276,7 @@
             {% csrf_token %}
             <div>
                 <label for="departmentName" class="block text-sm font-medium text-gray-700">Department Name</label>
-                <input type="text" id="departmentName" name="name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g., Housekeeping" required />
+                <input autocomplete="off" type="text" id="departmentName" name="name" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g., Housekeeping" required />
             </div>
             <div>
                 <label for="departmentDescription" class="block text-sm font-medium text-gray-700">Description</label>
@@ -294,13 +294,13 @@
             </div>
             <div>
                 <label for="departmentEmail" class="block text-sm font-medium text-gray-700">Department Email (Optional)</label>
-                <input type="email" id="departmentEmail" name="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g., housekeeping@hotel.com" autocomplete="email" />
+                <input autocomplete="off" type="email" id="departmentEmail" name="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="e.g., housekeeping@hotel.com" autocomplete="email" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Status</label>
                 <div class="mt-2 flex items-center gap-3">
                     <label for="departmentStatusToggle" class="relative inline-flex cursor-pointer items-center">
-                        <input type="checkbox" id="departmentStatusToggle" name="is_active" class="peer sr-only" checked>
+                        <input autocomplete="off" type="checkbox" id="departmentStatusToggle" name="is_active" class="peer sr-only" checked>
                         <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-sky-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300"></div>
                     </label>
                     <span class="text-sm text-gray-700">Active</span>
@@ -332,7 +332,7 @@
       </button>
     </div>
     <form autocomplete="off" id="editPermissionsForm" class="p-6 space-y-6 overflow-y-auto">
-      <input type="hidden" id="editGroupId" name="group_id">
+      <input autocomplete="off" type="hidden" id="editGroupId" name="group_id">
       <div class="mb-4">
         <h4 class="text-md font-medium text-gray-900" id="editGroupName"></h4>
         <p class="text-sm text-gray-600">Select the permissions for this group</p>
@@ -357,7 +357,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_view_profile" class="sr-only peer permission-toggle" data-permission="view_profile">
+                        <input autocomplete="off" type="checkbox" name="perm_view_profile" class="sr-only peer permission-toggle" data-permission="view_profile">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -368,7 +368,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_update_profile" class="sr-only peer permission-toggle" data-permission="update_profile">
+                        <input autocomplete="off" type="checkbox" name="perm_update_profile" class="sr-only peer permission-toggle" data-permission="update_profile">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -379,7 +379,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_view_requests" class="sr-only peer permission-toggle" data-permission="view_requests">
+                        <input autocomplete="off" type="checkbox" name="perm_view_requests" class="sr-only peer permission-toggle" data-permission="view_requests">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -390,7 +390,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_update_requests" class="sr-only peer permission-toggle" data-permission="update_requests">
+                        <input autocomplete="off" type="checkbox" name="perm_update_requests" class="sr-only peer permission-toggle" data-permission="update_requests">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -417,7 +417,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_manage_users" class="sr-only peer permission-toggle" data-permission="manage_users">
+                        <input autocomplete="off" type="checkbox" name="perm_manage_users" class="sr-only peer permission-toggle" data-permission="manage_users">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -428,7 +428,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_manage_groups" class="sr-only peer permission-toggle" data-permission="manage_groups">
+                        <input autocomplete="off" type="checkbox" name="perm_manage_groups" class="sr-only peer permission-toggle" data-permission="manage_groups">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -439,7 +439,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_system_config" class="sr-only peer permission-toggle" data-permission="system_config">
+                        <input autocomplete="off" type="checkbox" name="perm_system_config" class="sr-only peer permission-toggle" data-permission="system_config">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -450,7 +450,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_view_reports" class="sr-only peer permission-toggle" data-permission="view_reports">
+                        <input autocomplete="off" type="checkbox" name="perm_view_reports" class="sr-only peer permission-toggle" data-permission="view_reports">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -461,7 +461,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_manage_departments" class="sr-only peer permission-toggle" data-permission="manage_departments">
+                        <input autocomplete="off" type="checkbox" name="perm_manage_departments" class="sr-only peer permission-toggle" data-permission="manage_departments">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -472,7 +472,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_full_access" class="sr-only peer permission-toggle" data-permission="full_access">
+                        <input autocomplete="off" type="checkbox" name="perm_full_access" class="sr-only peer permission-toggle" data-permission="full_access">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -499,7 +499,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_view_team_reports" class="sr-only peer permission-toggle" data-permission="view_team_reports">
+                        <input autocomplete="off" type="checkbox" name="perm_view_team_reports" class="sr-only peer permission-toggle" data-permission="view_team_reports">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -510,7 +510,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_manage_team" class="sr-only peer permission-toggle" data-permission="manage_team">
+                        <input autocomplete="off" type="checkbox" name="perm_manage_team" class="sr-only peer permission-toggle" data-permission="manage_team">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -521,7 +521,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_assign_requests" class="sr-only peer permission-toggle" data-permission="assign_requests">
+                        <input autocomplete="off" type="checkbox" name="perm_assign_requests" class="sr-only peer permission-toggle" data-permission="assign_requests">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -532,7 +532,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center">
                       <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="perm_view_dept_data" class="sr-only peer permission-toggle" data-permission="view_dept_data">
+                        <input autocomplete="off" type="checkbox" name="perm_view_dept_data" class="sr-only peer permission-toggle" data-permission="view_dept_data">
                         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
@@ -571,7 +571,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           {% for group in groups %}
           <div class="flex items-center">
-            <input type="checkbox" id="bulk_group_{{ group.id }}" name="groups" value="{{ group.id }}" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+            <input autocomplete="off" type="checkbox" id="bulk_group_{{ group.id }}" name="groups" value="{{ group.id }}" class="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
             <label for="bulk_group_{{ group.id }}" class="ml-2 block text-sm text-gray-900">{{ group.name }}</label>
           </div>
           {% endfor %}
@@ -596,7 +596,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">View own profile</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_view_profile" class="sr-only peer permission-toggle" data-permission="view_profile">
+                      <input autocomplete="off" type="checkbox" name="perm_view_profile" class="sr-only peer permission-toggle" data-permission="view_profile">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -605,7 +605,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Update own profile</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_update_profile" class="sr-only peer permission-toggle" data-permission="update_profile">
+                      <input autocomplete="off" type="checkbox" name="perm_update_profile" class="sr-only peer permission-toggle" data-permission="update_profile">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -614,7 +614,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">View assigned requests</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_view_requests" class="sr-only peer permission-toggle" data-permission="view_requests">
+                      <input autocomplete="off" type="checkbox" name="perm_view_requests" class="sr-only peer permission-toggle" data-permission="view_requests">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -623,7 +623,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Update request status</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_update_requests" class="sr-only peer permission-toggle" data-permission="update_requests">
+                      <input autocomplete="off" type="checkbox" name="perm_update_requests" class="sr-only peer permission-toggle" data-permission="update_requests">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -648,7 +648,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Manage users</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_manage_users" class="sr-only peer permission-toggle" data-permission="manage_users">
+                      <input autocomplete="off" type="checkbox" name="perm_manage_users" class="sr-only peer permission-toggle" data-permission="manage_users">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -657,7 +657,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Manage groups</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_manage_groups" class="sr-only peer permission-toggle" data-permission="manage_groups">
+                      <input autocomplete="off" type="checkbox" name="perm_manage_groups" class="sr-only peer permission-toggle" data-permission="manage_groups">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -666,7 +666,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">System configuration</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_system_config" class="sr-only peer permission-toggle" data-permission="system_config">
+                      <input autocomplete="off" type="checkbox" name="perm_system_config" class="sr-only peer permission-toggle" data-permission="system_config">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -675,7 +675,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">View all reports</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_view_reports" class="sr-only peer permission-toggle" data-permission="view_reports">
+                      <input autocomplete="off" type="checkbox" name="perm_view_reports" class="sr-only peer permission-toggle" data-permission="view_reports">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -684,7 +684,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Manage departments</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_manage_departments" class="sr-only peer permission-toggle" data-permission="manage_departments">
+                      <input autocomplete="off" type="checkbox" name="perm_manage_departments" class="sr-only peer permission-toggle" data-permission="manage_departments">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -693,7 +693,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Full system access</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_full_access" class="sr-only peer permission-toggle" data-permission="full_access">
+                      <input autocomplete="off" type="checkbox" name="perm_full_access" class="sr-only peer permission-toggle" data-permission="full_access">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -718,7 +718,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">View team reports</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_view_team_reports" class="sr-only peer permission-toggle" data-permission="view_team_reports">
+                      <input autocomplete="off" type="checkbox" name="perm_view_team_reports" class="sr-only peer permission-toggle" data-permission="view_team_reports">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -727,7 +727,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Manage team members</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_manage_team" class="sr-only peer permission-toggle" data-permission="manage_team">
+                      <input autocomplete="off" type="checkbox" name="perm_manage_team" class="sr-only peer permission-toggle" data-permission="manage_team">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -736,7 +736,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">Assign requests</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_assign_requests" class="sr-only peer permission-toggle" data-permission="assign_requests">
+                      <input autocomplete="off" type="checkbox" name="perm_assign_requests" class="sr-only peer permission-toggle" data-permission="assign_requests">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
@@ -745,7 +745,7 @@
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">View department data</td>
                   <td class="px-6 py-4 text-center">
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" name="perm_view_dept_data" class="sr-only peer permission-toggle" data-permission="view_dept_data">
+                      <input autocomplete="off" type="checkbox" name="perm_view_dept_data" class="sr-only peer permission-toggle" data-permission="view_dept_data">
                       <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-checked:bg-sky-600 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </td>
