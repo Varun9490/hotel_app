@@ -30,7 +30,7 @@
         </div>
 
         <!-- Form -->
-        <form method="post" class="mt-8 space-y-6">
+        <form autocomplete="off" method="post" class="mt-8 space-y-6">
             {% csrf_token %}
             
             {% if form.non_field_errors %}

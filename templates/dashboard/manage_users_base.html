@@ -116,7 +116,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="createGroupForm" class="p-6 space-y-4 overflow-y-auto flex-grow">
+    <form autocomplete="off" id="createGroupForm" class="p-6 space-y-4 overflow-y-auto flex-grow">
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Group Name</label>
@@ -153,7 +153,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="importDataForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data">
+    <form autocomplete="off" id="importDataForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data">
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Select File</label>
@@ -213,7 +213,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="inviteUserForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data" autocomplete="on">
+    <form autocomplete="off" id="inviteUserForm" class="p-6 space-y-4 overflow-y-auto flex-grow" enctype="multipart/form-data" autocomplete="on">
       {% csrf_token %}
       <div>
         <label class="block text-sm font-medium text-gray-700">Full Name</label>
@@ -272,7 +272,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form id="addDepartmentForm" onsubmit="submitAddDepartment(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
+        <form autocomplete="off" id="addDepartmentForm" onsubmit="submitAddDepartment(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
             {% csrf_token %}
             <div>
                 <label for="departmentName" class="block text-sm font-medium text-gray-700">Department Name</label>
@@ -331,7 +331,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="editPermissionsForm" class="p-6 space-y-6 overflow-y-auto">
+    <form autocomplete="off" id="editPermissionsForm" class="p-6 space-y-6 overflow-y-auto">
       <input type="hidden" id="editGroupId" name="group_id">
       <div class="mb-4">
         <h4 class="text-md font-medium text-gray-900" id="editGroupName"></h4>
@@ -561,7 +561,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    <form id="bulkEditPermissionsForm" class="p-6 space-y-6 overflow-y-auto">
+    <form autocomplete="off" id="bulkEditPermissionsForm" class="p-6 space-y-6 overflow-y-auto">
       <div class="mb-4">
         <p class="text-sm text-gray-600">Select permissions to apply to all selected groups</p>
       </div>
