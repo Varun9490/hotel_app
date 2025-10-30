@@ -3954,7 +3954,7 @@ def dashboard_departments(request):
     # Build a serializable list for the template with featured_group (matching the template expectations)
     departments = []
     try:
-        from hotel_app.models import UserProfile
+        from hotel_app.models import UserProfile, ServiceRequest
         for index, d in enumerate(depts_page):
             profiles = UserProfile.objects.filter(department=d)
             members = []
@@ -3995,16 +3995,41 @@ def dashboard_departments(request):
             icon_color = 'gray-500'
             dot_bg = 'bg-gray-500'
 
+            # Calculate SLA compliance: (tickets that have NOT breached SLA) / (total tickets) * 100
+            # If no tickets, SLA compliance is 100%
+            total_tickets = ServiceRequest.objects.filter(department=d).count()
+            
+            if total_tickets > 0:
+                # Count tickets that have breached SLA
+                breached_tickets = ServiceRequest.objects.filter(
+                    department=d,
+                    sla_breached=True
+                ).count()
+                
+                # SLA compliance = (total - breached) / total * 100
+                sla_compliance = int(((total_tickets - breached_tickets) / total_tickets) * 100)
+            else:
+                # If no tickets, 100% SLA compliance
+                sla_compliance = 100
+                
+            # Determine color based on SLA compliance percentage
+            if sla_compliance >= 90:
+                sla_color = '#22c55e'  # green-500
+            elif sla_compliance >= 70:
+                sla_color = '#facc15'  # yellow-400
+            else:
+                sla_color = '#ef4444'  # red-500
+
             # Dummy metrics
             members_count = profiles.count()
             open_tickets = 0
-            performance_pct = f"{min(100, 50 + members_count)}%"
-            performance_color = 'green-500' if members_count > 5 else 'yellow-400'
-            performance_width = '8' if members_count > 5 else '4'
+            performance_pct = f"{sla_compliance}%"
+            performance_color = sla_color
+            performance_width = '8' if sla_compliance > 70 else '4'
 
-            sla_label = 'Good' if members_count > 5 else 'Monitor'
-            sla_tag_bg = 'bg-green-100' if sla_label == 'Good' else 'bg-yellow-100'
-            sla_color = 'green-700' if sla_label == 'Good' else 'yellow-700'
+            sla_label = 'Good' if sla_compliance >= 90 else ('Monitor' if sla_compliance >= 70 else 'Poor')
+            sla_tag_bg = 'bg-green-100' if sla_compliance >= 90 else ('bg-yellow-100' if sla_compliance >= 70 else 'bg-red-100')
+            sla_color_class = 'green-700' if sla_compliance >= 90 else ('yellow-700' if sla_compliance >= 70 else 'red-700')
 
             status_label = 'Active' if members_count > 0 else 'Inactive'
             status_bg = 'bg-green-500/10' if members_count > 0 else 'bg-gray-200'
@@ -4040,7 +4065,7 @@ def dashboard_departments(request):
                 'open_tickets': open_tickets,
                 'sla_label': sla_label,
                 'sla_tag_bg': sla_tag_bg,
-                'sla_color': sla_color,
+                'sla_color': sla_color_class,
                 'performance_pct': performance_pct,
                 'performance_color': performance_color,
                 'performance_width': performance_width,

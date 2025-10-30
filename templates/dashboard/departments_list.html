@@ -90,9 +90,9 @@
             <td class="max-w-xs px-6 py-4">
               <div class="flex min-w-0 items-center gap-3">
                 <div class="h-2 w-32 flex-shrink-0 rounded-full bg-gray-200">
-                  <div class="h-2 rounded-full {{ dept.performance_color|default:'bg-green-500' }}" style="width: {{ dept.performance_pct|default:'0%' }};"></div>
+                  <div class="h-2 rounded-full" style="width: {{ dept.performance_pct|default:'0%' }}; background-color: {{ dept.performance_color|default:'#22c55e' }};"></div>
                 </div>
-                <div class="text-sm font-medium {{ dept.performance_color|default:'text-green-600' }}">{{ dept.performance_pct|default:'0%' }}</div>
+                <div class="text-sm font-medium" style="color: {{ dept.performance_color|default:'#22c55e' }};">{{ dept.performance_pct|default:'0%' }}</div>
               </div>
             </td>
             <td class="px-6 py-4">
