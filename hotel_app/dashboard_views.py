@@ -966,10 +966,30 @@ def messaging_setup(request):
     except Exception:
         # keep fallback values
         stats.setdefault('connected', False)
-
+    
+    # Check Twilio configuration
+    twilio_configured = False
+    try:
+        from hotel_app.twilio_service import twilio_service
+        twilio_configured = twilio_service.is_configured()
+    except Exception:
+        pass
+    
+    # Get Twilio settings from environment
+    from django.conf import settings
+    twilio_account_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
+    twilio_auth_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
+    twilio_whatsapp_from = getattr(settings, 'TWILIO_WHATSAPP_FROM', '')
+    twilio_test_to_number = getattr(settings, 'TWILIO_TEST_TO_NUMBER', '')
+    
     context = {
         'templates': templates,
         'stats': stats,
+        'twilio_configured': twilio_configured,
+        'twilio_account_sid': twilio_account_sid,
+        'twilio_auth_token': twilio_auth_token,
+        'twilio_whatsapp_from': twilio_whatsapp_from,
+        'twilio_test_to_number': twilio_test_to_number,
     }
     return render(request, 'dashboard/messaging_setup.html', context)
 
@@ -1742,6 +1762,13 @@ def clear_user_data(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Error clearing user data: {str(e)}")
         return JsonResponse({'error': f'Failed to clear data: {str(e)}'}, status=500)
+import logging
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+
 
 
 @login_required
@@ -1778,7 +1805,103 @@ def clear_user_data(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Error importing user data: {str(e)}")
         return JsonResponse({'error': f'Failed to import data: {str(e)}'}, status=500)
+
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def test_twilio_connection(request):
+    """Test Twilio connection with provided credentials"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    # Get credentials from request
+    account_sid = request.POST.get('account_sid')
+    auth_token = request.POST.get('auth_token')
+    whatsapp_from = request.POST.get('whatsapp_from')
+    test_to_number = request.POST.get('test_to_number')
+    
+    # Validate inputs
+    if not account_sid or not auth_token or not whatsapp_from:
+        return JsonResponse({'error': 'Missing required parameters'}, status=400)
+    
+    try:
+        # Test Twilio connection by creating a client and fetching account info
+        from twilio.rest import Client
+        from twilio.base.exceptions import TwilioException
         
+        client = Client(account_sid, auth_token)
+        
+        # Try to fetch account details to verify credentials
+        account = client.api.accounts(account_sid).fetch()
+        
+        # If we have a test number, try to send a test message using our improved service
+        if test_to_number:
+            try:
+                # Use our improved Twilio service
+                from hotel_app.twilio_service import TwilioService
+                
+                # Create a temporary service instance with the provided credentials
+                temp_service = TwilioService()
+                temp_service.account_sid = account_sid
+                temp_service.auth_token = auth_token
+                temp_service.whatsapp_from = whatsapp_from
+                temp_service.client = client
+                
+                # Send a simple test message
+                result = temp_service.send_text_message(
+                    to_number=test_to_number,
+                    body='Connection test successful from Hotel Management System'
+                )
+                
+                if result['success']:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Twilio connection and message sending successful',
+                        'account_sid': account_sid,
+                        'message_sid': result['message_id']
+                    })
+                else:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Twilio connection successful but message sending failed',
+                        'account_sid': account_sid,
+                        'warning': result['error']
+                    })
+            except TwilioException as e:
+                # If message sending fails, still return success for connection but with warning
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Twilio connection successful but message sending failed',
+                    'account_sid': account_sid,
+                    'warning': str(e)
+                })
+            except Exception as e:
+                # Handle other exceptions
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Twilio connection successful but message sending failed',
+                    'account_sid': account_sid,
+                    'warning': f'Unexpected error: {str(e)}'
+                })
+        else:
+            # If we get here, the credentials are valid
+            return JsonResponse({
+                'success': True,
+                'message': 'Twilio connection successful',
+                'account_sid': account_sid
+            })
+    except TwilioException as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Twilio connection failed: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Twilio connection failed: {str(e)}'
+        }, status=400)
+
+
 @login_required       
 @require_role(['admin', 'staff'])
 def tickets(request):
@@ -5679,6 +5802,51 @@ def get_guest_whatsapp_message(request, guest_id):
         'guest_phone': guest.phone
     })
 
+
+@login_required
+@require_permission([ADMINS_GROUP, STAFF_GROUP])
+def send_test_twilio_message(request):
+    """Send a test Twilio message"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        # Get recipient from request
+        to_number = request.POST.get('to_number')
+        message_body = request.POST.get('message_body', 'This is a test message from Hotel Management System')
+        
+        if not to_number:
+            return JsonResponse({'error': 'Recipient number is required'}, status=400)
+        
+        # Send message using Twilio service
+        from hotel_app.twilio_service import twilio_service
+        
+        # Check if Twilio is configured
+        if not twilio_service.is_configured():
+            return JsonResponse({
+                'success': False,
+                'error': 'Twilio service is not properly configured'
+            }, status=400)
+        
+        result = twilio_service.send_text_message(to_number, message_body)
+        
+        if result['success']:
+            return JsonResponse({
+                'success': True,
+                'message': 'Test message sent successfully',
+                'message_id': result['message_id']
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result['error']
+            }, status=400)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to send test message: {str(e)}'
+        }, status=500)
 
 @login_required
 @require_permission([ADMINS_GROUP, STAFF_GROUP])

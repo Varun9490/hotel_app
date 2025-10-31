@@ -40,6 +40,9 @@ urlpatterns = [
     
     # Public feedback form
     path('', include('hotel_app.urls')),
+    
+    # Twilio demo
+    path('twilio/', include('hotel_app.twilio_urls')),
 
 ]
 
