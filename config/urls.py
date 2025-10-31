@@ -9,8 +9,14 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 
 def logout_view(request):
+    from django.contrib.auth import logout
     logout(request)
-    return redirect('/login/')
+    # Add cache control headers to prevent back button access
+    response = redirect('/login/')
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 urlpatterns = [
     path('admin/', admin.site.urls),
