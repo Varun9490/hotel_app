@@ -5753,6 +5753,7 @@ def feedback_inbox(request):
     """Feedback inbox view showing all guest feedback."""
     from .models import Review, Guest
     from .forms import FeedbackForm
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     
 
     # Handle form submission for new feedback
@@ -5808,12 +5809,28 @@ def feedback_inbox(request):
     else:
         form = FeedbackForm()
     
+    # Handle search query
+    search_query = request.GET.get('q', '').strip()
+    
     # Get all reviews with related guest information
     reviews = Review.objects.select_related('guest').all().order_by('-created_at')
     
+    # Apply search filter if query exists
+    if search_query:
+        reviews = reviews.filter(
+            Q(guest__full_name__icontains=search_query) |
+            Q(comment__icontains=search_query) |
+            Q(guest__room_number__icontains=search_query)
+        )
+    
+    # Pagination - Show 10 entries per page
+    paginator = Paginator(reviews, 10)  # Show 10 feedback entries per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     # Convert to the format expected by the template
     feedback_data = []
-    for review in reviews:
+    for review in page_obj:
         # Determine sentiment based on rating
         if review.rating >= 4:
             sentiment = 'Positive'
@@ -5858,7 +5875,11 @@ def feedback_inbox(request):
             'needs_attention': needs_attention,
             'response_rate': 100 - response_rate
         },
-        'form': form
+        'form': form,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+        'search_query': search_query
     }
     
     return render(request, 'dashboard/feedback_inbox.html', context)
