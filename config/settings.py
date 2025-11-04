@@ -29,7 +29,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 # For development, allow connections from local network devices
 # In production, replace with specific domain names
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.1.4,192.168.126.1,192.168.142.1,192.168.202.1').split(',')
+ALLOWED_HOSTS = ['*']
 
 # Session settings - 8 hours for development
 SESSION_COOKIE_AGE = 8 * 60 * 60  # 8 hours in seconds
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'hotel_app',
     'django_filters',
     "django.contrib.humanize",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
